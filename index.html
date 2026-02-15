@@ -4,82 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CITY TANKS: TIER SYSTEM</title>
-    <style>
-        :root{--ui-scale:1;--font-base:14px}
-        *{box-sizing:border-box}
-        body{margin:0;background:#1a1a1a;color:#eee;font-family:'Courier New',monospace;overflow:hidden;touch-action:none;font-size:var(--font-base)}
-        #ui{position:absolute;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;flex-direction:column;align-items:center;padding:clamp(8px,2vw,20px);overflow-y:auto}
-        .tree-view{position:relative;width:95vw;height:45vh;border:2px solid #444;background:#050505;overflow:auto;margin:clamp(4px,1vw,10px) 0;flex-shrink:0}
-        #tree-canvas{position:absolute;top:0;left:0;pointer-events:none}
-        .node{position:absolute;width:clamp(90px,12vw,125px);height:clamp(40px,6vh,52px);background:#222;border:1px solid #555;text-align:center;font-size:clamp(7px,1.2vw,10px);cursor:pointer;display:flex;flex-direction:column;justify-content:center;z-index:10;transition:all .2s;padding:2px}
-        .node:hover{background:#333}
-        .node.owned{border-color:#2ecc71;background:#0e2b18}
-        .node.selected{border-color:#f1c40f;box-shadow:0 0 10px #f1c40f}
-        #hud{position:absolute;inset:0;pointer-events:none;display:none}
-        .team-list{position:absolute;top:clamp(5px,1vh,10px);width:clamp(120px,18vw,210px);background:rgba(0,0,0,0.7);padding:clamp(3px,0.5vw,6px);font-size:clamp(8px,1.3vw,12px)}
-        #allies-list{left:clamp(5px,1vw,10px);border-left:3px solid #3498db}
-        #enemies-list{right:clamp(5px,1vw,10px);border-right:3px solid #e74c3c;text-align:right}
-        .dead{color:#666;text-decoration:line-through}
-        #bottom-bar{position:absolute;bottom:clamp(8px,2vh,20px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;width:clamp(280px,50vw,400px)}
-        #hp-ui{width:100%;height:clamp(8px,1.5vh,14px);background:#441111;border:2px solid #fff;margin-bottom:3px}
-        #hp-bar{height:100%;background:#2ecc71;width:100%;transition:width .3s}
-        #ammo-ui{background:rgba(0,0,0,0.85);padding:clamp(3px,0.5vh,6px) clamp(10px,2vw,20px);border:1px solid #f1c40f;color:#f1c40f;font-weight:bold;font-size:clamp(11px,1.8vw,16px);width:100%;text-align:center}
-        #shell-ui{background:rgba(0,0,0,0.85);padding:clamp(2px,0.4vh,4px) clamp(6px,1vw,12px);border:1px solid #888;margin-top:2px;font-size:clamp(9px,1.4vw,13px);display:flex;gap:clamp(6px,1.5vw,14px);justify-content:center}
-        .shell-opt{padding:clamp(2px,0.3vh,4px) clamp(4px,0.8vw,10px);cursor:pointer;pointer-events:all;border:1px solid #555}
-        .shell-opt.active{border-color:#f1c40f;color:#f1c40f;background:#332200}
-        #cons-ui{background:rgba(0,0,0,0.85);padding:clamp(2px,0.4vh,4px) clamp(6px,1vw,12px);border:1px solid #27ae60;margin-top:2px;font-size:clamp(8px,1.2vw,12px);display:flex;gap:clamp(4px,1vw,10px);justify-content:center;flex-wrap:wrap}
-        .cons-btn{padding:clamp(2px,0.3vh,4px) clamp(4px,0.8vw,10px);cursor:pointer;pointer-events:all;border:1px solid #555;color:#aaa}
-        .cons-btn.ready{color:#2ecc71;border-color:#2ecc71}
-        .cons-btn.used{color:#555;border-color:#333}
-        #minimap{position:absolute;bottom:clamp(10px,2vh,20px);right:clamp(10px,2vw,20px);width:clamp(100px,15vw,180px);height:clamp(100px,15vw,180px);background:rgba(0,0,0,0.7);border:2px solid #555;pointer-events:none}
-        #dmg-log{position:absolute;bottom:clamp(120px,20vh,200px);left:50%;transform:translateX(-50%);font-size:clamp(11px,1.8vw,16px);text-align:center}
-        .dmg-msg{animation:dmgF 2s forwards;position:relative}
-        @keyframes dmgF{0%{opacity:1;top:0}100%{opacity:0;top:-40px}}
-        .btn-group{display:flex;gap:clamp(5px,1vw,12px);margin-top:clamp(4px,1vh,10px);flex-wrap:wrap;justify-content:center}
-        .btn{padding:clamp(6px,1vh,10px) clamp(15px,3vw,30px);background:#d35400;color:#fff;border:none;font-size:clamp(12px,2vw,18px);cursor:pointer;white-space:nowrap}
-        .btn:hover{background:#e67e22}
-        .n-btn{padding:clamp(4px,0.8vh,8px) clamp(8px,1.5vw,18px);margin:clamp(2px,0.4vw,4px);cursor:pointer;background:#444;color:#fff;border:1px solid #666;font-size:clamp(10px,1.5vw,14px)}
-        .active-n{background:#d35400}
-        #res-panel{margin-bottom:clamp(4px,1vh,10px);font-size:clamp(14px,2.5vw,22px);display:flex;gap:clamp(10px,2vw,30px);flex-wrap:wrap;justify-content:center}
-        .gold-txt{color:#f1c40f}
-        .silver-txt{color:#bdc3c7}
-        #training-panel{background:#222;padding:clamp(8px,1.5vh,15px);border:1px solid #444;margin-top:clamp(4px,1vh,10px);text-align:center;width:min(90%,500px)}
-        #exchange-panel{background:#1a1a2e;padding:clamp(6px,1vh,12px);border:1px solid #f1c40f;margin-top:clamp(3px,0.5vh,6px);text-align:center;font-size:clamp(11px,1.5vw,14px)}
-        #enemy-select,#map-select,#train-nat-select{padding:clamp(3px,0.5vh,6px);background:#333;color:#fff;border:1px solid #666;font-family:inherit;font-size:clamp(11px,1.5vw,14px)}
-        #crew-msg{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:clamp(18px,4vw,30px);font-weight:bold;text-shadow:2px 2px 4px #000;opacity:0;transition:opacity .3s;pointer-events:none}
-        #result-screen{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.88);z-index:200;flex-direction:column;align-items:center;justify-content:center;font-size:clamp(14px,2.5vw,20px);padding:20px}
-        #result-screen.show{display:flex}
-        #result-title{font-size:clamp(28px,6vw,45px)!important;margin-bottom:clamp(10px,2vh,20px)}
-        .premium-glow{animation:glow 1.5s ease-in-out infinite alternate}
-        @keyframes glow{from{box-shadow:0 0 5px #f1c40f}to{box-shadow:0 0 20px #f1c40f,0 0 30px #e67e22}}
-        #control-modal{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.95);z-index:300;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-        #control-modal.show{display:flex}
-        #control-modal h2{font-size:clamp(20px,4vw,32px);color:#f1c40f;margin-bottom:clamp(15px,3vh,30px);text-align:center}
-        .control-options{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(10px,2vw,20px)}
-        .control-option{width:clamp(200px,40vw,300px);height:clamp(140px,25vh,200px);background:#222;border:3px solid #555;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .3s;padding:clamp(10px,2vw,20px)}
-        .control-option:hover{border-color:#f1c40f;background:#333;transform:scale(1.03)}
-        .control-icon{font-size:clamp(40px,8vw,70px);margin-bottom:clamp(5px,1vh,12px)}
-        .control-option h3{margin:clamp(3px,0.5vh,8px) 0;color:#fff;font-size:clamp(16px,2.5vw,22px)}
-        .control-option p{margin:0;color:#aaa;font-size:clamp(10px,1.5vw,13px);text-align:center;line-height:1.4}
-        #mobile-controls{display:none;position:absolute;inset:0;pointer-events:none;z-index:50}
-        #mobile-controls.show{display:block}
-        #joystick-zone{position:absolute;left:clamp(10px,2vw,25px);bottom:clamp(10px,2vh,25px);width:clamp(120px,22vw,180px);height:clamp(120px,22vw,180px);pointer-events:all}
-        #joystick-base{width:100%;height:100%;background:rgba(255,255,255,0.15);border:3px solid rgba(255,255,255,0.3);border-radius:50%;position:relative}
-        #joystick-stick{width:40%;height:40%;background:rgba(255,255,255,0.5);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-        #fire-zone{position:absolute;right:clamp(10px,2vw,25px);bottom:clamp(10px,2vh,25px);display:flex;flex-direction:column;gap:clamp(6px,1vh,12px);pointer-events:all}
-        .mobile-btn{width:clamp(55px,13vw,85px);height:clamp(55px,13vw,85px);border-radius:50%;border:3px solid rgba(255,255,255,0.5);background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:clamp(10px,1.6vw,14px);font-weight:bold;color:#fff;text-align:center}
-        .mobile-btn.fire{width:clamp(70px,16vw,110px);height:clamp(70px,16vw,110px);background:rgba(231,76,60,0.5);border-color:#e74c3c;font-size:clamp(12px,2vw,16px)}
-        .mobile-btn:active{background:rgba(255,255,255,0.5);transform:scale(0.95)}
-        #mobile-shells{position:absolute;right:clamp(10px,2vw,25px);bottom:clamp(140px,28vh,240px);display:flex;flex-direction:column;gap:clamp(5px,1vh,10px);pointer-events:all}
-        .m-shell{width:clamp(45px,10vw,60px);height:clamp(45px,10vw,60px);border-radius:10px;border:2px solid #555;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:clamp(10px,1.5vw,13px);color:#fff}
-        .m-shell.active{border-color:#f1c40f;background:rgba(241,196,15,0.3)}
-        #mobile-cons{position:absolute;left:clamp(10px,2vw,25px);top:clamp(80px,12vh,120px);display:flex;flex-direction:column;gap:clamp(5px,1vh,10px);pointer-events:all}
-        .m-cons{width:clamp(45px,10vw,60px);height:clamp(45px,10vw,60px);border-radius:10px;border:2px solid #2ecc71;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:clamp(9px,1.3vw,11px);color:#2ecc71;text-align:center}
-        .m-cons.used{border-color:#555;color:#555}
-        .mobile-mode #shell-ui,.mobile-mode #cons-ui{display:none}
-        @media(max-height:500px)and(orientation:landscape){.tree-view{height:60vh}#bottom-bar{bottom:5px;width:60vw}.team-list{font-size:9px;width:100px}#minimap{width:80px;height:80px}#joystick-zone{width:100px;height:100px}.mobile-btn{width:55px;height:55px}.mobile-btn.fire{width:70px;height:70px}}
-        @media(max-width:600px)and(orientation:portrait){#res-panel{font-size:14px;gap:8px}.n-btn{padding:5px 10px;font-size:11px}.tree-view{height:40vh}.control-option{width:85vw;height:auto;min-height:120px}}
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div id="control-modal">
@@ -97,6 +22,7 @@
         </div>
     </div>
 </div>
+
 <div id="ui">
     <div id="res-panel">
         <div>ОПЫТ: <span id="xp-val">500000</span> XP</div>
@@ -120,7 +46,11 @@
         <div id="nodes"></div>
     </div>
     <div style="margin:4px;font-size:clamp(11px,1.5vw,14px)">
-        КАРТА: <select id="map-select"><option value="city">Город</option><option value="field">Поле</option><option value="desert">Пустыня</option></select>
+        КАРТА: <select id="map-select">
+            <option value="city">Город</option>
+            <option value="field">Поле</option>
+            <option value="desert">Пустыня</option>
+        </select>
     </div>
     <div class="btn-group">
         <button class="btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
@@ -133,6 +63,7 @@
         <button class="btn" style="background:#7f8c8d;font-size:clamp(11px,1.5vw,14px);padding:4px 12px" onclick="showControlModal('train')">НАЧАТЬ</button>
     </div>
 </div>
+
 <div id="hud">
     <div id="allies-list" class="team-list"></div>
     <div id="enemies-list" class="team-list"></div>
@@ -154,9 +85,16 @@
     <div id="crew-msg"></div>
     <canvas id="minimap"></canvas>
 </div>
+
 <div id="mobile-controls">
-    <div id="joystick-zone"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
-    <div id="fire-zone"><div class="mobile-btn fire" id="fire-btn">ОГОНЬ</div></div>
+    <div id="joystick-zone">
+        <div id="joystick-base">
+            <div id="joystick-stick"></div>
+        </div>
+    </div>
+    <div id="fire-zone">
+        <div class="mobile-btn fire" id="fire-btn">ОГОНЬ</div>
+    </div>
     <div id="mobile-shells">
         <div class="m-shell active" onclick="setShell(0)">ББ</div>
         <div class="m-shell" onclick="setShell(1)">ОФ</div>
@@ -168,245 +106,23 @@
         <div class="m-cons" id="mcons3" onclick="useCons(2)">АДР</div>
     </div>
 </div>
+
 <div id="result-screen">
     <div id="result-title"></div>
     <div id="result-stats"></div>
     <button class="btn" style="margin-top:15px" onclick="backToGarage()">В АНГАР</button>
 </div>
+
 <canvas id="game"></canvas>
-<script>
-const R=["","I","II","III","IV","V","VI","VII","VIII","IX","X"];
-const SHELLS=[{name:'ББ',sMul:1,dMul:1,color:'#f1c40f',rico:true},{name:'ОФ',sMul:.6,dMul:1.5,color:'#e74c3c',rico:false},{name:'Подкал',sMul:1.6,dMul:.75,color:'#3498db',rico:true}];
-const CREW_HIT=["Есть пробитие!","Цель поражена!","Попали!"];
-const CREW_RICO=["Рикошет!","Не пробили!"];
-const CREW_KILL=["Враг уничтожен!","Цель уничтожена!"];
-let nodeScale=1;
-function updateScale(){const w=window.innerWidth;nodeScale=w<400?.65:w<600?.75:w<900?.85:w<1200?.95:1;const mm=document.getElementById('minimap'),sz=Math.min(Math.max(w*.12,80),180);mm.width=sz;mm.height=sz;mm.style.width=sz+'px';mm.style.height=sz+'px';const tc=document.getElementById('tree-canvas');tc.width=2200*nodeScale;tc.height=1100*nodeScale}
-window.addEventListener('resize',updateScale);
 
-// ========== ПОЛНАЯ БАЗА ТАНКОВ ==========
-const DB={
-// === СССР ===
-T26:{n:"Т-26",x:50,y:400,nat:"ussr",tier:1,hp:200,dmg:40,xp:0,s:.7,off:5,vr:280,camo:.35,cls:'lt',nc:'#4a7a3a'},
-BT2:{n:"БТ-2",x:200,y:400,p:"T26",nat:"ussr",tier:2,hp:250,dmg:50,xp:150,s:.7,off:5,vr:300,camo:.35,cls:'lt',nc:'#4a7a3a'},
-BT7:{n:"БТ-7",x:350,y:400,p:"BT2",nat:"ussr",tier:3,hp:350,dmg:60,xp:500,s:.75,off:5,vr:320,camo:.35,cls:'lt',nc:'#4a7a3a'},
-A20:{n:"А-20",x:500,y:250,p:"BT7",nat:"ussr",tier:4,hp:500,dmg:80,xp:1500,s:.8,off:5,vr:340,camo:.3,cls:'mt',nc:'#4a7a3a'},
-KV1:{n:"КВ-1",x:650,y:100,p:"A20",nat:"ussr",tier:5,hp:800,dmg:160,xp:4000,s:1,off:8,vr:310,camo:.15,cls:'ht',armor:80,nc:'#4a7a3a'},
-KV1S:{n:"КВ-1С",x:800,y:50,p:"KV1",nat:"ussr",tier:6,hp:900,dmg:200,xp:8000,s:1,off:8,vr:320,camo:.12,cls:'ht',armor:90,nc:'#4a7a3a'},
-IS:{n:"ИС",x:950,y:50,p:"KV1S",nat:"ussr",tier:7,hp:1200,dmg:390,xp:25000,s:1.1,off:10,vr:340,camo:.1,cls:'ht',armor:120,nc:'#4a7a3a'},
-IS3:{n:"ИС-3",x:1100,y:50,p:"IS",nat:"ussr",tier:8,hp:1500,dmg:390,xp:60000,s:1.15,off:12,vr:350,camo:.08,cls:'ht',armor:150,nc:'#4a7a3a'},
-IS8:{n:"ИС-8",x:1250,y:50,p:"IS3",nat:"ussr",tier:9,hp:1800,dmg:440,xp:120000,s:1.2,off:12,vr:370,camo:.08,cls:'ht',armor:160,nc:'#4a7a3a'},
-IS7:{n:"ИС-7",x:1400,y:50,p:"IS8",nat:"ussr",tier:10,hp:2400,dmg:490,xp:195000,s:1.3,off:15,vr:400,camo:.06,cls:'ht',armor:200,nc:'#4a7a3a'},
-KV2:{n:"КВ-2",x:800,y:150,p:"KV1",nat:"ussr",tier:6,hp:900,dmg:450,xp:10000,s:1.1,off:5,vr:310,camo:.1,cls:'ht',armor:75,nc:'#4a7a3a'},
-KV3:{n:"КВ-3",x:950,y:150,p:"KV2",nat:"ussr",tier:7,hp:1300,dmg:320,xp:25000,s:1.2,off:5,vr:320,camo:.08,cls:'ht',armor:120,nc:'#4a7a3a'},
-KV4:{n:"КВ-4",x:1100,y:150,p:"KV3",nat:"ussr",tier:8,hp:1600,dmg:320,xp:60000,s:1.3,off:5,vr:330,camo:.06,cls:'ht',armor:170,nc:'#4a7a3a'},
-ST1:{n:"СТ-1",x:1250,y:150,p:"KV4",nat:"ussr",tier:9,hp:2000,dmg:440,xp:120000,s:1.3,off:10,vr:370,camo:.06,cls:'ht',armor:180,nc:'#4a7a3a'},
-IS4:{n:"ИС-4",x:1400,y:150,p:"ST1",nat:"ussr",tier:10,hp:2500,dmg:440,xp:195000,s:1.3,off:10,vr:380,camo:.05,cls:'ht',armor:200,nc:'#4a7a3a'},
-T34:{n:"Т-34",x:500,y:350,p:"BT7",nat:"ussr",tier:5,hp:600,dmg:90,xp:4000,s:.9,off:5,vr:340,camo:.3,cls:'mt',nc:'#4a7a3a'},
-T3485:{n:"Т-34-85",x:650,y:350,p:"T34",nat:"ussr",tier:6,hp:750,dmg:160,xp:8000,s:1,off:5,vr:350,camo:.28,cls:'mt',nc:'#4a7a3a'},
-T43:{n:"Т-43",x:800,y:350,p:"T3485",nat:"ussr",tier:7,hp:1100,dmg:160,xp:20000,s:1,off:5,vr:360,camo:.25,cls:'mt',nc:'#4a7a3a'},
-T44:{n:"Т-44",x:950,y:350,p:"T43",nat:"ussr",tier:8,hp:1300,dmg:280,xp:55000,s:1.05,off:5,vr:370,camo:.25,cls:'mt',nc:'#4a7a3a'},
-T54:{n:"Т-54",x:1100,y:350,p:"T44",nat:"ussr",tier:9,hp:1650,dmg:310,xp:110000,s:1.1,off:5,vr:390,camo:.22,cls:'mt',nc:'#4a7a3a'},
-T62A:{n:"Т-62А",x:1400,y:350,p:"T54",nat:"ussr",tier:10,hp:2000,dmg:310,xp:195000,s:1.1,off:5,vr:400,camo:.2,cls:'mt',nc:'#4a7a3a'},
-S85B:{n:"СУ-85Б",x:500,y:550,p:"BT7",nat:"ussr",tier:4,hp:400,dmg:160,xp:1500,s:.8,isPT:true,off:10,vr:300,camo:.45,cls:'td',nc:'#4a7a3a'},
-S85:{n:"СУ-85",x:650,y:550,p:"S85B",nat:"ussr",tier:5,hp:600,dmg:200,xp:4000,s:.85,isPT:true,off:10,vr:310,camo:.4,cls:'td',nc:'#4a7a3a'},
-S100:{n:"СУ-100",x:800,y:550,p:"S85",nat:"ussr",tier:6,hp:850,dmg:280,xp:10000,s:.9,isPT:true,off:10,vr:320,camo:.38,cls:'td',nc:'#4a7a3a'},
-S100M1:{n:"Су-100М1",x:950,y:500,p:"S100",nat:"ussr",tier:7,hp:1100,dmg:310,xp:25000,s:.95,isPT:true,off:10,vr:330,camo:.35,cls:'td',nc:'#4a7a3a'},
-S101:{n:"СУ-101",x:1100,y:500,p:"S100M1",nat:"ussr",tier:8,hp:1300,dmg:400,xp:60000,s:1,isPT:true,off:-12,vr:340,camo:.35,cls:'td',nc:'#4a7a3a'},
-S12254:{n:"СУ-122-54",x:1250,y:500,p:"S101",nat:"ussr",tier:9,hp:1700,dmg:420,xp:120000,s:1.05,isPT:true,off:5,vr:360,camo:.3,cls:'td',nc:'#4a7a3a'},
-OB253:{n:"Об.253",x:1400,y:500,p:"S12254",nat:"ussr",tier:10,hp:2200,dmg:490,xp:195000,s:1.15,isPT:true,off:8,vr:380,camo:.28,cls:'td',nc:'#4a7a3a'},
-S152:{n:"СУ-152",x:950,y:600,p:"S100",nat:"ussr",tier:7,hp:1100,dmg:640,xp:25000,s:1.1,isPT:true,off:8,vr:320,camo:.25,cls:'td',nc:'#4a7a3a'},
-ISU152:{n:"ИСУ-152",x:1100,y:600,p:"S152",nat:"ussr",tier:8,hp:1300,dmg:640,xp:60000,s:1.2,isPT:true,off:8,vr:340,camo:.2,cls:'td',nc:'#4a7a3a'},
-OB704:{n:"ОБ.704",x:1250,y:600,p:"ISU152",nat:"ussr",tier:9,hp:1700,dmg:640,xp:120000,s:1.2,isPT:true,off:8,vr:360,camo:.2,cls:'td',nc:'#4a7a3a'},
-OB268:{n:"ОБ.268",x:1400,y:600,p:"OB704",nat:"ussr",tier:10,hp:2100,dmg:640,xp:195000,s:1.25,isPT:true,off:10,vr:380,camo:.22,cls:'td',nc:'#4a7a3a'},
-MT25:{n:"МТ-25",x:650,y:700,p:"T34",nat:"ussr",tier:6,hp:600,dmg:90,xp:8000,s:.85,off:5,vr:380,camo:.4,cls:'lt',nc:'#4a7a3a'},
-LTTB:{n:"ЛТТБ",x:800,y:700,p:"MT25",nat:"ussr",tier:7,hp:1000,dmg:160,xp:20000,s:.95,off:5,vr:390,camo:.38,cls:'lt',nc:'#4a7a3a'},
-T54O:{n:"Т-54 обл.",x:950,y:700,p:"LTTB",nat:"ussr",tier:8,hp:1250,dmg:250,xp:55000,s:1,off:5,vr:400,camo:.36,cls:'lt',nc:'#4a7a3a'},
-OB84:{n:"Объект 84",x:1100,y:700,p:"T54O",nat:"ussr",tier:9,hp:1550,dmg:310,xp:110000,s:1.05,off:5,vr:410,camo:.35,cls:'lt',nc:'#4a7a3a'},
-T100LT:{n:"Т-100 ЛТ",x:1400,y:700,p:"OB84",nat:"ussr",tier:10,hp:1800,dmg:310,xp:195000,s:1.1,off:5,vr:420,camo:.4,cls:'lt',nc:'#4a7a3a'},
-MS11:{n:"МС-11",x:50,y:50,nat:"ussr",tier:10,gold:3000,hp:1750,dmg:110,s:.8,mag:11,reload:12000,off:0,vr:350,camo:.3,cls:'mt',nc:'#4a7a3a',premium:true},
-SPRUT99:{n:"Спрут-99",x:50,y:150,nat:"ussr",tier:10,gold:4999,hp:1400,dmg:45,s:.85,mag:99,reload:1000,off:5,vr:360,camo:.28,cls:'mt',nc:'#ff6600',premium:true},
-
-// === ГЕРМАНИЯ ===
-PZ2:{n:"Pz.2",x:50,y:400,nat:"germany",tier:1,hp:200,dmg:15,xp:0,s:.7,mag:4,off:5,vr:300,camo:.35,cls:'lt',nc:'#7a7a7a'},
-PZ35T:{n:"Pz.35(t)",x:200,y:400,p:"PZ2",nat:"germany",tier:2,hp:250,dmg:40,xp:150,s:.75,off:5,vr:310,camo:.3,cls:'lt',nc:'#7a7a7a'},
-PZ3:{n:"Pz.III",x:350,y:400,p:"PZ35T",nat:"germany",tier:3,hp:400,dmg:50,xp:500,s:.8,off:5,vr:320,camo:.28,cls:'mt',nc:'#7a7a7a'},
-HETZER:{n:"Hetzer",x:500,y:100,p:"PZ3",nat:"germany",tier:4,hp:450,dmg:250,xp:1500,s:.8,isPT:true,off:10,vr:300,camo:.45,cls:'td',nc:'#7a7a7a'},
-STUG3:{n:"StuG 3 G",x:650,y:100,p:"HETZER",nat:"germany",tier:5,hp:600,dmg:200,xp:4000,s:.85,isPT:true,off:10,vr:310,camo:.42,cls:'td',nc:'#7a7a7a'},
-NASHORN:{n:"Nashorn",x:800,y:50,p:"STUG3",nat:"germany",tier:6,hp:800,dmg:280,xp:10000,s:1,isPT:true,off:-5,vr:340,camo:.25,cls:'td',nc:'#7a7a7a'},
-STEMIL:{n:"St.Emil",x:950,y:50,p:"NASHORN",nat:"germany",tier:7,hp:1100,dmg:450,xp:25000,s:1.1,isPT:true,off:-8,vr:350,camo:.2,cls:'td',nc:'#7a7a7a'},
-RHMB:{n:"Rhm.-B.WT",x:1100,y:50,p:"STEMIL",nat:"germany",tier:8,hp:1300,dmg:490,xp:60000,s:1,off:-12,vr:360,camo:.3,cls:'td',nc:'#7a7a7a'},
-WTPZ5:{n:"WT Pz.IV",x:1250,y:50,p:"RHMB",nat:"germany",tier:9,hp:1700,dmg:550,xp:120000,s:1.2,off:-12,vr:380,camo:.15,cls:'td',nc:'#7a7a7a'},
-GRILLE:{n:"Grille 15",x:1400,y:50,p:"WTPZ5",nat:"germany",tier:10,hp:1900,dmg:650,xp:195000,s:1.3,off:-15,vr:400,camo:.12,cls:'td',nc:'#7a7a7a'},
-JGPZ4:{n:"Jg.Pz.IV",x:800,y:150,p:"STUG3",nat:"germany",tier:6,hp:800,dmg:220,xp:10000,s:.9,isPT:true,off:8,vr:320,camo:.38,cls:'td',nc:'#7a7a7a'},
-JPANTHER:{n:"Jpanther",x:950,y:150,p:"JGPZ4",nat:"germany",tier:7,hp:1200,dmg:280,xp:25000,s:1.1,isPT:true,off:8,vr:340,camo:.3,cls:'td',nc:'#7a7a7a'},
-JPANTHER2:{n:"Jpanther 2",x:1100,y:150,p:"JPANTHER",nat:"germany",tier:8,hp:1450,dmg:450,xp:60000,s:1.2,isPT:true,off:8,vr:350,camo:.25,cls:'td',nc:'#7a7a7a'},
-JAGTIGER:{n:"Jagdtiger",x:1250,y:150,p:"JPANTHER2",nat:"germany",tier:9,hp:2000,dmg:490,xp:120000,s:1.3,isPT:true,off:8,vr:370,camo:.18,cls:'td',armor:180,nc:'#7a7a7a'},
-JGE100:{n:"Jg.Pz.E100",x:1400,y:150,p:"JAGTIGER",nat:"germany",tier:10,hp:2800,dmg:1000,xp:195000,s:1.45,isPT:true,off:-8,vr:380,camo:.1,cls:'td',armor:250,nc:'#7a7a7a'},
-PZ4D:{n:"Pz.IV D",x:500,y:400,p:"PZ3",nat:"germany",tier:4,hp:550,dmg:110,xp:1500,s:.9,off:5,vr:330,camo:.25,cls:'mt',nc:'#7a7a7a'},
-PZ5G:{n:"Pz.V/IV",x:650,y:400,p:"PZ4D",nat:"germany",tier:5,hp:900,dmg:160,xp:4000,s:1,off:5,vr:350,camo:.2,cls:'ht',armor:80,nc:'#7a7a7a'},
-VK30P:{n:"VK 30.01P",x:800,y:300,p:"PZ5G",nat:"germany",tier:6,hp:1100,dmg:200,xp:10000,s:1.1,off:12,vr:360,camo:.15,cls:'ht',armor:100,nc:'#7a7a7a'},
-TIGERP:{n:"Tiger(P)",x:950,y:300,p:"VK30P",nat:"germany",tier:7,hp:1400,dmg:220,xp:25000,s:1.2,off:12,vr:370,camo:.1,cls:'ht',armor:130,nc:'#7a7a7a'},
-VK45A:{n:"VK 45.02A",x:1100,y:250,p:"TIGERP",nat:"germany",tier:8,hp:1700,dmg:320,xp:60000,s:1.2,off:12,vr:370,camo:.08,cls:'ht',armor:160,nc:'#7a7a7a'},
-VK45B:{n:"VK 45.02B",x:1250,y:250,p:"VK45A",nat:"germany",tier:9,hp:2100,dmg:450,xp:120000,s:1.3,off:-15,vr:380,camo:.06,cls:'ht',armor:200,nc:'#7a7a7a'},
-VK72:{n:"VK 72.01K",x:1400,y:250,p:"VK45B",nat:"germany",tier:10,hp:2500,dmg:490,xp:195000,s:1.4,off:-15,vr:390,camo:.05,cls:'ht',armor:220,nc:'#7a7a7a'},
-VK100:{n:"VK 100.01P",x:1100,y:350,p:"TIGERP",nat:"germany",tier:8,hp:1900,dmg:450,xp:60000,s:1.4,off:5,vr:360,camo:.05,cls:'ht',armor:200,nc:'#7a7a7a'},
-MAUSCHEN:{n:"Mäuschen",x:1250,y:350,p:"VK100",nat:"germany",tier:9,hp:2300,dmg:450,xp:120000,s:1.45,off:-5,vr:370,camo:.03,cls:'ht',armor:240,nc:'#7a7a7a'},
-MAUS:{n:"Maus",x:1400,y:350,p:"MAUSCHEN",nat:"germany",tier:10,hp:3000,dmg:490,xp:195000,s:1.6,off:-5,vr:380,camo:.02,cls:'ht',armor:280,nc:'#7a7a7a'},
-VK36H:{n:"VK 36.01H",x:800,y:450,p:"PZ5G",nat:"germany",tier:6,hp:1050,dmg:160,xp:10000,s:1.05,off:5,vr:350,camo:.15,cls:'ht',armor:80,nc:'#7a7a7a'},
-TIGER1:{n:"Tiger I",x:950,y:450,p:"VK36H",nat:"germany",tier:7,hp:1400,dmg:240,xp:25000,s:1.15,off:5,vr:370,camo:.1,cls:'ht',armor:100,nc:'#7a7a7a'},
-TIGER2:{n:"Tiger II",x:1100,y:450,p:"TIGER1",nat:"germany",tier:8,hp:1650,dmg:320,xp:60000,s:1.2,off:5,vr:380,camo:.08,cls:'ht',armor:160,nc:'#7a7a7a'},
-E75:{n:"E 75",x:1250,y:450,p:"TIGER2",nat:"germany",tier:9,hp:2100,dmg:440,xp:120000,s:1.3,off:5,vr:390,camo:.06,cls:'ht',armor:200,nc:'#7a7a7a'},
-E100:{n:"E 100",x:1400,y:450,p:"E75",nat:"germany",tier:10,hp:2800,dmg:640,xp:195000,s:1.5,off:5,vr:400,camo:.04,cls:'ht',armor:250,nc:'#7a7a7a'},
-LEOPARD:{n:"Leopard",x:650,y:550,p:"PZ4D",nat:"germany",tier:5,hp:500,dmg:30,xp:4000,s:.85,mag:12,reload:6000,off:5,vr:350,camo:.3,cls:'lt',nc:'#7a7a7a'},
-VK30D:{n:"VK 30.01D",x:800,y:550,p:"LEOPARD",nat:"germany",tier:6,hp:850,dmg:160,xp:10000,s:.95,off:5,vr:360,camo:.25,cls:'mt',nc:'#7a7a7a'},
-PANTHER:{n:"Panther",x:950,y:550,p:"VK30D",nat:"germany",tier:7,hp:1200,dmg:200,xp:25000,s:1.05,off:5,vr:380,camo:.22,cls:'mt',nc:'#7a7a7a'},
-PANTHER2:{n:"Panther II",x:1100,y:550,p:"PANTHER",nat:"germany",tier:8,hp:1400,dmg:280,xp:60000,s:1.1,off:5,vr:390,camo:.2,cls:'mt',nc:'#7a7a7a'},
-E50:{n:"E 50",x:1250,y:550,p:"PANTHER2",nat:"germany",tier:9,hp:1800,dmg:310,xp:120000,s:1.15,off:5,vr:400,camo:.18,cls:'mt',nc:'#7a7a7a'},
-E50M:{n:"E 50 M",x:1400,y:550,p:"E50",nat:"germany",tier:10,hp:2050,dmg:350,xp:195000,s:1.2,off:5,vr:410,camo:.16,cls:'mt',nc:'#7a7a7a'},
-VK30D2:{n:"VK 30.02D",x:950,y:650,p:"VK30D",nat:"germany",tier:7,hp:1100,dmg:180,xp:25000,s:1,off:5,vr:380,camo:.25,cls:'mt',nc:'#7a7a7a'},
-INDIEN:{n:"Indien-Pz.",x:1100,y:650,p:"VK30D2",nat:"germany",tier:8,hp:1350,dmg:260,xp:60000,s:1.05,off:5,vr:390,camo:.22,cls:'mt',nc:'#7a7a7a'},
-LEOPA:{n:"Leopard PTA",x:1250,y:650,p:"INDIEN",nat:"germany",tier:9,hp:1650,dmg:350,xp:120000,s:1.1,off:5,vr:410,camo:.2,cls:'mt',nc:'#7a7a7a'},
-LEO1:{n:"Leopard 1",x:1400,y:650,p:"LEOPA",nat:"germany",tier:10,hp:1900,dmg:350,xp:195000,s:1.1,off:5,vr:420,camo:.2,cls:'mt',nc:'#7a7a7a'},
-VK2801:{n:"VK 28.01",x:800,y:750,p:"LEOPARD",nat:"germany",tier:6,hp:700,dmg:90,xp:10000,s:.85,off:5,vr:390,camo:.4,cls:'lt',nc:'#7a7a7a'},
-SP1C:{n:"Sp I C",x:950,y:750,p:"VK2801",nat:"germany",tier:7,hp:850,dmg:120,xp:25000,s:.9,mag:2,reload:4000,off:5,vr:400,camo:.42,cls:'lt',nc:'#7a7a7a'},
-RU251:{n:"Ru 251",x:1100,y:750,p:"SP1C",nat:"germany",tier:8,hp:1100,dmg:200,xp:60000,s:.95,off:5,vr:410,camo:.4,cls:'lt',nc:'#7a7a7a'},
-HWK12:{n:"HWK 12",x:1250,y:750,p:"RU251",nat:"germany",tier:9,hp:1350,dmg:250,xp:120000,s:1,off:5,vr:420,camo:.38,cls:'lt',nc:'#7a7a7a'},
-RHMPZW:{n:"Rhm. Pzw.",x:1400,y:750,p:"HWK12",nat:"germany",tier:10,hp:1600,dmg:310,xp:195000,s:1.05,off:5,vr:440,camo:.42,cls:'lt',nc:'#7a7a7a'},
-WTE100:{n:"WT auf E100",x:50,y:50,nat:"germany",tier:10,gold:2000,hp:2000,dmg:490,s:1.3,mag:5,off:-12,vr:400,camo:.05,cls:'td',nc:'#7a7a7a',premium:true},
-
-// === БРИТАНИЯ ===
-MED1:{n:"Medium I",x:50,y:400,nat:"uk",tier:1,hp:200,dmg:10,xp:0,s:.8,mag:15,reload:5000,off:0,vr:300,camo:.25,cls:'mt',nc:'#c2a64a'},
-MED2:{n:"Medium II",x:200,y:400,p:"MED1",nat:"uk",tier:2,hp:280,dmg:45,xp:150,s:.85,off:0,vr:310,camo:.22,cls:'mt',nc:'#c2a64a'},
-MED3:{n:"Medium III",x:350,y:400,p:"MED2",nat:"uk",tier:3,hp:420,dmg:40,xp:500,s:.9,mag:3,reload:4000,off:0,vr:320,camo:.2,cls:'mt',nc:'#c2a64a'},
-TOG2:{n:"TOG II*",x:650,y:400,p:"MED3",nat:"uk",tier:6,hp:1400,dmg:150,xp:12000,s:1.2,isLong:true,off:20,vr:330,camo:.02,cls:'ht',armor:76,nc:'#c2a64a'},
-CRUS2:{n:"Cruiser II",x:50,y:600,nat:"uk",tier:1,hp:200,dmg:30,xp:0,s:.7,mag:2,reload:3000,off:5,vr:310,camo:.35,cls:'lt',nc:'#c2a64a'},
-CRUS3:{n:"Cruiser III",x:200,y:600,p:"CRUS2",nat:"uk",tier:2,hp:260,dmg:35,xp:150,s:.75,mag:2,reload:3000,off:5,vr:320,camo:.33,cls:'lt',nc:'#c2a64a'},
-CRUS4:{n:"Cruiser IV",x:350,y:600,p:"CRUS3",nat:"uk",tier:3,hp:350,dmg:45,xp:500,s:.8,mag:2,reload:3500,off:5,vr:330,camo:.3,cls:'lt',nc:'#c2a64a'},
-ALECTO:{n:"Alecto",x:500,y:600,p:"CRUS4",nat:"uk",tier:4,hp:350,dmg:200,xp:1500,s:.75,isPT:true,off:8,vr:310,camo:.45,cls:'td',nc:'#c2a64a'},
-AT2:{n:"AT 2",x:650,y:600,p:"ALECTO",nat:"uk",tier:5,hp:850,dmg:110,xp:4000,s:1.1,isPT:true,off:5,vr:300,camo:.2,cls:'td',armor:150,nc:'#c2a64a'},
-AT8:{n:"AT 8",x:800,y:600,p:"AT2",nat:"uk",tier:6,hp:1000,dmg:160,xp:10000,s:1.15,isPT:true,off:5,vr:310,camo:.18,cls:'td',armor:170,nc:'#c2a64a'},
-AT7:{n:"AT 7",x:950,y:600,p:"AT8",nat:"uk",tier:7,hp:1200,dmg:20,xp:25000,s:1.2,isPT:true,mag:15,reload:8000,off:5,vr:320,camo:.15,cls:'td',armor:180,nc:'#c2a64a'},
-AT15:{n:"AT 15",x:1100,y:600,p:"AT7",nat:"uk",tier:8,hp:1500,dmg:280,xp:60000,s:1.25,isPT:true,off:5,vr:340,camo:.12,cls:'td',armor:200,nc:'#c2a64a'},
-TORTOISE:{n:"Tortoise",x:1250,y:600,p:"AT15",nat:"uk",tier:9,hp:2000,dmg:400,xp:120000,s:1.35,isPT:true,off:5,vr:370,camo:.08,cls:'td',armor:250,nc:'#c2a64a'},
-FV183:{n:"FV215b 183",x:1400,y:600,p:"TORTOISE",nat:"uk",tier:10,hp:2100,dmg:1150,xp:195000,s:1.3,isPT:true,off:10,reload:8000,vr:390,camo:.1,cls:'td',armor:120,nc:'#c2a64a'},
-
-// === КИТАЙ ===
-VAEB:{n:"VAE Type B",x:50,y:400,nat:"china",tier:1,hp:200,dmg:40,xp:0,s:.7,off:5,vr:280,camo:.3,cls:'lt',nc:'#8b0000'},
-VZ38:{n:"LT vz.38",x:200,y:400,p:"VAEB",nat:"china",tier:2,hp:250,dmg:45,xp:150,s:.7,off:5,vr:300,camo:.3,cls:'lt',nc:'#8b0000'},
-CHIHA:{n:"Chi-Ha",x:350,y:400,p:"VZ38",nat:"china",tier:3,hp:350,dmg:60,xp:500,s:.75,off:5,vr:310,camo:.28,cls:'mt',nc:'#8b0000'},
-M5A1:{n:"M5A1",x:500,y:400,p:"CHIHA",nat:"china",tier:4,hp:500,dmg:80,xp:1500,s:.8,off:5,vr:340,camo:.35,cls:'lt',nc:'#8b0000'},
-T34C:{n:"Type T-34",x:650,y:400,p:"M5A1",nat:"china",tier:5,hp:600,dmg:90,xp:4000,s:.9,off:5,vr:350,camo:.28,cls:'mt',nc:'#8b0000'},
-T58:{n:"Type 58",x:800,y:400,p:"T34C",nat:"china",tier:6,hp:800,dmg:160,xp:10000,s:1,off:5,vr:360,camo:.25,cls:'mt',nc:'#8b0000'},
-BZ58:{n:"BZ-58",x:950,y:400,p:"T58",nat:"china",tier:7,hp:1250,dmg:320,xp:25000,s:1.1,off:8,vr:350,camo:.12,cls:'ht',armor:130,nc:'#8b0000'},
-BZ166:{n:"BZ-166",x:1100,y:400,p:"BZ58",nat:"china",tier:8,hp:1600,dmg:400,xp:60000,s:1.2,off:10,vr:360,camo:.1,cls:'ht',armor:160,nc:'#8b0000'},
-BZ68:{n:"BZ-68",x:1250,y:400,p:"BZ166",nat:"china",tier:9,hp:1900,dmg:490,xp:120000,s:1.25,off:12,vr:370,camo:.08,cls:'ht',armor:180,nc:'#8b0000'},
-BZ75:{n:"BZ-75",x:1400,y:400,p:"BZ68",nat:"china",tier:10,hp:2400,dmg:650,xp:195000,s:1.35,off:15,vr:380,camo:.06,cls:'ht',armor:220,nc:'#8b0000'},
-
-// === ЯПОНИЯ ===
-TYPE5:{n:"Type 5 Heavy",x:100,y:100,nat:"japan",tier:10,gold:5000,hp:3500,dmg:900,s:1.8,reload:8000,off:0,vr:350,camo:.02,cls:'ht',armor:300,nc:'#d4a574',premium:true}
-};
-
-let XP=500000,GOLD=5000,SILVER=50000;
-let owned=["T26","PZ2","MED1","VAEB","CRUS2"],selected="T26",curNat="ussr";
-let gameActive=false,player,units=[],bullets=[],walls=[],cam={x:0,y:0},keys={},mouse={x:0,y:0};
-let particles=[],tracks=[],shakeTimer=0,shakeIntensity=0;
-let curShell=0,battleDmg=0,battleKills=0,curMap='city';
-let consumables=[false,false,false],adrenalineActive=false,adrenalineTimer=0;
-let controlMode='pc',pendingBattle=null;
-let joystickData={active:false,dx:0,dy:0,angle:0,mag:0};
-let mobileFireActive=false;
-
-const AC=new(window.AudioContext||window.webkitAudioContext)();
-function snd(t,v=.3){const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);g.gain.value=v;if(t==='shot'){o.type='sawtooth';o.frequency.value=80;g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.3);o.start();o.stop(AC.currentTime+.3)}if(t==='rapidfire'){o.type='square';o.frequency.value=150;g.gain.value=.2;g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.1);o.start();o.stop(AC.currentTime+.1)}if(t==='bigshot'){o.type='sawtooth';o.frequency.value=40;g.gain.value=.5;g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.5);o.start();o.stop(AC.currentTime+.5)}if(t==='hit'){o.type='square';o.frequency.value=200;g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.15);o.start();o.stop(AC.currentTime+.15)}if(t==='rico'){o.type='sine';o.frequency.value=2000;o.frequency.exponentialRampToValueAtTime(4000,AC.currentTime+.2);g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.3);o.start();o.stop(AC.currentTime+.3)}if(t==='boom'){o.type='sawtooth';o.frequency.value=30;g.gain.value=.6;g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.8);o.start();o.stop(AC.currentTime+.8)}if(t==='eng'){o.type='sawtooth';o.frequency.value=35+Math.random()*10;g.gain.value=.04;g.gain.exponentialRampToValueAtTime(.01,AC.currentTime+.1);o.start();o.stop(AC.currentTime+.1)}}
-
-function crewMsg(m,c='#fff'){const e=document.getElementById('crew-msg');e.innerText=m;e.style.color=c;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,1500)}
-function dmgLog(m,c='#fff'){const e=document.getElementById('dmg-log'),d=document.createElement('div');d.className='dmg-msg';d.style.color=c;d.innerText=m;e.appendChild(d);setTimeout(()=>d.remove(),2000)}
-function spawnP(x,y,col,n,spd,life){for(let i=0;i<n;i++){let a=Math.random()*Math.PI*2,sp=Math.random()*spd;particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life,ml:life,color:col,sz:2+Math.random()*3})}}
-function boom(x,y){spawnP(x,y,'#ff6600',25,5,40);spawnP(x,y,'#ffcc00',15,3,30);spawnP(x,y,'#ff0000',10,4,35);spawnP(x,y,'#333',8,2,50)}
-function sparks(x,y){spawnP(x,y,'#ffcc00',6,4,15);spawnP(x,y,'#fff',3,3,10)}
-function smoke(x,y){particles.push({x:x+(Math.random()-.5)*5,y:y+(Math.random()-.5)*5,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5-.3,life:30,ml:30,color:'#555',sz:4+Math.random()*4})}
-
-function canSee(obs,tgt){if(obs===tgt||tgt.dead)return true;let d=Math.hypot(obs.x-tgt.x,obs.y-tgt.y),vr=obs.vr||350,ca=tgt.camo||.2,er=vr*(1-ca*.7);if(tgt.isMoving)er*=1.3;if(tgt.justFired)er*=1.5;return d<=er}
-function teamSees(tgt,team){for(let u of units){if(u.dead)continue;let ok=(team==='enemy')?(u.team==='enemy'):(u.team!=='enemy');if(ok&&canSee(u,tgt))return true}return false}
-function rico(shooter,tgt,st){if(!SHELLS[st].rico)return false;let ar=tgt.armor||0;if(ar<=0)return false;let ha=Math.atan2(tgt.y-shooter.y,tgt.x-shooter.x),ad=Math.abs(ha-tgt.angle);while(ad>Math.PI)ad=Math.abs(ad-Math.PI*2);return Math.random()<Math.abs(Math.cos(ad))*(ar/400)*(st===2?.5:1)}
-
-function setupWalls(mt){walls=[];if(mt==='city'){for(let r=0;r<5;r++)for(let c=0;c<5;c++){walls.push({x:-400+c*500,y:-1000+r*500,w:100,h:100,type:'building',color:'#3a3a3a'})}}if(mt==='field'){for(let i=0;i<8;i++)walls.push({x:-1000+Math.random()*2500,y:-1000+Math.random()*2000,w:30+Math.random()*40,h:30+Math.random()*40,type:'bush',color:'#2d5a1e'})}if(mt==='desert'){for(let i=0;i<6;i++)walls.push({x:-600+Math.random()*2000,y:-600+Math.random()*1200,w:80+Math.random()*60,h:20,type:'dune',color:'#c2a645'})}}
-
-function tankCollides(x,y,angle,sz){const pts=[{dx:0,dy:0},{dx:sz,dy:0},{dx:-sz*.8,dy:0},{dx:sz*.6,dy:sz*.5},{dx:sz*.6,dy:-sz*.5},{dx:-sz*.6,dy:sz*.5},{dx:-sz*.6,dy:-sz*.5}];for(let p of pts){let rx=x+p.dx*Math.cos(angle)-p.dy*Math.sin(angle),ry=y+p.dx*Math.sin(angle)+p.dy*Math.cos(angle);for(let w of walls){if(w.type==='bush'||w.type==='dune')continue;if(rx>w.x-5&&rx<w.x+w.w+5&&ry>w.y-5&&ry<w.y+w.h+5)return true}}return false}
-
-class Tank{
-constructor(id,x,y,team){const d=DB[id];this.id=id;this.name=d.n;this.team=team;this.x=x;this.y=y;this.hp=d.hp;this.maxHp=d.hp;this.dmg=d.dmg;this.s=d.s;this.tier=d.tier;this.isPT=d.isPT||false;this.isLong=d.isLong||false;this.off=d.off||0;this.cls=d.cls||'mt';this.nc=d.nc||'#666';this.vr=d.vr||350;this.camo=d.camo||.2;this.armor=d.armor||0;this.angle=0;this.tAngle=0;this.lastShot=0;this.dead=false;this.magSize=d.mag||1;this.curMag=this.magSize;this.isReloading=false;this.reloadTime=d.reload||2500;this.baseSpeed=d.moveSpeed||2.5;this.isMoving=false;this.justFired=false;this.fireTimer=0;this.trackBroken=false;this.visible=true;this.engineTick=0;this.premium=d.premium||false;this.shotDelay=this.magSize>=20?80:200;this.stuckTimer=0;this.lastPos={x,y};this.wanderAngle=Math.random()*Math.PI*2;this.wanderTimer=0}
-draw(ctx){if(this.team==='enemy'&&!this.dead){this.visible=teamSees(this,'player');if(!this.visible)return}ctx.save();ctx.translate(this.x-cam.x,this.y-cam.y);if(!this.dead){ctx.fillStyle="#441111";ctx.fillRect(-30,-45,60,6);ctx.fillStyle=this.team==='enemy'?"#e74c3c":"#2ecc71";ctx.fillRect(-30,-45,60*(this.hp/this.maxHp),6);ctx.strokeStyle="#fff";ctx.lineWidth=1;ctx.strokeRect(-30,-45,60,6);ctx.fillStyle=this.premium?"#f1c40f":"#fff";ctx.font="bold 9px Arial";ctx.textAlign="center";ctx.fillText(`${this.premium?'★ ':''}${this.name} [${R[this.tier]}]`,0,-50);if(this.trackBroken){ctx.fillStyle="#ff0";ctx.fillText("⚠",0,-60)}}ctx.save();ctx.rotate(this.angle);let bc=this.dead?'#333':(this.team==='player'?(this.premium?'#ff6600':'#27ae60'):(this.team==='ally'?(this.nc||'#2980b9'):'#c0392b'));ctx.fillStyle=bc;let bW=this.isLong?80:44;ctx.fillRect(-bW/2*this.s,-14*this.s,bW*this.s,28*this.s);ctx.fillStyle="#111";ctx.fillRect(-bW/2*this.s-2,-16*this.s,(bW+4)*this.s,6*this.s);ctx.fillRect(-bW/2*this.s-2,10*this.s,(bW+4)*this.s,6*this.s);ctx.restore();if(!this.dead){ctx.save();ctx.translate(Math.cos(this.angle)*this.off*this.s,Math.sin(this.angle)*this.off*this.s);ctx.rotate(this.isPT?this.angle:this.tAngle);let tc=this.team==='player'?(this.premium?'#ff8800':'#2ecc71'):(this.team==='ally'?(this.nc||'#3498db'):'#e74c3c');ctx.fillStyle=tc;ctx.fillRect(-10*this.s,-10*this.s,20*this.s,20*this.s);ctx.fillStyle="#111";ctx.fillRect(5*this.s,-3*this.s,35*this.s,6*this.s);ctx.restore()}ctx.restore()}
-fire(st=0){if(this.dead||this.isReloading||Date.now()-this.lastShot<this.shotDelay)return false;let fa=this.isPT?this.angle:this.tAngle;let tx=this.x+Math.cos(this.angle)*this.off*this.s,ty=this.y+Math.sin(this.angle)*this.off*this.s;let sh=SHELLS[st];bullets.push({x:tx,y:ty,a:fa,team:this.team,dmg:this.dmg*sh.dMul,speed:12*sh.sMul,color:sh.color,st,shooter:this});this.lastShot=Date.now();this.justFired=true;this.fireTimer=Date.now()+3000;this.curMag--;if(this.magSize>=20)snd('rapidfire');else if(this.dmg>=400)snd('bigshot');else snd('shot');spawnP(tx+Math.cos(fa)*35*this.s,ty+Math.sin(fa)*35*this.s,'#ff8800',this.magSize>=20?2:5,3,10);if(this===player&&this.dmg>=300){shakeTimer=10;shakeIntensity=Math.min(this.dmg/100,8)}if(this.curMag<=0){this.isReloading=true;setTimeout(()=>{this.curMag=this.magSize;this.isReloading=false},this.reloadTime*(this===player&&adrenalineActive?.5:1))}return true}
-}
-
-function showControlModal(mode){pendingBattle=mode;document.getElementById('control-modal').classList.add('show')}
-function selectControl(type){controlMode=type;document.getElementById('control-modal').classList.remove('show');if(controlMode==='mobile')document.body.classList.add('mobile-mode');else document.body.classList.remove('mobile-mode');if(pendingBattle==='train')startTraining();else startBattle(pendingBattle)}
-function exchangeXP(){if(XP>=100){XP-=100;GOLD+=10;document.getElementById('exchange-msg').innerText="✓";setTimeout(()=>document.getElementById('exchange-msg').innerText="",1500);updateRes()}}
-function setNat(n,btn){curNat=n;renderTree();document.querySelectorAll('.n-btn').forEach(b=>b.classList.remove('active-n'));btn.classList.add('active-n')}
-function setShell(i){curShell=i;document.querySelectorAll('.shell-opt').forEach((e,idx)=>e.classList.toggle('active',idx===i));document.querySelectorAll('.m-shell').forEach((e,idx)=>e.classList.toggle('active',idx===i))}
-function useCons(i){if(!gameActive||!player||player.dead||consumables[i])return;if(SILVER<500){crewMsg("Нет серебра!","#e74c3c");return}SILVER-=500;consumables[i]=true;document.getElementById('cons'+(i+1)).classList.add('used');document.getElementById('mcons'+(i+1)).classList.add('used');if(i===0){player.trackBroken=false;crewMsg("Починено!","#2ecc71");snd('hit')}if(i===1){player.hp=Math.min(player.maxHp,player.hp+player.maxHp*.15);crewMsg("+15%HP","#2ecc71");snd('hit')}if(i===2){adrenalineActive=true;adrenalineTimer=Date.now()+10000;crewMsg("Адреналин!","#f39c12");snd('hit')}}
-function updateRes(){document.getElementById('xp-val').innerText=XP;document.getElementById('gold-val').innerText=GOLD;document.getElementById('silver-val').innerText=SILVER}
-function fillTrainNatSelect(){const s=document.getElementById('train-nat-select');s.innerHTML='';[...new Set(Object.values(DB).map(d=>d.nat))].forEach(n=>{let o=document.createElement('option');o.value=n;o.innerText={ussr:'СССР',germany:'Германия',uk:'Британия',china:'Китай',japan:'Япония'}[n]||n;s.appendChild(o)})}
-function fillEnemySelect(){const nat=document.getElementById('train-nat-select').value,sel=document.getElementById('enemy-select');sel.innerHTML='';Object.keys(DB).filter(id=>DB[id].nat===nat).sort((a,b)=>DB[a].tier-DB[b].tier).forEach(id=>{let o=document.createElement('option');o.value=id;o.innerText=`${DB[id].n} [${R[DB[id].tier]}]`;sel.appendChild(o)})}
-function renderTree(){const nodes=document.getElementById('nodes'),tc=document.getElementById('tree-canvas'),ct=tc.getContext('2d'),sc=nodeScale;nodes.innerHTML='';ct.clearRect(0,0,tc.width,tc.height);ct.strokeStyle="#444";ct.lineWidth=2*sc;for(let id in DB){const t=DB[id];if(t.nat!==curNat)continue;const sx=t.x*sc,sy=t.y*sc;if(t.p&&DB[t.p]){ct.beginPath();ct.moveTo(DB[t.p].x*sc+62*sc,DB[t.p].y*sc+24*sc);ct.lineTo(sx,sy+24*sc);ct.stroke()}const div=document.createElement('div');div.className=`node ${owned.includes(id)?'owned':''} ${selected===id?'selected':''} ${t.premium?'premium-glow':''}`;div.style.cssText=`left:${sx}px;top:${sy}px;width:${120*sc}px;height:${48*sc}px;font-size:${9*sc}px`;let cost=t.gold?t.gold+'G':(t.xp!==undefined?t.xp+'XP':''),cl={lt:'ЛТ',mt:'СТ',ht:'ТТ',td:'ПТ'}[t.cls||'mt']||'',mag=t.mag&&t.mag>1?`🔄${t.mag}`:'';div.innerHTML=`<b style="color:${t.premium?'#f1c40f':'#fff'}">${t.premium?'★':''}${t.n}</b><br><span style="color:#f1c40f">[${R[t.tier]}]</span> ${cl} ${mag}<br>${cost}`;div.onclick=()=>{if(owned.includes(id))selected=id;else{if(t.gold){if(GOLD>=t.gold){GOLD-=t.gold;owned.push(id);selected=id}}else if(t.xp!==undefined&&XP>=t.xp&&(!t.p||owned.includes(t.p))){XP-=t.xp;owned.push(id);selected=id}}renderTree();updateRes()};nodes.appendChild(div)}}
-function updateScoreboard(){const al=document.getElementById('allies-list'),en=document.getElementById('enemies-list');al.innerHTML='<b>СОЮЗНИКИ</b><br>';en.innerHTML='<b>ВРАГИ</b><br>';units.forEach(u=>{if(u.team==='enemy'&&!u.visible&&!u.dead)return;const sp=`<span class="${u.dead?'dead':''}">${R[u.tier]}|${u.name}</span><br>`;if(u.team==='enemy')en.innerHTML+=sp;else al.innerHTML+=sp})}
-
-function startBattle(mode){gameActive=true;battleDmg=0;battleKills=0;curMap=document.getElementById('map-select').value;consumables=[false,false,false];adrenalineActive=false;document.querySelectorAll('.cons-btn').forEach(b=>{b.classList.remove('used');b.classList.add('ready')});document.querySelectorAll('.m-cons').forEach(b=>b.classList.remove('used'));document.getElementById('ui').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('result-screen').classList.remove('show');if(controlMode==='mobile')document.getElementById('mobile-controls').classList.add('show');else document.getElementById('mobile-controls').classList.remove('show');player=new Tank(selected,-1500,0,'player');units=[player];bullets=[];particles=[];tracks=[];setupWalls(curMap);const pt=player.tier,vids=Object.keys(DB).filter(id=>Math.abs(DB[id].tier-pt)<=1);for(let i=0;i<mode-1;i++){let id=vids[Math.floor(Math.random()*vids.length)];units.push(new Tank(id,-1400+Math.random()*200,-500+Math.random()*1000,'ally'))}for(let i=0;i<mode;i++){let id=vids[Math.floor(Math.random()*vids.length)];let t=new Tank(id,1200+Math.random()*600,-500+Math.random()*1000,'enemy');t.angle=Math.PI;units.push(t)}updateScoreboard()}
-function startTraining(){gameActive=true;battleDmg=0;battleKills=0;curMap=document.getElementById('map-select').value;consumables=[false,false,false];adrenalineActive=false;document.querySelectorAll('.cons-btn').forEach(b=>{b.classList.remove('used');b.classList.add('ready')});document.querySelectorAll('.m-cons').forEach(b=>b.classList.remove('used'));const eid=document.getElementById('enemy-select').value;document.getElementById('ui').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('result-screen').classList.remove('show');if(controlMode==='mobile')document.getElementById('mobile-controls').classList.add('show');else document.getElementById('mobile-controls').classList.remove('show');player=new Tank(selected,-500,0,'player');let en=new Tank(eid,500,0,'enemy');en.angle=Math.PI;units=[player,en];bullets=[];particles=[];tracks=[];setupWalls(curMap);updateScoreboard()}
-function endBattle(won){gameActive=false;let sEarn=Math.floor(battleDmg*.5+battleKills*200);SILVER+=sEarn;document.getElementById('result-screen').classList.add('show');document.getElementById('result-title').innerText=won?"ПОБЕДА!":"ПОРАЖЕНИЕ";document.getElementById('result-title').style.color=won?"#2ecc71":"#e74c3c";document.getElementById('result-stats').innerHTML=`Урон: ${Math.floor(battleDmg)}<br>Фрагов: ${battleKills}<br>Серебро: +${sEarn}₽`}
-function backToGarage(){document.getElementById('result-screen').classList.remove('show');document.getElementById('ui').style.display='flex';document.getElementById('hud').style.display='none';document.getElementById('mobile-controls').classList.remove('show');updateRes();renderTree()}
-
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
-const mCtx=document.getElementById('minimap').getContext('2d');
-let mouseDown=false;
-window.onkeydown=e=>{keys[e.code]=true;if(e.code==='Digit1')setShell(0);if(e.code==='Digit2')setShell(1);if(e.code==='Digit3')setShell(2);if(e.code==='Digit4')useCons(0);if(e.code==='Digit5')useCons(1);if(e.code==='Digit6')useCons(2)};
-window.onkeyup=e=>keys[e.code]=false;
-window.onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY};
-window.onmousedown=()=>{if(controlMode==='pc')mouseDown=true};
-window.onmouseup=()=>{mouseDown=false};
-
-const jZone=document.getElementById('joystick-zone'),jStick=document.getElementById('joystick-stick'),jBase=document.getElementById('joystick-base');
-jZone.addEventListener('touchstart',e=>{e.preventDefault();joystickData.active=true;handleJoystick(e.touches[0])},{passive:false});
-jZone.addEventListener('touchmove',e=>{e.preventDefault();if(joystickData.active)handleJoystick(e.touches[0])},{passive:false});
-jZone.addEventListener('touchend',e=>{e.preventDefault();joystickData.active=false;joystickData.mag=0;jStick.style.transform='translate(-50%,-50%)'},{passive:false});
-function handleJoystick(touch){const rect=jBase.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;let dx=touch.clientX-cx,dy=touch.clientY-cy;const dist=Math.hypot(dx,dy),maxDist=rect.width*.4;if(dist>maxDist){dx=dx/dist*maxDist;dy=dy/dist*maxDist}jStick.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;joystickData.dx=dx/maxDist;joystickData.dy=dy/maxDist;joystickData.mag=Math.min(dist/maxDist,1);joystickData.angle=Math.atan2(dy,dx)}
-const fireBtn=document.getElementById('fire-btn');
-fireBtn.addEventListener('touchstart',e=>{e.preventDefault();mobileFireActive=true},{passive:false});
-fireBtn.addEventListener('touchend',e=>{e.preventDefault();mobileFireActive=false},{passive:false});
-
-function update(){
-if(!gameActive||!player)return;
-if(player.dead){endBattle(false);return}
-if(adrenalineActive&&Date.now()>adrenalineTimer){adrenalineActive=false;crewMsg("Адреналин кончился","#aaa")}
-let spd=player.trackBroken?player.baseSpeed*.3:player.baseSpeed,sz=25*player.s;
-player.isMoving=false;
-if(controlMode==='pc'){let nx=player.x,ny=player.y;if(keys['KeyW']){nx+=Math.cos(player.angle)*spd;ny+=Math.sin(player.angle)*spd;player.isMoving=true}if(keys['KeyS']){nx-=Math.cos(player.angle)*spd*.6;ny-=Math.sin(player.angle)*spd*.6;player.isMoving=true}if(keys['KeyA'])player.angle-=.04;if(keys['KeyD'])player.angle+=.04;if(!tankCollides(nx,ny,player.angle,sz)){player.x=nx;player.y=ny}else player.isMoving=false;if(!player.isPT)player.tAngle=Math.atan2(mouse.y-canvas.height/2,mouse.x-canvas.width/2);if(mouseDown)player.fire(curShell)}
-else{if(joystickData.mag>.15){let targetAngle=joystickData.angle,angleDiff=targetAngle-player.angle;while(angleDiff>Math.PI)angleDiff-=Math.PI*2;while(angleDiff<-Math.PI)angleDiff+=Math.PI*2;player.angle+=Math.sign(angleDiff)*Math.min(Math.abs(angleDiff),.08);let nx=player.x+Math.cos(player.angle)*spd*joystickData.mag,ny=player.y+Math.sin(player.angle)*spd*joystickData.mag;if(!tankCollides(nx,ny,player.angle,sz)){player.x=nx;player.y=ny;player.isMoving=true}player.tAngle=player.angle}if(mobileFireActive)player.fire(curShell)}
-if(player.isPT)player.tAngle=player.angle;
-if(player.justFired&&Date.now()>player.fireTimer)player.justFired=false;
-if(player.isMoving){player.engineTick++;if(player.engineTick%5===0){smoke(player.x-Math.cos(player.angle)*22*player.s,player.y-Math.sin(player.angle)*22*player.s);snd('eng')}if(player.engineTick%3===0)tracks.push({x:player.x,y:player.y,a:player.angle,life:200,s:player.s})}
-cam.x=player.x-canvas.width/2;cam.y=player.y-canvas.height/2;
-if(shakeTimer>0){shakeTimer--;cam.x+=(Math.random()-.5)*shakeIntensity;cam.y+=(Math.random()-.5)*shakeIntensity}
-
-// AI
-units.forEach(u=>{if(u.dead||u===player)return;if(u.justFired&&Date.now()>u.fireTimer)u.justFired=false;let spd=u.trackBroken?u.baseSpeed*.3:u.baseSpeed,sz=25*u.s;let distMoved=Math.hypot(u.x-u.lastPos.x,u.y-u.lastPos.y);if(distMoved<.5)u.stuckTimer++;else u.stuckTimer=0;u.lastPos={x:u.x,y:u.y};let targets=units.filter(t=>!t.dead&&(u.team==='enemy'?t.team!=='enemy':t.team==='enemy'));targets=targets.filter(t=>canSee(u,t)||units.some(a=>!a.dead&&a!==u&&((u.team==='enemy')===(a.team==='enemy'))&&canSee(a,t)));let target=targets.sort((a,b)=>Math.hypot(a.x-u.x,a.y-u.y)-Math.hypot(b.x-u.x,b.y-u.y))[0];u.isMoving=false;if(target){let dist=Math.hypot(target.x-u.x,target.y-u.y),ta=Math.atan2(target.y-u.y,target.x-u.x),ad=ta-u.angle;while(ad>Math.PI)ad-=Math.PI*2;while(ad<-Math.PI)ad+=Math.PI*2;u.angle+=Math.sign(ad)*Math.min(Math.abs(ad),.06);u.tAngle=u.angle;if(dist>300){if(u.stuckTimer>30){u.wanderAngle=u.angle+(Math.random()>.5?1:-1)*(Math.PI/2+Math.random());u.stuckTimer=0;u.wanderTimer=60}let moveAngle=u.wanderTimer>0?u.wanderAngle:u.angle;if(u.wanderTimer>0)u.wanderTimer--;let nx=u.x+Math.cos(moveAngle)*spd,ny=u.y+Math.sin(moveAngle)*spd;if(!tankCollides(nx,ny,u.angle,sz)){u.x=nx;u.y=ny;u.isMoving=true}else{for(let off of[.4,-.4,.8,-.8,1.2,-1.2]){nx=u.x+Math.cos(moveAngle+off)*spd;ny=u.y+Math.sin(moveAngle+off)*spd;if(!tankCollides(nx,ny,u.angle,sz)){u.x=nx;u.y=ny;u.isMoving=true;break}}}}if(dist<600&&Math.abs(ad)<.3)u.fire(u.dmg>=400?1:0)}else{let ca=Math.atan2(-u.y,-u.x),ad=ca-u.angle;while(ad>Math.PI)ad-=Math.PI*2;while(ad<-Math.PI)ad+=Math.PI*2;u.angle+=Math.sign(ad)*Math.min(Math.abs(ad),.04);u.tAngle=u.angle;let nx=u.x+Math.cos(u.angle)*spd*.7,ny=u.y+Math.sin(u.angle)*spd*.7;if(!tankCollides(nx,ny,u.angle,sz)){u.x=nx;u.y=ny;u.isMoving=true}else u.angle+=.15}u.engineTick=(u.engineTick||0)+1;if(u.isMoving&&u.engineTick%8===0)tracks.push({x:u.x,y:u.y,a:u.angle,life:150,s:u.s})});
-
-// Bullets
-for(let i=bullets.length-1;i>=0;i--){let b=bullets[i];b.x+=Math.cos(b.a)*b.speed;b.y+=Math.sin(b.a)*b.speed;let hit=false;for(let w of walls){if(w.type==='bush'||w.type==='dune')continue;if(b.x>w.x&&b.x<w.x+w.w&&b.y>w.y&&b.y<w.y+w.h){hit=true;sparks(b.x,b.y);snd('hit');break}}if(!hit){for(let u of units){let fr=(b.team===u.team)||(b.team==='player'&&u.team==='ally')||(b.team==='ally'&&u.team==='player');if(!u.dead&&!fr&&Math.hypot(u.x-b.x,u.y-b.y)<30*u.s){if(rico(b.shooter,u,b.st)){hit=true;sparks(b.x,b.y);snd('rico');if(b.team==='player')crewMsg("Рикошет!","#ff8800");break}u.hp-=b.dmg;hit=true;sparks(b.x,b.y);snd('hit');if(!u.trackBroken&&Math.random()<.1){u.trackBroken=true;if(u===player)crewMsg("Гусеница!","#e74c3c")}if(b.team==='player'){battleDmg+=b.dmg;dmgLog(`-${Math.floor(b.dmg)}`,'#ff4444');crewMsg(CREW_HIT[Math.floor(Math.random()*CREW_HIT.length)],'#2ecc71')}if(u===player){dmgLog(`-${Math.floor(b.dmg)}`,'#ff0000');shakeTimer=5;shakeIntensity=3}if(u.hp<=0){u.dead=true;boom(u.x,u.y);snd('boom');if(b.team==='player'){XP+=u.tier*500;battleKills++;crewMsg(CREW_KILL[Math.floor(Math.random()*CREW_KILL.length)],'#f1c40f')}}updateScoreboard();break}}}if(hit||Math.abs(b.x-player.x)>3000)bullets.splice(i,1)}
-
-for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1)}
-for(let i=tracks.length-1;i>=0;i--){tracks[i].life--;if(tracks[i].life<=0)tracks.splice(i,1)}
-const at=document.getElementById('ammo-val');if(player.isReloading){at.innerText="ПЕРЕЗАРЯДКА...";at.style.color="#ff4444"}else{at.innerText=player.magSize>1?`${SHELLS[curShell].name}|${player.curMag}/${player.magSize}`:`${SHELLS[curShell].name}|ГОТОВ`;at.style.color=SHELLS[curShell].color}
-document.getElementById('hp-bar').style.width=Math.max(0,player.hp/player.maxHp*100)+"%";
-const mm=document.getElementById('minimap'),mmW=mm.width,mmH=mm.height;mCtx.fillStyle="rgba(0,0,0,.8)";mCtx.fillRect(0,0,mmW,mmH);units.forEach(u=>{if(u.team==='enemy'&&!u.visible&&!u.dead)return;mCtx.fillStyle=u.dead?"#444":(u.team==='enemy'?"red":(u.team==='player'?"#2ecc71":"#3498db"));let mx=mmW/2+(u.x-player.x)/40,my=mmH/2+(u.y-player.y)/40;if(mx>2&&mx<mmW-2&&my>2&&my<mmH-2)mCtx.fillRect(mx-2,my-2,4,4)});mCtx.fillStyle="#fff";mCtx.fillRect(mmW/2-2,mmH/2-2,4,4);
-let ea=units.filter(u=>u.team==='enemy'&&!u.dead).length,aa=units.filter(u=>u.team!=='enemy'&&!u.dead).length;if(ea===0&&units.length>1)endBattle(true);if(aa===0&&units.length>1)endBattle(false)}
-
-function draw(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;if(!gameActive||!player)return;let bg=curMap==='desert'?'#3d3520':(curMap==='field'?'#1e2e1e':'#1a1a1a');ctx.fillStyle=bg;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.strokeStyle=curMap==='desert'?'#4a4030':(curMap==='field'?'#2a3a2a':'#252525');ctx.lineWidth=1;let gx=Math.floor(cam.x/200)*200,gy=Math.floor(cam.y/200)*200;for(let x=gx;x<cam.x+canvas.width;x+=200){ctx.beginPath();ctx.moveTo(x-cam.x,0);ctx.lineTo(x-cam.x,canvas.height);ctx.stroke()}for(let y=gy;y<cam.y+canvas.height;y+=200){ctx.beginPath();ctx.moveTo(0,y-cam.y);ctx.lineTo(canvas.width,y-cam.y);ctx.stroke()}tracks.forEach(t=>{let a=t.life/200;ctx.save();ctx.translate(t.x-cam.x,t.y-cam.y);ctx.rotate(t.a);ctx.fillStyle=`rgba(60,50,30,${a*.4})`;ctx.fillRect(-18*t.s,-14*t.s,4,28*t.s);ctx.fillRect(14*t.s,-14*t.s,4,28*t.s);ctx.restore()});walls.forEach(w=>{if(w.type==='bush'){ctx.fillStyle='#3a7a2a';ctx.beginPath();ctx.arc(w.x-cam.x+w.w/2,w.y-cam.y+w.h/2,w.w/2,0,Math.PI*2);ctx.fill();return}ctx.fillStyle=w.color||'#333';ctx.fillRect(w.x-cam.x,w.y-cam.y,w.w,w.h);if(w.type!=='dune'){ctx.strokeStyle="#222";ctx.lineWidth=2;ctx.strokeRect(w.x-cam.x,w.y-cam.y,w.w,w.h)}});units.forEach(u=>u.draw(ctx));bullets.forEach(b=>{ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x-cam.x,b.y-cam.y,4,0,7);ctx.fill();ctx.globalAlpha=.3;ctx.strokeStyle=b.color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(b.x-cam.x,b.y-cam.y);ctx.lineTo(b.x-cam.x-Math.cos(b.a)*20,b.y-cam.y-Math.sin(b.a)*20);ctx.stroke();ctx.globalAlpha=1});particles.forEach(p=>{ctx.globalAlpha=p.life/p.ml;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x-cam.x,p.y-cam.y,p.sz*(p.life/p.ml),0,7);ctx.fill()});ctx.globalAlpha=1;if(!player.dead){ctx.strokeStyle='rgba(100,200,100,.12)';ctx.setLineDash([5,10]);ctx.beginPath();ctx.arc(player.x-cam.x,player.y-cam.y,player.vr,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}if(controlMode==='mobile'){ctx.save();ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(player.tAngle);ctx.strokeStyle='#e74c3c';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(50,0);ctx.lineTo(120,0);ctx.stroke();ctx.beginPath();ctx.arc(120,0,8,0,Math.PI*2);ctx.stroke();ctx.restore();if(joystickData.mag>.15){ctx.save();ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(joystickData.angle);ctx.strokeStyle='rgba(46,204,113,0.5)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(30,0);ctx.lineTo(30+joystickData.mag*40,0);ctx.stroke();ctx.beginPath();ctx.moveTo(30+joystickData.mag*40-8,-6);ctx.lineTo(30+joystickData.mag*40,0);ctx.lineTo(30+joystickData.mag*40-8,6);ctx.stroke();ctx.restore()}}}
-
-function loop(){update();draw();requestAnimationFrame(loop)}
-updateScale();fillTrainNatSelect();fillEnemySelect();renderTree();updateRes();loop();
-</script>
+<!-- Скрипты в правильном порядке -->
+<script src="js/config.js"></script>
+<script src="js/tanks.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/tank.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

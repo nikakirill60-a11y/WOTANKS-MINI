@@ -1,0 +1,552 @@
+:root {
+    --ui-scale: 1;
+    --font-base: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: #1a1a1a;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    touch-action: none;
+    font-size: var(--font-base);
+}
+
+/* === UI ПАНЕЛЬ === */
+#ui {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(8px, 2vw, 20px);
+    overflow-y: auto;
+}
+
+/* === ДЕРЕВО ТАНКОВ === */
+.tree-view {
+    position: relative;
+    width: 95vw;
+    height: 45vh;
+    border: 2px solid #444;
+    background: #050505;
+    overflow: auto;
+    margin: clamp(4px,1vw,10px) 0;
+    flex-shrink: 0;
+}
+
+#tree-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.node {
+    position: absolute;
+    width: clamp(90px,12vw,125px);
+    height: clamp(40px,6vh,52px);
+    background: #222;
+    border: 1px solid #555;
+    text-align: center;
+    font-size: clamp(7px,1.2vw,10px);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 10;
+    transition: all .2s;
+    padding: 2px;
+}
+
+.node:hover { background: #333; }
+.node.owned { border-color: #2ecc71; background: #0e2b18; }
+.node.selected { border-color: #f1c40f; box-shadow: 0 0 10px #f1c40f; }
+
+.premium-glow {
+    animation: glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { box-shadow: 0 0 5px #f1c40f; }
+    to { box-shadow: 0 0 20px #f1c40f, 0 0 30px #e67e22; }
+}
+
+/* === HUD === */
+#hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: none;
+}
+
+.team-list {
+    position: absolute;
+    top: clamp(5px,1vh,10px);
+    width: clamp(120px,18vw,210px);
+    background: rgba(0,0,0,0.7);
+    padding: clamp(3px,0.5vw,6px);
+    font-size: clamp(8px,1.3vw,12px);
+}
+
+#allies-list { left: clamp(5px,1vw,10px); border-left: 3px solid #3498db; }
+#enemies-list { right: clamp(5px,1vw,10px); border-right: 3px solid #e74c3c; text-align: right; }
+.dead { color: #666; text-decoration: line-through; }
+
+/* === НИЖНЯЯ ПАНЕЛЬ === */
+#bottom-bar {
+    position: absolute;
+    bottom: clamp(8px,2vh,20px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: clamp(280px,50vw,400px);
+}
+
+#hp-ui {
+    width: 100%;
+    height: clamp(8px,1.5vh,14px);
+    background: #441111;
+    border: 2px solid #fff;
+    margin-bottom: 3px;
+}
+
+#hp-bar {
+    height: 100%;
+    background: #2ecc71;
+    width: 100%;
+    transition: width .3s;
+}
+
+#ammo-ui {
+    background: rgba(0,0,0,0.85);
+    padding: clamp(3px,0.5vh,6px) clamp(10px,2vw,20px);
+    border: 1px solid #f1c40f;
+    color: #f1c40f;
+    font-weight: bold;
+    font-size: clamp(11px,1.8vw,16px);
+    width: 100%;
+    text-align: center;
+}
+
+#shell-ui {
+    background: rgba(0,0,0,0.85);
+    padding: clamp(2px,0.4vh,4px) clamp(6px,1vw,12px);
+    border: 1px solid #888;
+    margin-top: 2px;
+    font-size: clamp(9px,1.4vw,13px);
+    display: flex;
+    gap: clamp(6px,1.5vw,14px);
+    justify-content: center;
+}
+
+.shell-opt {
+    padding: clamp(2px,0.3vh,4px) clamp(4px,0.8vw,10px);
+    cursor: pointer;
+    pointer-events: all;
+    border: 1px solid #555;
+}
+
+.shell-opt.active {
+    border-color: #f1c40f;
+    color: #f1c40f;
+    background: #332200;
+}
+
+#cons-ui {
+    background: rgba(0,0,0,0.85);
+    padding: clamp(2px,0.4vh,4px) clamp(6px,1vw,12px);
+    border: 1px solid #27ae60;
+    margin-top: 2px;
+    font-size: clamp(8px,1.2vw,12px);
+    display: flex;
+    gap: clamp(4px,1vw,10px);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cons-btn {
+    padding: clamp(2px,0.3vh,4px) clamp(4px,0.8vw,10px);
+    cursor: pointer;
+    pointer-events: all;
+    border: 1px solid #555;
+    color: #aaa;
+}
+
+.cons-btn.ready { color: #2ecc71; border-color: #2ecc71; }
+.cons-btn.used { color: #555; border-color: #333; }
+
+/* === МИНИКАРТА === */
+#minimap {
+    position: absolute;
+    bottom: clamp(10px,2vh,20px);
+    right: clamp(10px,2vw,20px);
+    width: clamp(100px,15vw,180px);
+    height: clamp(100px,15vw,180px);
+    background: rgba(0,0,0,0.7);
+    border: 2px solid #555;
+    pointer-events: none;
+}
+
+/* === ЛОГ УРОНА === */
+#dmg-log {
+    position: absolute;
+    bottom: clamp(120px,20vh,200px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(11px,1.8vw,16px);
+    text-align: center;
+}
+
+.dmg-msg {
+    animation: dmgF 2s forwards;
+    position: relative;
+}
+
+@keyframes dmgF {
+    0% { opacity: 1; top: 0; }
+    100% { opacity: 0; top: -40px; }
+}
+
+/* === КНОПКИ === */
+.btn-group {
+    display: flex;
+    gap: clamp(5px,1vw,12px);
+    margin-top: clamp(4px,1vh,10px);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    padding: clamp(6px,1vh,10px) clamp(15px,3vw,30px);
+    background: #d35400;
+    color: #fff;
+    border: none;
+    font-size: clamp(12px,2vw,18px);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn:hover { background: #e67e22; }
+
+.n-btn {
+    padding: clamp(4px,0.8vh,8px) clamp(8px,1.5vw,18px);
+    margin: clamp(2px,0.4vw,4px);
+    cursor: pointer;
+    background: #444;
+    color: #fff;
+    border: 1px solid #666;
+    font-size: clamp(10px,1.5vw,14px);
+}
+
+.active-n { background: #d35400; }
+
+/* === РЕСУРСЫ === */
+#res-panel {
+    margin-bottom: clamp(4px,1vh,10px);
+    font-size: clamp(14px,2.5vw,22px);
+    display: flex;
+    gap: clamp(10px,2vw,30px);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.gold-txt { color: #f1c40f; }
+.silver-txt { color: #bdc3c7; }
+
+/* === ПАНЕЛИ === */
+#training-panel {
+    background: #222;
+    padding: clamp(8px,1.5vh,15px);
+    border: 1px solid #444;
+    margin-top: clamp(4px,1vh,10px);
+    text-align: center;
+    width: min(90%,500px);
+}
+
+#exchange-panel {
+    background: #1a1a2e;
+    padding: clamp(6px,1vh,12px);
+    border: 1px solid #f1c40f;
+    margin-top: clamp(3px,0.5vh,6px);
+    text-align: center;
+    font-size: clamp(11px,1.5vw,14px);
+}
+
+#enemy-select, #map-select, #train-nat-select {
+    padding: clamp(3px,0.5vh,6px);
+    background: #333;
+    color: #fff;
+    border: 1px solid #666;
+    font-family: inherit;
+    font-size: clamp(11px,1.5vw,14px);
+}
+
+/* === СООБЩЕНИЕ ЭКИПАЖА === */
+#crew-msg {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: clamp(18px,4vw,30px);
+    font-weight: bold;
+    text-shadow: 2px 2px 4px #000;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+}
+
+/* === ЭКРАН РЕЗУЛЬТАТА === */
+#result-screen {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(14px,2.5vw,20px);
+    padding: 20px;
+}
+
+#result-screen.show { display: flex; }
+
+#result-title {
+    font-size: clamp(28px,6vw,45px) !important;
+    margin-bottom: clamp(10px,2vh,20px);
+}
+
+/* === МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ === */
+#control-modal {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 300;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#control-modal.show { display: flex; }
+
+#control-modal h2 {
+    font-size: clamp(20px,4vw,32px);
+    color: #f1c40f;
+    margin-bottom: clamp(15px,3vh,30px);
+    text-align: center;
+}
+
+.control-options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(10px,2vw,20px);
+}
+
+.control-option {
+    width: clamp(200px,40vw,300px);
+    height: clamp(140px,25vh,200px);
+    background: #222;
+    border: 3px solid #555;
+    border-radius: 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all .3s;
+    padding: clamp(10px,2vw,20px);
+}
+
+.control-option:hover {
+    border-color: #f1c40f;
+    background: #333;
+    transform: scale(1.03);
+}
+
+.control-icon {
+    font-size: clamp(40px,8vw,70px);
+    margin-bottom: clamp(5px,1vh,12px);
+}
+
+.control-option h3 {
+    margin: clamp(3px,0.5vh,8px) 0;
+    color: #fff;
+    font-size: clamp(16px,2.5vw,22px);
+}
+
+.control-option p {
+    margin: 0;
+    color: #aaa;
+    font-size: clamp(10px,1.5vw,13px);
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* === МОБИЛЬНОЕ УПРАВЛЕНИЕ === */
+#mobile-controls {
+    display: none;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+}
+
+#mobile-controls.show { display: block; }
+
+#joystick-zone {
+    position: absolute;
+    left: clamp(10px,2vw,25px);
+    bottom: clamp(10px,2vh,25px);
+    width: clamp(120px,22vw,180px);
+    height: clamp(120px,22vw,180px);
+    pointer-events: all;
+}
+
+#joystick-base {
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.15);
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    position: relative;
+}
+
+#joystick-stick {
+    width: 40%;
+    height: 40%;
+    background: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+}
+
+#fire-zone {
+    position: absolute;
+    right: clamp(10px,2vw,25px);
+    bottom: clamp(10px,2vh,25px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px,1vh,12px);
+    pointer-events: all;
+}
+
+.mobile-btn {
+    width: clamp(55px,13vw,85px);
+    height: clamp(55px,13vw,85px);
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(10px,1.6vw,14px);
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+}
+
+.mobile-btn.fire {
+    width: clamp(70px,16vw,110px);
+    height: clamp(70px,16vw,110px);
+    background: rgba(231,76,60,0.5);
+    border-color: #e74c3c;
+    font-size: clamp(12px,2vw,16px);
+}
+
+.mobile-btn:active {
+    background: rgba(255,255,255,0.5);
+    transform: scale(0.95);
+}
+
+#mobile-shells {
+    position: absolute;
+    right: clamp(10px,2vw,25px);
+    bottom: clamp(140px,28vh,240px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(5px,1vh,10px);
+    pointer-events: all;
+}
+
+.m-shell {
+    width: clamp(45px,10vw,60px);
+    height: clamp(45px,10vw,60px);
+    border-radius: 10px;
+    border: 2px solid #555;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(10px,1.5vw,13px);
+    color: #fff;
+}
+
+.m-shell.active {
+    border-color: #f1c40f;
+    background: rgba(241,196,15,0.3);
+}
+
+#mobile-cons {
+    position: absolute;
+    left: clamp(10px,2vw,25px);
+    top: clamp(80px,12vh,120px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(5px,1vh,10px);
+    pointer-events: all;
+}
+
+.m-cons {
+    width: clamp(45px,10vw,60px);
+    height: clamp(45px,10vw,60px);
+    border-radius: 10px;
+    border: 2px solid #2ecc71;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(9px,1.3vw,11px);
+    color: #2ecc71;
+    text-align: center;
+}
+
+.m-cons.used {
+    border-color: #555;
+    color: #555;
+}
+
+/* === АДАПТИВНОСТЬ === */
+.mobile-mode #shell-ui,
+.mobile-mode #cons-ui {
+    display: none;
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .tree-view { height: 60vh; }
+    #bottom-bar { bottom: 5px; width: 60vw; }
+    .team-list { font-size: 9px; width: 100px; }
+    #minimap { width: 80px; height: 80px; }
+    #joystick-zone { width: 100px; height: 100px; }
+    .mobile-btn { width: 55px; height: 55px; }
+    .mobile-btn.fire { width: 70px; height: 70px; }
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+    #res-panel { font-size: 14px; gap: 8px; }
+    .n-btn { padding: 5px 10px; font-size: 11px; }
+    .tree-view { height: 40vh; }
+    .control-option { width: 85vw; height: auto; min-height: 120px; }
+}

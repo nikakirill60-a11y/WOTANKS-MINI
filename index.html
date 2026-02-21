@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CITY TANKS: TIER SYSTEM</title>
+    <title>CITY TANKS</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+
 <div id="control-modal">
     <h2>ВЫБЕРИТЕ УПРАВЛЕНИЕ</h2>
     <div class="control-options">
@@ -23,44 +24,76 @@
     </div>
 </div>
 
+<div id="container-modal">
+    <div class="modal-header">
+        <h2>📦 КОНТЕЙНЕРЫ</h2>
+        <div class="modal-tabs">
+            <button class="modal-tab active" onclick="switchTab('shop',this)">МАГАЗИН</button>
+            <button class="modal-tab" onclick="switchTab('collection',this)">КОЛЛЕКЦИЯ</button>
+        </div>
+        <button class="modal-close" onclick="hideContainerShop()">✕</button>
+    </div>
+    <div id="tab-shop" class="tab-content active-tab">
+        <div id="container-grid"></div>
+    </div>
+    <div id="tab-collection" class="tab-content">
+        <div id="collection-grid"></div>
+    </div>
+</div>
+
+<div id="container-opening">
+    <div id="anim-container"></div>
+    <div id="reward-display"></div>
+</div>
+
 <div id="ui">
-    <div id="res-panel">
-        <div>ОПЫТ: <span id="xp-val">500000</span> XP</div>
-        <div class="gold-txt">ЗОЛОТО: <span id="gold-val">5000</span> G</div>
-        <div class="silver-txt">СЕРЕБРО: <span id="silver-val">50000</span> ₽</div>
+    <div id="top-bar">
+        <div id="res-panel">
+            <div>ОПЫТ: <span id="xp-val">500000</span> XP</div>
+            <div class="gold-txt">ЗОЛОТО: <span id="gold-val">5000</span> G</div>
+            <div class="silver-txt">СЕРЕБРО: <span id="silver-val">50000</span> ₽</div>
+        </div>
+        <div id="exchange-panel">
+            100 XP → 10 G
+            <button class="btn btn-sm" onclick="exchangeXP()">ОБМЕН</button>
+            <span id="exchange-msg"></span>
+        </div>
+        <button class="btn btn-container" onclick="showContainerShop()">📦 КОНТЕЙНЕРЫ</button>
     </div>
-    <div id="exchange-panel">
-        ОБМЕН: 100 XP → 10 ЗОЛОТО
-        <button class="btn" style="font-size:clamp(10px,1.5vw,13px);padding:4px 12px;background:#f39c12" onclick="exchangeXP()">ОБМЕНЯТЬ</button>
-        <span id="exchange-msg" style="color:#2ecc71"></span>
+    <div id="main-garage-area">
+        <div id="nat-buttons">
+            <button class="n-btn active-n" onclick="setNat('ussr',this)">СССР</button>
+            <button class="n-btn" onclick="setNat('germany',this)">ГЕРМАНИЯ</button>
+            <button class="n-btn" onclick="setNat('uk',this)">БРИТАНИЯ</button>
+            <button class="n-btn" onclick="setNat('china',this)">КИТАЙ</button>
+            <button class="n-btn" onclick="setNat('japan',this)">ЯПОНИЯ</button>
+        </div>
+        <div class="tree-view" id="tree-container">
+            <canvas id="tree-canvas"></canvas>
+            <div id="nodes"></div>
+        </div>
+        <div id="battle-controls">
+            <div style="margin-bottom:5px;font-size:14px">
+                КАРТА: <select id="map-select">
+                    <option value="city">Город</option>
+                    <option value="field">Поле</option>
+                    <option value="desert">Пустыня</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
+                <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">10x10</button>
+                <button class="btn" style="background:#7f8c8d" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+            </div>
+            <div id="training-panel" style="display:none">
+                НАЦИЯ: <select id="train-nat-select" onchange="fillEnemySelect()"></select>
+                ВРАГ: <select id="enemy-select"></select>
+                <button class="btn" onclick="showControlModal('train')">НАЧАТЬ</button>
+            </div>
+        </div>
     </div>
-    <div id="nat-buttons">
-        <button class="n-btn active-n" onclick="setNat('ussr',this)">СССР</button>
-        <button class="n-btn" onclick="setNat('germany',this)">ГЕРМАНИЯ</button>
-        <button class="n-btn" onclick="setNat('uk',this)">БРИТАНИЯ</button>
-        <button class="n-btn" onclick="setNat('china',this)">КИТАЙ</button>
-        <button class="n-btn" onclick="setNat('japan',this)">ЯПОНИЯ</button>
-    </div>
-    <div class="tree-view" id="tree-container">
-        <canvas id="tree-canvas"></canvas>
-        <div id="nodes"></div>
-    </div>
-    <div style="margin:4px;font-size:clamp(11px,1.5vw,14px)">
-        КАРТА: <select id="map-select">
-            <option value="city">Город</option>
-            <option value="field">Поле</option>
-            <option value="desert">Пустыня</option>
-        </select>
-    </div>
-    <div class="btn-group">
-        <button class="btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
-        <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">В БОЙ 10x10</button>
-    </div>
-    <div id="training-panel">
-        <b>ТРЕНИРОВКА</b><br>
-        НАЦИЯ: <select id="train-nat-select" onchange="fillEnemySelect()"></select>
-        ВРАГ: <select id="enemy-select"></select>
-        <button class="btn" style="background:#7f8c8d;font-size:clamp(11px,1.5vw,14px);padding:4px 12px" onclick="showControlModal('train')">НАЧАТЬ</button>
+    <div id="tank-carousel-container">
+        <div id="tank-carousel"></div>
     </div>
 </div>
 
@@ -115,9 +148,9 @@
 
 <canvas id="game"></canvas>
 
-<!-- Скрипты в правильном порядке -->
 <script src="js/config.js"></script>
 <script src="js/tanks.js"></script>
+<script src="js/containers.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/tank.js"></script>
 <script src="js/ui.js"></script>

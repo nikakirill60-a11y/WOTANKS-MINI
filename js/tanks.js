@@ -109,21 +109,61 @@ const DB = {
     WTE100: { n: "WT auf E100", x: 50, y: 50, nat: "germany", tier: 10, gold: 2000, hp: 2000, dmg: 490, s: 1.3, mag: 5, off: -12, vr: 400, camo: 0.05, cls: 'td', nc: '#7a7a7a', premium: true },
 
     // === БРИТАНИЯ ===
-    MED1: { n: "Medium I", x: 50, y: 400, nat: "uk", tier: 1, hp: 200, dmg: 10, xp: 0, s: 0.8, mag: 15, reload: 5000, off: 0, vr: 300, camo: 0.25, cls: 'mt', nc: '#c2a64a' },
-    MED2: { n: "Medium II", x: 200, y: 400, p: "MED1", nat: "uk", tier: 2, hp: 280, dmg: 45, xp: 150, s: 0.85, off: 0, vr: 310, camo: 0.22, cls: 'mt', nc: '#c2a64a' },
-    MED3: { n: "Medium III", x: 350, y: 400, p: "MED2", nat: "uk", tier: 3, hp: 420, dmg: 40, xp: 500, s: 0.9, mag: 3, reload: 4000, off: 0, vr: 320, camo: 0.2, cls: 'mt', nc: '#c2a64a' },
-    TOG2: { n: "TOG II*", x: 650, y: 400, p: "MED3", nat: "uk", tier: 6, hp: 1400, dmg: 150, xp: 12000, s: 1.2, isLong: true, off: 20, vr: 330, camo: 0.02, cls: 'ht', armor: 76, nc: '#c2a64a' },
+    // I уровень: Mk I* Heavy Tank (за 500 золота, урон 90)
+    MK1HEAVY: { n: "Mk I* Heavy", x: 200, y: 50, nat: "uk", tier: 1, gold: 500, hp: 350, dmg: 90, s: 1.1, off: 0, vr: 280, camo: 0.1, cls: 'td', armor: 50, nc: '#8e44ad', premium: true, isLong: true },
+
+    // Премиум танки (бывшая стартовая ветка)
+    MED1: { n: "Medium I", x: 50, y: 50, nat: "uk", tier: 1, gold: 10, hp: 200, dmg: 10, s: 0.8, mag: 15, reload: 5000, off: 0, vr: 300, camo: 0.25, cls: 'mt', nc: '#c2a64a', premium: true },
+    MED2: { n: "Medium II", x: 350, y: 50, nat: "uk", tier: 2, gold: 20, hp: 280, dmg: 45, s: 0.85, off: 0, vr: 310, camo: 0.22, cls: 'mt', nc: '#c2a64a', premium: true },
+    MED3: { n: "Medium III", x: 500, y: 50, nat: "uk", tier: 3, gold: 25, hp: 420, dmg: 40, s: 0.9, mag: 3, reload: 4000, off: 0, vr: 320, camo: 0.2, cls: 'mt', nc: '#c2a64a', premium: true },
+    TOG2: { n: "TOG II*", x: 650, y: 50, nat: "uk", tier: 6, gold: 350, hp: 1400, dmg: 150, s: 1.2, isLong: true, off: 20, vr: 330, camo: 0.02, cls: 'ht', armor: 76, nc: '#c2a64a', premium: true },
     
-    CRUS2: { n: "Cruiser II", x: 50, y: 600, nat: "uk", tier: 1, hp: 200, dmg: 30, xp: 0, s: 0.7, mag: 2, reload: 3000, off: 5, vr: 310, camo: 0.35, cls: 'lt', nc: '#c2a64a' },
-    CRUS3: { n: "Cruiser III", x: 200, y: 600, p: "CRUS2", nat: "uk", tier: 2, hp: 260, dmg: 35, xp: 150, s: 0.75, mag: 2, reload: 3000, off: 5, vr: 320, camo: 0.33, cls: 'lt', nc: '#c2a64a' },
-    CRUS4: { n: "Cruiser IV", x: 350, y: 600, p: "CRUS3", nat: "uk", tier: 3, hp: 350, dmg: 45, xp: 500, s: 0.8, mag: 2, reload: 3500, off: 5, vr: 330, camo: 0.3, cls: 'lt', nc: '#c2a64a' },
-    ALECTO: { n: "Alecto", x: 500, y: 600, p: "CRUS4", nat: "uk", tier: 4, hp: 350, dmg: 200, xp: 1500, s: 0.75, isPT: true, off: 8, vr: 310, camo: 0.45, cls: 'td', nc: '#c2a64a' },
-    AT2: { n: "AT 2", x: 650, y: 600, p: "ALECTO", nat: "uk", tier: 5, hp: 850, dmg: 110, xp: 4000, s: 1.1, isPT: true, off: 5, vr: 300, camo: 0.2, cls: 'td', armor: 150, nc: '#c2a64a' },
-    AT8: { n: "AT 8", x: 800, y: 600, p: "AT2", nat: "uk", tier: 6, hp: 1000, dmg: 160, xp: 10000, s: 1.15, isPT: true, off: 5, vr: 310, camo: 0.18, cls: 'td', armor: 170, nc: '#c2a64a' },
-    AT7: { n: "AT 7", x: 950, y: 600, p: "AT8", nat: "uk", tier: 7, hp: 1200, dmg: 20, xp: 25000, s: 1.2, isPT: true, mag: 15, reload: 8000, off: 5, vr: 320, camo: 0.15, cls: 'td', armor: 180, nc: '#c2a64a' },
-    AT15: { n: "AT 15", x: 1100, y: 600, p: "AT7", nat: "uk", tier: 8, hp: 1500, dmg: 280, xp: 60000, s: 1.25, isPT: true, off: 5, vr: 340, camo: 0.12, cls: 'td', armor: 200, nc: '#c2a64a' },
-    TORTOISE: { n: "Tortoise", x: 1250, y: 600, p: "AT15", nat: "uk", tier: 9, hp: 2000, dmg: 400, xp: 120000, s: 1.35, isPT: true, off: 5, vr: 370, camo: 0.08, cls: 'td', armor: 250, nc: '#c2a64a' },
-    FV183: { n: "FV215b 183", x: 1400, y: 600, p: "TORTOISE", nat: "uk", tier: 10, hp: 2100, dmg: 1150, xp: 195000, s: 1.3, isPT: true, off: 10, reload: 8000, vr: 390, camo: 0.1, cls: 'td', armor: 120, nc: '#c2a64a' },
+    // Стартовая ветка (Cruiser)
+    CRUS2: { n: "Cruiser II", x: 50, y: 400, nat: "uk", tier: 1, hp: 200, dmg: 30, xp: 0, s: 0.7, mag: 2, reload: 3000, off: 5, vr: 310, camo: 0.35, cls: 'lt', nc: '#c2a64a' },
+    CRUS3: { n: "Cruiser III", x: 200, y: 400, p: "CRUS2", nat: "uk", tier: 2, hp: 260, dmg: 35, xp: 150, s: 0.75, mag: 2, reload: 3000, off: 5, vr: 320, camo: 0.33, cls: 'lt', nc: '#c2a64a' },
+    CRUS4: { n: "Cruiser IV", x: 350, y: 400, p: "CRUS3", nat: "uk", tier: 3, hp: 350, dmg: 45, xp: 500, s: 0.8, mag: 2, reload: 3500, off: 5, vr: 330, camo: 0.3, cls: 'lt', nc: '#c2a64a' },
+    
+    // Общий танк tier 4
+    MATILDA: { n: "Matilda", x: 500, y: 400, p: "CRUS4", nat: "uk", tier: 4, hp: 550, dmg: 75, xp: 1500, s: 0.95, off: 5, vr: 320, camo: 0.18, cls: 'mt', armor: 75, nc: '#c2a64a' },
+    
+    // Crusader - общий для трёх веток (СТ/ЛТ/ПТ)
+    CRUSADER: { n: "Crusader", x: 650, y: 350, p: "MATILDA", nat: "uk", tier: 5, hp: 650, dmg: 80, xp: 4000, s: 0.85, mag: 2, reload: 3000, off: 5, vr: 360, camo: 0.32, cls: 'lt', nc: '#c2a64a' },
+    
+    // === ПТ Ветка → FV4005 ===
+    FIREFLY: { n: "Sherman Firefly", x: 800, y: 150, p: "CRUSADER", nat: "uk", tier: 6, hp: 800, dmg: 230, xp: 10000, s: 0.95, isPT: true, off: 8, vr: 340, camo: 0.28, cls: 'td', nc: '#c2a64a' },
+    CHALLENGER: { n: "Challenger", x: 950, y: 150, p: "FIREFLY", nat: "uk", tier: 7, hp: 1100, dmg: 280, xp: 25000, s: 1, isPT: true, off: 10, vr: 360, camo: 0.25, cls: 'td', nc: '#c2a64a' },
+    CHARIOTEER: { n: "Charioteer", x: 1100, y: 150, p: "CHALLENGER", nat: "uk", tier: 8, hp: 1300, dmg: 390, xp: 60000, s: 1.05, off: 5, vr: 380, camo: 0.28, cls: 'td', nc: '#c2a64a' },
+    CONWAY: { n: "Conway", x: 1250, y: 150, p: "CHARIOTEER", nat: "uk", tier: 9, hp: 1700, dmg: 480, xp: 120000, s: 1.15, off: 8, vr: 390, camo: 0.22, cls: 'td', nc: '#c2a64a' },
+    FV4005: { n: "FV4005", x: 1400, y: 150, p: "CONWAY", nat: "uk", tier: 10, hp: 1850, dmg: 1150, xp: 195000, s: 1.2, off: 5, reload: 9000, vr: 390, camo: 0.08, cls: 'td', nc: '#c2a64a' },
+    
+    // === СТ Ветка → FV4202 ===
+    CROMWELL: { n: "Cromwell", x: 800, y: 300, p: "CRUSADER", nat: "uk", tier: 6, hp: 850, dmg: 140, xp: 10000, s: 0.9, off: 5, vr: 360, camo: 0.28, cls: 'mt', nc: '#c2a64a' },
+    COMET: { n: "Comet", x: 950, y: 300, p: "CROMWELL", nat: "uk", tier: 7, hp: 1150, dmg: 180, xp: 25000, s: 0.95, off: 5, vr: 370, camo: 0.26, cls: 'mt', nc: '#c2a64a' },
+    CENT1: { n: "Centurion I", x: 1100, y: 300, p: "COMET", nat: "uk", tier: 8, hp: 1450, dmg: 280, xp: 60000, s: 1.05, off: 5, vr: 390, camo: 0.22, cls: 'mt', nc: '#c2a64a' },
+    CENT71: { n: "Centurion 7/1", x: 1250, y: 300, p: "CENT1", nat: "uk", tier: 9, hp: 1750, dmg: 350, xp: 120000, s: 1.1, off: 5, vr: 400, camo: 0.2, cls: 'mt', nc: '#c2a64a' },
+    FV4202: { n: "FV4202", x: 1400, y: 300, p: "CENT71", nat: "uk", tier: 10, hp: 1950, dmg: 350, xp: 195000, s: 1.1, off: 5, vr: 410, camo: 0.18, cls: 'mt', nc: '#c2a64a' },
+    
+    // === ЛТ Ветка → Vickers Light ===
+    FV301: { n: "FV301", x: 1100, y: 450, p: "COMET", nat: "uk", tier: 8, hp: 1100, dmg: 200, xp: 60000, s: 0.9, off: 5, vr: 410, camo: 0.38, cls: 'lt', nc: '#c2a64a' },
+    VICKERSCR: { n: "Vickers CR", x: 1250, y: 450, p: "FV301", nat: "uk", tier: 9, hp: 1350, dmg: 260, xp: 120000, s: 0.95, off: 5, vr: 420, camo: 0.36, cls: 'lt', nc: '#c2a64a' },
+    VICKERSLT: { n: "Vickers Light", x: 1400, y: 450, p: "VICKERSCR", nat: "uk", tier: 10, hp: 1550, dmg: 320, xp: 195000, s: 1, off: 5, vr: 430, camo: 0.4, cls: 'lt', nc: '#c2a64a' },
+    
+    // === ТТ Ветка → FV215B ===
+    CHURCHILL1: { n: "Churchill I", x: 650, y: 550, p: "MATILDA", nat: "uk", tier: 5, hp: 900, dmg: 120, xp: 4000, s: 1.1, off: 5, vr: 320, camo: 0.1, cls: 'ht', armor: 100, nc: '#c2a64a' },
+    CHURCHILL7: { n: "Churchill VII", x: 800, y: 550, p: "CHURCHILL1", nat: "uk", tier: 6, hp: 1100, dmg: 150, xp: 10000, s: 1.15, off: 5, vr: 330, camo: 0.08, cls: 'ht', armor: 140, nc: '#c2a64a' },
+    BLACKPRINCE: { n: "Black Prince", x: 950, y: 550, p: "CHURCHILL7", nat: "uk", tier: 7, hp: 1350, dmg: 180, xp: 25000, s: 1.2, off: 5, vr: 350, camo: 0.06, cls: 'ht', armor: 160, nc: '#c2a64a' },
+    CAERNARVON: { n: "Caernarvon", x: 1100, y: 550, p: "BLACKPRINCE", nat: "uk", tier: 8, hp: 1600, dmg: 280, xp: 60000, s: 1.2, off: 5, vr: 370, camo: 0.08, cls: 'ht', armor: 170, nc: '#c2a64a' },
+    CONQUEROR: { n: "Conqueror", x: 1250, y: 550, p: "CAERNARVON", nat: "uk", tier: 9, hp: 2000, dmg: 400, xp: 120000, s: 1.25, off: 5, vr: 390, camo: 0.06, cls: 'ht', armor: 200, nc: '#c2a64a' },
+    FV215B: { n: "FV215B", x: 1400, y: 550, p: "CONQUEROR", nat: "uk", tier: 10, hp: 2300, dmg: 440, xp: 195000, s: 1.3, off: -10, vr: 400, camo: 0.05, cls: 'ht', armor: 230, nc: '#c2a64a' },
+    
+    // === Старая ПТ ветка → FV183 (от Cruiser IV) ===
+    ALECTO: { n: "Alecto", x: 500, y: 700, p: "CRUS4", nat: "uk", tier: 4, hp: 350, dmg: 200, xp: 1500, s: 0.75, isPT: true, off: 8, vr: 310, camo: 0.45, cls: 'td', nc: '#c2a64a' },
+    AT2: { n: "AT 2", x: 650, y: 700, p: "ALECTO", nat: "uk", tier: 5, hp: 850, dmg: 110, xp: 4000, s: 1.1, isPT: true, off: 5, vr: 300, camo: 0.2, cls: 'td', armor: 150, nc: '#c2a64a' },
+    AT8: { n: "AT 8", x: 800, y: 700, p: "AT2", nat: "uk", tier: 6, hp: 1000, dmg: 160, xp: 10000, s: 1.15, isPT: true, off: 5, vr: 310, camo: 0.18, cls: 'td', armor: 170, nc: '#c2a64a' },
+    AT7: { n: "AT 7", x: 950, y: 700, p: "AT8", nat: "uk", tier: 7, hp: 1200, dmg: 20, xp: 25000, s: 1.2, isPT: true, mag: 15, reload: 8000, off: 5, vr: 320, camo: 0.15, cls: 'td', armor: 180, nc: '#c2a64a' },
+    AT15: { n: "AT 15", x: 1100, y: 700, p: "AT7", nat: "uk", tier: 8, hp: 1500, dmg: 280, xp: 60000, s: 1.25, isPT: true, off: 5, vr: 340, camo: 0.12, cls: 'td', armor: 200, nc: '#c2a64a' },
+    TORTOISE: { n: "Tortoise", x: 1250, y: 700, p: "AT15", nat: "uk", tier: 9, hp: 2000, dmg: 400, xp: 120000, s: 1.35, isPT: true, off: 5, vr: 370, camo: 0.08, cls: 'td', armor: 250, nc: '#c2a64a' },
+    FV183: { n: "FV215b 183", x: 1400, y: 700, p: "TORTOISE", nat: "uk", tier: 10, hp: 2100, dmg: 1150, xp: 195000, s: 1.3, isPT: true, off: 10, reload: 8000, vr: 390, camo: 0.1, cls: 'td', armor: 120, nc: '#c2a64a' },
 
     // === КИТАЙ ===
     VAEB: { n: "VAE Type B", x: 50, y: 400, nat: "china", tier: 1, hp: 200, dmg: 40, xp: 0, s: 0.7, off: 5, vr: 280, camo: 0.3, cls: 'lt', nc: '#8b0000' },
@@ -139,4 +179,7 @@ const DB = {
 
     // === ЯПОНИЯ ===
     TYPE5: { n: "Type 5 Heavy", x: 100, y: 100, nat: "japan", tier: 10, gold: 5000, hp: 3500, dmg: 900, s: 1.8, reload: 8000, off: 0, vr: 350, camo: 0.02, cls: 'ht', armor: 300, nc: '#d4a574', premium: true }
+	
+    // === ОГНЕМЁТНЫЕ ТАНКИ (покупаются только из контейнера) ===
+    // Эти танки НЕ добавляются в DB напрямую - они в COLLECTION_DB
 };

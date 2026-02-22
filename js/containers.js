@@ -45,7 +45,7 @@ const CONTAINERS={
     event:{name:"Ивентовый",icon:"🎪",cost:{silver:50000},color:"#e74c3c",desc:"Специальный контейнер!",
         drops:[{type:'silver',amount:[10000,30000],weight:15,label:"Серебро"},{type:'xp',amount:[10000,30000],weight:10,label:"Опыт"},{type:'gold',amount:[300,800],weight:15,label:"Золото"},{type:'tank',pool:'rare',weight:30,label:"Редкая техника"},{type:'tank',pool:'legendary',weight:30,label:"Легенда!"}]},
     flamebox:{name:"Танко-Жарка",icon:"🔥",cost:{gold:2000},color:"#ff4500",desc:"Огнемётные танки! Гарантированный дроп!",
-        drops:[{type:'gold',amount:[300,1000],weight:10,label:"Золото"},{type:'tank',pool:'flame',weight:90,label:"🔥 Огнемётный танк!"}]}
+        drops:[{type:'gold',amount:[300,1000],weight:99,label:"Золото"},{type:'tank',pool:'flame',weight:1,label:"🔥 Огнемётный танк!"}]}
 };
 
 const DROP_POOLS={common:[],rare:[],legendary:[],flame:[],missile:['SHERIDAN']};

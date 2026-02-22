@@ -8,6 +8,20 @@
 </head>
 <body>
 
+<!-- ЭКРАН ВХОДА -->
+<div id="login-screen">
+    <div class="login-box">
+        <h1>CITY TANKS</h1>
+        <input type="text" id="username-input" placeholder="Имя пользователя">
+        <input type="password" id="password-input" placeholder="Пароль">
+        <div class="login-btns">
+            <button class="btn" onclick="login()">ВОЙТИ</button>
+            <button class="btn" onclick="register()">РЕГИСТРАЦИЯ</button>
+        </div>
+        <div id="login-msg"></div>
+    </div>
+</div>
+
 <div id="control-modal">
     <h2>ВЫБЕРИТЕ УПРАВЛЕНИЕ</h2>
     <div class="control-options">
@@ -41,29 +55,47 @@
     </div>
 </div>
 
+<div id="promo-modal">
+    <div class="promo-content">
+        <h2>🎟️ ПРОМОКОД</h2>
+        <input type="text" id="promo-input" placeholder="Введите код...">
+        <button class="btn" onclick="activatePromo()">АКТИВИРОВАТЬ</button>
+        <button class="btn btn-close" onclick="hidePromo()">ЗАКРЫТЬ</button>
+        <div id="promo-result"></div>
+    </div>
+</div>
+
 <div id="container-opening">
     <div id="anim-container"></div>
     <div id="reward-display"></div>
 </div>
 
-<div id="ui">
+<div id="ui" style="display:none;"> <!-- Скрыт по умолчанию до входа -->
     <div id="top-bar">
+        <div class="user-info">
+            👤 <span id="current-user">Player</span>
+            <button class="btn btn-sm btn-logout" onclick="logout()">ВЫЙТИ</button>
+        </div>
         <div id="res-panel">
-            <div>ОПЫТ: <span id="xp-val">500000</span> XP</div>
-            <div class="gold-txt">ЗОЛОТО: <span id="gold-val">5000</span> G</div>
-            <div class="silver-txt">СЕРЕБРО: <span id="silver-val">50000</span> ₽</div>
+            <div>ОПЫТ: <span id="xp-val">0</span> XP</div>
+            <div class="gold-txt">ЗОЛОТО: <span id="gold-val">0</span> G</div>
+            <div class="silver-txt">СЕРЕБРО: <span id="silver-val">0</span> ₽</div>
         </div>
         <div id="exchange-panel">
             100 XP → 10 G
             <button class="btn btn-sm" onclick="exchangeXP()">ОБМЕН</button>
             <span id="exchange-msg"></span>
         </div>
-        <button class="btn btn-container" onclick="showContainerShop()">📦 КОНТЕЙНЕРЫ</button>
+        <div class="top-btns">
+            <button class="btn btn-promo" onclick="showPromo()">🎟️ КОД</button>
+            <button class="btn btn-container" onclick="showContainerShop()">📦 КОНТЕЙНЕРЫ</button>
+        </div>
     </div>
     <div id="main-garage-area">
         <div id="nat-buttons">
             <button class="n-btn active-n" onclick="setNat('ussr',this)">СССР</button>
             <button class="n-btn" onclick="setNat('germany',this)">ГЕРМАНИЯ</button>
+            <button class="n-btn" onclick="setNat('france',this)">ФРАНЦИЯ</button>
             <button class="n-btn" onclick="setNat('uk',this)">БРИТАНИЯ</button>
             <button class="n-btn" onclick="setNat('china',this)">КИТАЙ</button>
             <button class="n-btn" onclick="setNat('japan',this)">ЯПОНИЯ</button>
@@ -153,6 +185,7 @@
 <script src="js/containers.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/tank.js"></script>
+<script src="js/auth.js"></script> <!-- Новый скрипт аутентификации -->
 <script src="js/ui.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/battle.js"></script>

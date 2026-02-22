@@ -12,6 +12,7 @@ class Tank{
         this.shotDelay=d.shotDelay||(this.magSize>=20?80:200);
         this.flame=d.flame||false;this.flameRange=d.flameRange||0;this.flameCone=d.flameCone||.4;
         this.flameDPS=d.flameDPS||0;this.flameActive=false;this.flameTick=0;
+        this.missile=d.missile||false;
         this.stuckTimer=0;this.lastPos={x,y};this.wanderAngle=Math.random()*Math.PI*2;this.wanderTimer=0;
     }
     draw(ctx){
@@ -24,12 +25,12 @@ class Tank{
             ctx.fillRect(-30,-45,60*(this.hp/this.maxHp),6);
             ctx.strokeStyle="#fff";ctx.lineWidth=1;ctx.strokeRect(-30,-45,60,6);
             ctx.fillStyle=this.premium?"#f1c40f":"#fff";ctx.font="bold 9px Arial";ctx.textAlign="center";
-            const fi=this.flame?'🔥 ':'',pi=this.premium&&!this.flame?'★ ':'';
+            const fi=this.flame?'🔥 ':(this.missile?'🚀 ':''),pi=this.premium&&!this.flame&&!this.missile?'★ ':'';
             ctx.fillText(`${fi}${pi}${this.name} [${CONFIG.TIER_ROMAN[this.tier]}]`,0,-50);
             if(this.trackBroken){ctx.fillStyle="#ff0";ctx.fillText("⚠",0,-60);}
         }
         ctx.save();ctx.rotate(this.angle);
-        let bc=this.dead?'#333':this.team==='player'?(this.flame?'#cc3300':this.premium?'#ff6600':'#27ae60'):this.team==='ally'?(this.nc||'#2980b9'):'#c0392b';
+        let bc=this.dead?'#333':this.team==='player'?(this.flame?'#cc3300':this.missile?'#005580':this.premium?'#ff6600':'#27ae60'):this.team==='ally'?(this.nc||'#2980b9'):'#c0392b';
         ctx.fillStyle=bc;let bW=this.isLong?80:44;
         ctx.fillRect(-bW/2*this.s,-14*this.s,bW*this.s,28*this.s);
         ctx.fillStyle="#111";ctx.fillRect(-bW/2*this.s-2,-16*this.s,(bW+4)*this.s,6*this.s);ctx.fillRect(-bW/2*this.s-2,10*this.s,(bW+4)*this.s,6*this.s);
@@ -37,7 +38,7 @@ class Tank{
         if(!this.dead){
             ctx.save();ctx.translate(Math.cos(this.angle)*this.off*this.s,Math.sin(this.angle)*this.off*this.s);
             ctx.rotate(this.isPT?this.angle:this.tAngle);
-            let tc2=this.team==='player'?(this.flame?'#ff4500':this.premium?'#ff8800':'#2ecc71'):this.team==='ally'?(this.nc||'#3498db'):'#e74c3c';
+            let tc2=this.team==='player'?(this.flame?'#ff4500':this.missile?'#00ccff':this.premium?'#ff8800':'#2ecc71'):this.team==='ally'?(this.nc||'#3498db'):'#e74c3c';
             ctx.fillStyle=tc2;ctx.fillRect(-10*this.s,-10*this.s,20*this.s,20*this.s);
             if(this.flame){ctx.fillStyle="#333";ctx.fillRect(5*this.s,-5*this.s,25*this.s,10*this.s);ctx.fillStyle="#ff4500";ctx.fillRect(28*this.s,-4*this.s,6*this.s,8*this.s);}
             else{ctx.fillStyle="#111";ctx.fillRect(5*this.s,-3*this.s,35*this.s,6*this.s);}
@@ -70,10 +71,18 @@ class Tank{
         shellType=shellType||0;
         const sh=CONFIG.SHELLS[shellType],fa=this.isPT?this.angle:this.tAngle;
         const tx=this.x+Math.cos(this.angle)*this.off*this.s,ty=this.y+Math.sin(this.angle)*this.off*this.s;
-        GameState.bullets.push({x:tx,y:ty,a:fa,team:this.team,dmg:this.dmg*sh.dMul,speed:12*sh.sMul,color:sh.color,st:shellType,shooter:this});
+        
+        const b = {x:tx,y:ty,a:fa,team:this.team,dmg:this.dmg*sh.dMul,speed:12*sh.sMul,color:this.missile?'#00ffff':sh.color,st:shellType,shooter:this};
+        if(this.missile) {
+            b.guided = true;
+            b.speed = 8; // Ракеты летят чуть медленнее
+            b.dmg = this.dmg; // Фикс урон
+        }
+        GameState.bullets.push(b);
+
         this.lastShot=Date.now();this.justFired=true;this.fireTimer=Date.now()+3000;this.curMag--;
         if(this.magSize>=20)snd('rapidfire');else if(this.dmg>=400)snd('bigshot');else snd('shot');
-        spawnParticles(tx+Math.cos(fa)*35*this.s,ty+Math.sin(fa)*35*this.s,'#ff8800',this.magSize>=20?2:5,3,10);
+        spawnParticles(tx+Math.cos(fa)*35*this.s,ty+Math.sin(fa)*35*this.s,this.missile?'#00ccff':'#ff8800',this.magSize>=20?2:5,3,10);
         if(this===GameState.player&&this.dmg>=300){GameState.shakeTimer=10;GameState.shakeIntensity=Math.min(this.dmg/100,8);}
         if(this.curMag<=0){this.isReloading=true;const mul=(this===GameState.player&&GameState.adrenalineActive)?.5:1;setTimeout(()=>{this.curMag=this.magSize;this.isReloading=false;},this.reloadTime*mul);}
         return true;

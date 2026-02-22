@@ -63,10 +63,26 @@ function updateAI(){
 
 function updateBullets(){
     for(let i=GameState.bullets.length-1;i>=0;i--){
-        const b=GameState.bullets[i];b.x+=Math.cos(b.a)*b.speed;b.y+=Math.sin(b.a)*b.speed;let hit=false;
+        const b=GameState.bullets[i];
+        
+        // Управление ракетой (только игрок на ПК)
+        if(b.guided && b.team === 'player' && GameState.controlMode === 'pc'){
+            const targetX = GameState.mouse.x + GameState.cam.x;
+            const targetY = GameState.mouse.y + GameState.cam.y;
+            const desiredAngle = Math.atan2(targetY - b.y, targetX - b.x);
+            let diff = desiredAngle - b.a;
+            while(diff > Math.PI) diff -= Math.PI*2;
+            while(diff < -Math.PI) diff += Math.PI*2;
+            // Скорость поворота ракеты
+            b.a += Math.sign(diff) * Math.min(Math.abs(diff), 0.08);
+            // Добавляем красивый шлейф
+            GameState.particles.push({x:b.x,y:b.y,vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2,life:15,ml:15,color:'#00ffff',sz:2});
+        }
+
+        b.x+=Math.cos(b.a)*b.speed;b.y+=Math.sin(b.a)*b.speed;let hit=false;
         for(let w of GameState.walls){if(w.type==='bush'||w.type==='dune')continue;if(b.x>w.x&&b.x<w.x+w.w&&b.y>w.y&&b.y<w.y+w.h){hit=true;sparks(b.x,b.y);snd('hit');break;}}
         if(!hit){for(let u of GameState.units){const fr=(b.team===u.team)||(b.team==='player'&&u.team==='ally')||(b.team==='ally'&&u.team==='player');if(!u.dead&&!fr&&Math.hypot(u.x-b.x,u.y-b.y)<30*u.s){
-            if(checkRicochet(b.shooter,u,b.st)){hit=true;sparks(b.x,b.y);snd('rico');if(b.team==='player')crewMsg("Рикошет!","#ff8800");break;}
+            if(checkRicochet(b.shooter,u,b.st) && !b.guided){hit=true;sparks(b.x,b.y);snd('rico');if(b.team==='player')crewMsg("Рикошет!","#ff8800");break;}
             u.hp-=b.dmg;hit=true;sparks(b.x,b.y);snd('hit');
             if(!u.trackBroken&&Math.random()<.1){u.trackBroken=true;if(u===GameState.player)crewMsg("Гусеница!","#e74c3c");}
             if(b.team==='player'){GameState.battleDmg+=b.dmg;dmgLog(`-${Math.floor(b.dmg)}`,'#ff4444');crewMsg(CONFIG.CREW_MESSAGES.HIT[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.HIT.length)],'#2ecc71');}

@@ -19,29 +19,85 @@ function toggleTraining(){const p=document.getElementById('training-panel');p.st
 function sellTank(tid){
     if(GameState.owned.length<=1){alert("Нельзя продать последний танк!");return;}
     const t=DB[tid];let price=t.collection?t.tier*15000:t.gold?t.gold*200:t.tier*5000;
-    const tag=t.flame?' [ОГНЕМЁТНЫЙ]':t.collection?' [КОЛЛЕКЦИОННЫЙ]':t.premium?' [ПРЕМИУМ]':'';
+    const tag=t.flame?' [ОГНЕМЁТНЫЙ]':(t.missile?' [ПТУР]':(t.collection?' [КОЛЛЕКЦИОННЫЙ]':(t.premium?' [ПРЕМИУМ]':'')));
     const warn=t.collection?'\n⚠️ Коллекционный танк можно получить только из контейнера!':'';
     if(confirm(`Продать ${t.n}${tag} за ${price} серебра?${warn}`)){GameState.SILVER+=price;GameState.owned=GameState.owned.filter(id=>id!==tid);if(GameState.selected===tid)GameState.selected=GameState.owned[0];updateResources();renderCarousel();renderTree();}
+}
+
+// === ПРОМОКОДЫ ===
+function showPromo(){
+    document.getElementById('promo-modal').classList.add('show');
+    document.getElementById('promo-input').value = '';
+    document.getElementById('promo-result').innerText = '';
+}
+function hidePromo(){document.getElementById('promo-modal').classList.remove('show');}
+
+function activatePromo(){
+    const input = document.getElementById('promo-input');
+    const code = input.value.trim().toUpperCase();
+    const result = document.getElementById('promo-result');
+    
+    if(!code) return;
+    
+    if(GameState.usedPromos.includes(code)){
+        result.innerText = "Код уже использован!";
+        result.style.color = "#e74c3c";
+        return;
+    }
+    
+    const reward = CONFIG.PROMOCODES[code];
+    if(reward){
+        let msg = "Награда: ";
+        if(reward.gold){ GameState.GOLD += reward.gold; msg += `${reward.gold} G `; }
+        if(reward.silver){ GameState.SILVER += reward.silver; msg += `${reward.silver} ₽ `; }
+        if(reward.xp){ GameState.XP += reward.xp; msg += `${reward.xp} XP `; }
+        if(reward.tank){
+            if(!GameState.owned.includes(reward.tank)){
+                GameState.owned.push(reward.tank);
+                msg += `Танк: ${DB[reward.tank].n}`;
+            } else {
+                msg += `Танк уже есть (компенсация 500 G)`;
+                GameState.GOLD += 500;
+            }
+        }
+        
+        GameState.usedPromos.push(code);
+        localStorage.setItem('ct_used_promos', JSON.stringify(GameState.usedPromos));
+        
+        result.innerText = "Успешно! " + msg;
+        result.style.color = "#2ecc71";
+        updateResources();
+        renderCarousel();
+    } else {
+        result.innerText = "Неверный код!";
+        result.style.color = "#e74c3c";
+    }
 }
 
 function renderCarousel(){
     const c=document.getElementById('tank-carousel');c.innerHTML='';
     [...GameState.owned].sort((a,b)=>{const ta=DB[a],tb=DB[b];if(!ta||!tb)return 0;if(tb.tier!==ta.tier)return tb.tier-ta.tier;if((tb.collection?1:0)!==(ta.collection?1:0))return(tb.collection?1:0)-(ta.collection?1:0);return 0;}).forEach(id=>{
         const t=DB[id];if(!t)return;
-        const isColl=t.collection||false,isFlame=t.flame||false;
+        const isColl=t.collection||false,isFlame=t.flame||false,isMissile=t.missile||false;
         const slot=document.createElement('div');slot.className='tank-slot';
         if(t.premium&&!isColl)slot.className+=' premium-slot';
         if(isColl)slot.className+=' collection-slot';
         if(isFlame)slot.className+=' flame-slot';
+        if(isMissile)slot.style.borderColor = '#00ccff';
         if(GameState.selected===id)slot.className+=' selected';
+        
         slot.onclick=e=>{if(e.target.classList.contains('sell-btn'))return;GameState.selected=id;renderCarousel();renderTree();};
         const sb=document.createElement('button');sb.className='sell-btn';sb.innerText='×';sb.onclick=e=>{e.stopPropagation();sellTank(id);};slot.appendChild(sb);
-        if(isColl){const bg=document.createElement('div');bg.className='coll-badge'+(isFlame?' flame-badge':'');bg.innerText=isFlame?'🔥':'★';slot.appendChild(bg);}
+        if(isColl){const bg=document.createElement('div');bg.className='coll-badge'+(isFlame?' flame-badge':'');bg.style.background=isMissile?'#00ccff':'';bg.innerText=isFlame?'🔥':(isMissile?'🚀':'★');slot.appendChild(bg);}
         const wrap=document.createElement('div');wrap.className='slot-bg';const cv=document.createElement('canvas');cv.width=140;cv.height=80;drawTankIcon(cv,id);wrap.appendChild(cv);
         const info=document.createElement('div');info.className='slot-info';
         const tier=document.createElement('span');tier.className='slot-tier';tier.innerText=CONFIG.TIER_ROMAN[t.tier];
-        const name=document.createElement('span');name.className='slot-name';if(isFlame)name.style.color='#ff4500';else if(isColl)name.style.color=getRarityColor(t.tier);name.innerText=t.n;
-        const cls=document.createElement('span');cls.className='slot-cls';cls.innerText=isFlame?'🔥ОТ':CONFIG.TANK_CLASSES[t.cls||'mt'];
+        const name=document.createElement('span');name.className='slot-name';
+        if(isFlame)name.style.color='#ff4500';
+        else if(isMissile)name.style.color='#00ccff';
+        else if(isColl)name.style.color=getRarityColor(t.tier);
+        name.innerText=t.n;
+        const cls=document.createElement('span');cls.className='slot-cls';cls.innerText=isFlame?'🔥ОТ':(isMissile?'🚀ЛТ':CONFIG.TANK_CLASSES[t.cls||'mt']);
         info.append(tier,name,cls);slot.append(wrap,info);c.appendChild(slot);
     });
 }
@@ -49,11 +105,12 @@ function renderCarousel(){
 function drawTankIcon(canvas,tankId){
     const ctx=canvas.getContext('2d'),t=DB[tankId];if(!t)return;ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.save();ctx.translate(canvas.width/2,canvas.height/2);ctx.scale(.8,.8);const a=-Math.PI/6,s=t.s||1;
-    let bc=t.nc||'#666';if(t.flame)bc='#ff4500';else if(t.collection)bc=getRarityColor(t.tier);else if(t.premium)bc='#f39c12';
+    let bc=t.nc||'#666';if(t.flame)bc='#ff4500';else if(t.missile)bc='#00ccff';else if(t.collection)bc=getRarityColor(t.tier);else if(t.premium)bc='#f39c12';
     ctx.save();ctx.rotate(a);ctx.fillStyle=bc;let bW=t.isLong?80:44;
     ctx.fillRect(-bW/2*s,-14*s,bW*s,28*s);ctx.fillStyle="#111";ctx.fillRect(-bW/2*s-2,-16*s,(bW+4)*s,6*s);ctx.fillRect(-bW/2*s-2,10*s,(bW+4)*s,6*s);ctx.restore();
     ctx.save();const off=(t.off||0)*s;ctx.translate(Math.cos(a)*off,Math.sin(a)*off);ctx.rotate(a);ctx.fillStyle=bc;ctx.filter='brightness(1.2)';ctx.fillRect(-10*s,-10*s,20*s,20*s);ctx.filter='none';
     if(t.flame){ctx.fillStyle="#333";ctx.fillRect(5*s,-5*s,25*s,10*s);ctx.fillStyle="#ff4500";ctx.fillRect(28*s,-4*s,6*s,8*s);}
+    else if(t.missile){ctx.fillStyle="#111";ctx.fillRect(5*s,-6*s,20*s,12*s);}
     else{ctx.fillStyle="#111";ctx.fillRect(5*s,-3*s,35*s,6*s);}
     ctx.restore();ctx.restore();
 }
@@ -83,5 +140,5 @@ function renderTree(){
 function updateScoreboard(){
     const al=document.getElementById('allies-list'),en=document.getElementById('enemies-list');
     al.innerHTML='<b>СОЮЗНИКИ</b><br>';en.innerHTML='<b>ВРАГИ</b><br>';
-    GameState.units.forEach(u=>{if(u.team==='enemy'&&!u.visible&&!u.dead)return;const mk=u.flame?'🔥':u.collection?'★':'';const sp=`<span class="${u.dead?'dead':''}">${CONFIG.TIER_ROMAN[u.tier]}|${mk}${u.name}</span><br>`;if(u.team==='enemy')en.innerHTML+=sp;else al.innerHTML+=sp;});
+    GameState.units.forEach(u=>{if(u.team==='enemy'&&!u.visible&&!u.dead)return;const mk=u.flame?'🔥':(u.missile?'🚀':(u.collection?'★':''));const sp=`<span class="${u.dead?'dead':''}">${CONFIG.TIER_ROMAN[u.tier]}|${mk}${u.name}</span><br>`;if(u.team==='enemy')en.innerHTML+=sp;else al.innerHTML+=sp;});
 }

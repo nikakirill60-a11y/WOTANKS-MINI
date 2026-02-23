@@ -22,7 +22,9 @@ function saveProgress() {
         SILVER: GameState.SILVER,
         owned: GameState.owned,
         selected: GameState.selected,
-        usedPromos: GameState.usedPromos
+        usedPromos: GameState.usedPromos,
+        // Сохраняем прогресс квеста
+        quest23: GameState.quest23
     };
     saveUsers(users);
 }
@@ -38,7 +40,9 @@ function loadProgress(username) {
         GameState.owned = d.owned;
         GameState.selected = d.selected;
         GameState.usedPromos = d.usedPromos || [];
-        // Проверка на целостность данных
+        // Загрузка квеста, либо дефолт если нет в сохранении
+        GameState.quest23 = d.quest23 || { active: true, kills: 0, target: 15, claimed: false };
+        
         if(!GameState.owned.includes(GameState.selected)) GameState.selected = GameState.owned[0];
     } else {
         // Дефолтные данные для нового аккаунта
@@ -48,7 +52,11 @@ function loadProgress(username) {
         GameState.owned = ["T26", "PZ2", "CRUS2", "VAEB", "R35"];
         GameState.selected = "T26";
         GameState.usedPromos = [];
+        GameState.quest23 = { active: true, kills: 0, target: 15, claimed: false };
     }
+    
+    // Обновляем UI квеста после загрузки
+    if(typeof updateQuestUI === 'function') updateQuestUI();
 }
 
 // Регистрация
@@ -118,10 +126,7 @@ function performLogin(username) {
 }
 
 function logout() {
-    saveProgress(); // Сохраняем перед выходом
+    saveProgress(); 
     currentUser = null;
-    location.reload(); // Перезагрузка страницы возвращает на экран входа
+    location.reload(); 
 }
-
-// Проверка авто-входа (если бы мы хранили сессию, но пока просто экран входа)
-// Можно добавить "Запомнить меня" в будущем.

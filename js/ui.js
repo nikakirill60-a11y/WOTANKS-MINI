@@ -24,6 +24,42 @@ function sellTank(tid){
     if(confirm(`Продать ${t.n}${tag} за ${price} серебра?${warn}`)){GameState.SILVER+=price;GameState.owned=GameState.owned.filter(id=>id!==tid);if(GameState.selected===tid)GameState.selected=GameState.owned[0];updateResources();renderCarousel();renderTree();}
 }
 
+// === КВЕСТ UI ===
+function updateQuestUI() {
+    const q = GameState.quest23;
+    if(!q) return;
+    
+    if(q.claimed) {
+        document.getElementById('quest-widget').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('quest-widget').style.display = 'block';
+    const pct = Math.min(100, (q.kills / q.target) * 100);
+    document.getElementById('quest-bar').style.width = pct + '%';
+    document.getElementById('quest-text').innerText = `${q.kills} / ${q.target}`;
+    
+    if (q.kills >= q.target) {
+        document.getElementById('quest-claim-btn').style.display = 'block';
+        document.getElementById('quest-text').style.display = 'none';
+    } else {
+        document.getElementById('quest-claim-btn').style.display = 'none';
+        document.getElementById('quest-text').style.display = 'block';
+    }
+}
+
+function claimQuestReward() {
+    if(!GameState.quest23.claimed) {
+        GameState.quest23.claimed = true;
+        GameState.owned.push('T3485VIC');
+        alert("🎉 Поздравляем! Танк Т-34-85 Победный добавлен в ангар!");
+        updateResources();
+        renderCarousel();
+        updateQuestUI();
+        saveProgress();
+    }
+}
+
 // === ПРОМОКОДЫ ===
 function showPromo(){
     document.getElementById('promo-modal').classList.add('show');
@@ -62,12 +98,12 @@ function activatePromo(){
         }
         
         GameState.usedPromos.push(code);
-        localStorage.setItem('ct_used_promos', JSON.stringify(GameState.usedPromos));
         
         result.innerText = "Успешно! " + msg;
         result.style.color = "#2ecc71";
         updateResources();
         renderCarousel();
+        saveProgress();
     } else {
         result.innerText = "Неверный код!";
         result.style.color = "#e74c3c";

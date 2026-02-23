@@ -28,8 +28,9 @@ function endBattle(won){
     GameState.gameActive=false;const silver=Math.floor(GameState.battleDmg*.5+GameState.battleKills*200);GameState.SILVER+=silver;
     document.getElementById('result-screen').classList.add('show');document.getElementById('result-title').innerText=won?"ПОБЕДА!":"ПОРАЖЕНИЕ";document.getElementById('result-title').style.color=won?"#2ecc71":"#e74c3c";
     document.getElementById('result-stats').innerHTML=`Урон: ${Math.floor(GameState.battleDmg)}<br>Фрагов: ${GameState.battleKills}<br>Серебро: +${silver}₽`;
+    if(GameState.quest23 && !GameState.quest23.claimed){ saveProgress(); }
 }
-function backToGarage(){document.getElementById('result-screen').classList.remove('show');document.getElementById('ui').style.display='flex';document.getElementById('hud').style.display='none';document.getElementById('mobile-controls').classList.remove('show');updateResources();renderTree();renderCarousel();}
+function backToGarage(){document.getElementById('result-screen').classList.remove('show');document.getElementById('ui').style.display='flex';document.getElementById('hud').style.display='none';document.getElementById('mobile-controls').classList.remove('show');updateResources();updateQuestUI();renderTree();renderCarousel();}
 function spawnParticles(x,y,color,count,speed,life){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=Math.random()*speed;GameState.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life,ml:life,color,sz:2+Math.random()*3});}}
 function boom(x,y){spawnParticles(x,y,'#ff6600',25,5,40);spawnParticles(x,y,'#ffcc00',15,3,30);spawnParticles(x,y,'#ff0000',10,4,35);spawnParticles(x,y,'#333',8,2,50);}
 function sparks(x,y){spawnParticles(x,y,'#ffcc00',6,4,15);spawnParticles(x,y,'#fff',3,3,10);}

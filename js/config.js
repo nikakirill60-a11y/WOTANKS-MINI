@@ -15,7 +15,7 @@ const CONFIG={
     
     // ПРОМОКОДЫ
     PROMOCODES: {
-        "BETA_TEST": { tank: "KV220BT" } // <-- Новый код
+        "BETA_TEST": { tank: "KV220BT" }
     }
 };
 
@@ -31,7 +31,10 @@ const GameState={
     keys:{},mouse:{x:0,y:0},mouseDown:false,
     joystickData:{active:false,dx:0,dy:0,angle:0,mag:0},mobileFireActive:false,
     
-    usedPromos: JSON.parse(localStorage.getItem('ct_used_promos') || '[]')
+    usedPromos: JSON.parse(localStorage.getItem('ct_used_promos') || '[]'),
+    
+    // Квест 23 февраля
+    quest23: { active: true, kills: 0, target: 15, claimed: false }
 };
 
 let nodeScale=1;

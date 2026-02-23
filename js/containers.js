@@ -30,8 +30,17 @@ const COLLECTION_DB={
         tier:11, hp:3500, dmg:600, s:1.1, off:5, vr:400, camo:0.05,
         cls:'ht', nc:'#8e44ad', 
         premium:true, collection:true, 
-        armor:250, // Очень бронированный
+        armor:250, 
         desc:"Уникальный танк бета-теста. Недоступен в контейнерах. Выдается только избранным."
+    },
+
+    // === ТАНК ЗА КВЕСТ 23 ФЕВРАЛЯ ===
+    T3485VIC:{
+        n:"Т-34-85 Победный", nat:"ussr",
+        tier:6, hp:950, dmg:180, s:1, off:5, vr:360, camo:0.25,
+        cls:'mt', nc:'#e74c3c', 
+        premium:true, collection:true,
+        desc:"Специальная версия в честь 23 февраля. За победу!"
     }
 };
 
@@ -44,8 +53,14 @@ const CONTAINERS={
         drops:[{type:'gold',amount:[500,1500],weight:15,label:"Золото"},{type:'tank',pool:'rare',weight:40,label:"Редкая техника"},{type:'tank',pool:'legendary',weight:40,label:"Легенда!"},{type:'tank',pool:'missile',weight:5,label:"🚀 Sheridan!"}]},
     event:{name:"Ивентовый",icon:"🎪",cost:{silver:50000},color:"#e74c3c",desc:"Специальный контейнер!",
         drops:[{type:'silver',amount:[10000,30000],weight:15,label:"Серебро"},{type:'xp',amount:[10000,30000],weight:10,label:"Опыт"},{type:'gold',amount:[300,800],weight:15,label:"Золото"},{type:'tank',pool:'rare',weight:30,label:"Редкая техника"},{type:'tank',pool:'legendary',weight:30,label:"Легенда!"}]},
-    flamebox:{name:"Танко-Жарка",icon:"🔥",cost:{gold:2000},color:"#ff4500",desc:"Огнемётные танки! Гарантированный дроп!",
-        drops:[{type:'gold',amount:[300,1000],weight:99,label:"Золото"},{type:'tank',pool:'flame',weight:1,label:"🔥 Огнемётный танк!"}]}
+    
+    // === ОБНОВЛЕННАЯ ТАНКО-ЖАРКА ===
+    flamebox:{name:"Танко-Жарка",icon:"🔥",cost:{gold:2000},color:"#ff4500",desc:"99% Золота, 1% Огнемёт!",
+        drops:[
+            {type:'gold',amount:[300,1000],weight:99,label:"Золото"},
+            {type:'tank',pool:'flame',weight:1,label:"🔥 Огнемётный танк!"}
+        ]
+    }
 };
 
 const DROP_POOLS={common:[],rare:[],legendary:[],flame:[],missile:['SHERIDAN']};
@@ -53,8 +68,7 @@ const DROP_POOLS={common:[],rare:[],legendary:[],flame:[],missile:['SHERIDAN']};
 function initContainers(){
     for(let id in COLLECTION_DB) DB[id]=COLLECTION_DB[id];
     for(let id in COLLECTION_DB){
-        // KV220BT НЕ добавляем в пулы дропа
-        if (id === 'KV220BT') continue;
+        if (id === 'KV220BT' || id === 'T3485VIC') continue; // Не добавляем эксклюзивы в пулы
 
         const t=COLLECTION_DB[id];
         if(t.flame) DROP_POOLS.flame.push(id);
@@ -66,7 +80,7 @@ function initContainers(){
 }
 
 function getRarityColor(tier){
-    if(tier>=11) return "#ff00ff"; // Эксклюзив (XI)
+    if(tier>=11) return "#ff00ff";
     if(tier>=9) return "#9b59b6";
     if(tier>=6) return "#3498db";
     return "#2ecc71";
@@ -168,7 +182,7 @@ function renderCollectionGrid(){
     g.appendChild(st);
     
     // Специальные (Огнемёт и ПТУР и XI)
-    const ft=Object.keys(COLLECTION_DB).filter(id=>COLLECTION_DB[id].flame || COLLECTION_DB[id].missile || COLLECTION_DB[id].tier > 10);
+    const ft=Object.keys(COLLECTION_DB).filter(id=>COLLECTION_DB[id].flame || COLLECTION_DB[id].missile || COLLECTION_DB[id].tier > 10 || id === 'T3485VIC');
     if(ft.length){
         const h=document.createElement('div');h.className='coll-nat-hdr flame-hdr';h.innerHTML='⭐ СПЕЦИАЛЬНЫЕ ТАНКИ ⭐';g.appendChild(h);
         const gr=document.createElement('div');gr.className='coll-nat-grid';
@@ -177,7 +191,7 @@ function renderCollectionGrid(){
     }
 
     ['ussr','germany','france','uk','china','japan'].forEach(nat=>{
-        const tanks=Object.keys(COLLECTION_DB).filter(id=>COLLECTION_DB[id].nat===nat && !COLLECTION_DB[id].flame && !COLLECTION_DB[id].missile && COLLECTION_DB[id].tier <= 10);
+        const tanks=Object.keys(COLLECTION_DB).filter(id=>COLLECTION_DB[id].nat===nat && !COLLECTION_DB[id].flame && !COLLECTION_DB[id].missile && COLLECTION_DB[id].tier <= 10 && id !== 'T3485VIC');
         if(!tanks.length)return;
         const h=document.createElement('div');h.className='coll-nat-hdr';h.innerText=CONFIG.NATIONS[nat];g.appendChild(h);
         const gr=document.createElement('div');gr.className='coll-nat-grid';

@@ -83,6 +83,7 @@ const DB={
     VK100:{n:"VK 100.01P",x:1100,y:330,p:"TIGERP",nat:"germany",tier:8,hp:1900,dmg:450,xp:60000,s:1.4,off:5,vr:360,camo:.05,cls:'ht',armor:200,nc:'#7a7a7a'},
     MAUSCH:{n:"Mäuschen",x:1250,y:330,p:"VK100",nat:"germany",tier:9,hp:2300,dmg:450,xp:120000,s:1.45,off:-5,vr:370,camo:.03,cls:'ht',armor:240,nc:'#7a7a7a'},
     MAUS:{n:"Maus",x:1400,y:330,p:"MAUSCH",nat:"germany",tier:10,hp:3000,dmg:490,xp:195000,s:1.6,off:-5,vr:380,camo:.02,cls:'ht',armor:280,nc:'#7a7a7a'},
+	TASCHENRATTE:{n:"Taschenratte",x:1550,y:330,p:"MAUS",nat:"germany",tier:11,hp:3500,dmg:600,xp:300000,s:1.8,off:0,vr:370,camo:.01,cls:'ht',armor:320,nc:'#7a7a7a'},
     // СТ верхняя
     LEOPARD:{n:"Leopard",x:650,y:550,p:"PZ4D",nat:"germany",tier:5,hp:500,dmg:30,xp:4000,s:.85,mag:12,reload:6000,off:5,vr:350,camo:.3,cls:'lt',nc:'#7a7a7a'},
     VK30D:{n:"VK 30.01D",x:800,y:550,p:"LEOPARD",nat:"germany",tier:6,hp:850,dmg:160,xp:10000,s:.95,off:5,vr:360,camo:.25,cls:'mt',nc:'#7a7a7a'},
@@ -103,6 +104,7 @@ const DB={
     RHMPZW:{n:"Rhm. Pzw.",x:1400,y:750,p:"HWK12",nat:"germany",tier:10,hp:1600,dmg:310,xp:195000,s:1.05,off:5,vr:440,camo:.42,cls:'lt',nc:'#7a7a7a'},
     // Премиум Германия
     WTE100:{n:"WT auf E100",x:50,y:50,nat:"germany",tier:10,gold:2000,hp:2000,dmg:490,s:1.3,mag:5,off:-12,vr:400,camo:.05,cls:'td',nc:'#7a7a7a',premium:true},
+	MAUSKONIG:{n:"Mausekönig",x:200,y:50,nat:"germany",tier:11,gold:9999,hp:4000,dmg:650,s:1.8,off:5,vr:380,camo:.02,cls:'ht',armor:350,nc:'#7a7a7a',premium:true,dualGun:true,dualDelay:400,reload:6000,desc:"Король мышей. Двуствольный монстр XI уровня."},
 
     // ===================== ФРАНЦИЯ =====================
     // Общий ствол tier 1-3
@@ -180,6 +182,7 @@ const DB={
     AT15:{n:"AT 15",x:1100,y:700,p:"AT7",nat:"uk",tier:8,hp:1500,dmg:280,xp:60000,s:1.25,isPT:true,off:5,vr:340,camo:.12,cls:'td',armor:200,nc:'#c2a64a'},
     TORTOISE:{n:"Tortoise",x:1250,y:700,p:"AT15",nat:"uk",tier:9,hp:2000,dmg:400,xp:120000,s:1.35,isPT:true,off:5,vr:370,camo:.08,cls:'td',armor:250,nc:'#c2a64a'},
     FV183:{n:"FV215b 183",x:1400,y:700,p:"TORTOISE",nat:"uk",tier:10,hp:2100,dmg:1150,xp:195000,s:1.3,isPT:true,off:10,reload:8000,vr:390,camo:.1,cls:'td',armor:120,nc:'#c2a64a'},
+	FV205B:{n:"FV205b Alligator",x:1400,y:780,p:"TORTOISE",nat:"uk",tier:10,hp:2400,dmg:550,xp:195000,s:1.35,isPT:true,off:12,vr:390,camo:.12,cls:'td',armor:270,nc:'#c2a64a'},
     // Премиум Британия
     MK1HEAVY:{n:"Mk I* Heavy",x:200,y:50,nat:"uk",tier:1,gold:500,hp:350,dmg:90,s:1.1,off:0,vr:280,camo:.1,cls:'td',armor:50,nc:'#8e44ad',premium:true,isLong:true},
     MED1:{n:"Medium I",x:50,y:50,nat:"uk",tier:1,gold:10,hp:200,dmg:10,s:.8,mag:15,reload:5000,off:0,vr:300,camo:.25,cls:'mt',nc:'#c2a64a',premium:true},

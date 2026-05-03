@@ -92,7 +92,6 @@ class Tank {
     ctx.translate(this.x - cam.x, this.y - cam.y);
     
     if (!this.dead) {
-      // Полоска здоровья
       ctx.fillStyle = "#441111";
       ctx.fillRect(-30, -45, 60, 6);
       ctx.fillStyle = this.team === 'enemy' ? "#e74c3c" : "#2ecc71";
@@ -101,7 +100,6 @@ class Tank {
       ctx.lineWidth = 1;
       ctx.strokeRect(-30, -45, 60, 6);
       
-      // Название танка
       ctx.fillStyle = this.premium ? "#f1c40f" : "#fff";
       ctx.font = "bold 9px Arial";
       ctx.textAlign = "center";
@@ -109,7 +107,6 @@ class Tank {
       var pi = this.premium && !this.flame && !this.missile && !this.titan && !this.dualGun ? '★ ' : '';
       ctx.fillText(fi + pi + this.name + ' [' + CONFIG.TIER_ROMAN[this.tier] + ']', 0, -50);
       
-      // Индикаторы состояния
       if (this.trackBroken) {
         ctx.fillStyle = "#ff0";
         ctx.fillText("⚠", 0, -60);
@@ -119,7 +116,6 @@ class Tank {
         ctx.fillText("🔥", 15, -60);
       }
       
-      // Индикатор двух стволов
       if (this.dualGun && this === GameState.player) {
         var g1 = this.dualReady[0] ? '#2ecc71' : '#e74c3c';
         var g2 = this.dualReady[1] ? '#2ecc71' : '#e74c3c';
@@ -130,7 +126,6 @@ class Tank {
       }
     }
     
-    // Корпус танка
     ctx.save();
     ctx.rotate(this.angle);
     var bc = this.dead ? '#333' : 
@@ -146,7 +141,6 @@ class Tank {
     ctx.fillRect(-bW / 2 * this.s - 2, 10 * this.s, (bW + 4) * this.s, 6 * this.s);
     ctx.restore();
     
-    // Башня и орудие
     if (!this.dead) {
       ctx.save();
       ctx.translate(Math.cos(this.angle) * this.off * this.s, Math.sin(this.angle) * this.off * this.s);
@@ -295,8 +289,8 @@ class Tank {
       }, this.reloadTime * mul);
     }
     
-    // ✅ ОТПРАВКА ВЫСТРЕЛА В МУЛЬТИПЛЕЕРЕ
-    if (this === GameState.player && multiplayerMode && currentRoomId) {
+    // ✅ ИСПРАВЛЕНО: GameState.multiplayerMode и GameState.currentRoomId
+    if (this === GameState.player && GameState.multiplayerMode && GameState.currentRoomId) {
       sendShot(tx, ty, fa, shellType);
     }
     
@@ -374,8 +368,8 @@ class Tank {
     this.justFired = true;
     this.fireTimer = now + 3000;
     
-    // ✅ ОТПРАВКА ВЫСТРЕЛА В МУЛЬТИПЛЕЕРЕ
-    if (this === GameState.player && multiplayerMode && currentRoomId) {
+    // ✅ ИСПРАВЛЕНО: GameState.multiplayerMode и GameState.currentRoomId
+    if (this === GameState.player && GameState.multiplayerMode && GameState.currentRoomId) {
       sendShot(tx, ty, fa, shellType);
     }
     

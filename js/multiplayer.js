@@ -7,6 +7,7 @@ let otherPlayers = {};
 let positionSubscription = null;
 let shotSubscription = null;
 let isRoomHost = false;
+let pollingInterval = null;
 
 // ========== ЭКРАН ЛОББИ ==========
 function showWaitingScreen(roomCode, mode, players, isHost) {
@@ -30,10 +31,8 @@ function showWaitingScreen(roomCode, mode, players, isHost) {
     </div>
   `).join('');
 
-  // ✅ ИСПРАВЛЕНО: mode * 2 (1x1 = 2 игрока, 2x2 = 4 игрока)
   const totalPlayers = mode * 2;
 
-  // Добавляем пустые слоты
   for (let i = players.length; i < totalPlayers; i++) {
     playersHtml += `
       <div style="padding: 10px; background: #111; margin: 5px 0; border-radius: 4px; border: 1px dashed #444; text-align: center; color: #666;">
@@ -42,7 +41,6 @@ function showWaitingScreen(roomCode, mode, players, isHost) {
     `;
   }
 
-  // ✅ ИСПРАВЛЕНО: проверка на totalPlayers
   const canStart = players.length >= totalPlayers;
 
   const startButton = isHost 
@@ -110,7 +108,6 @@ function updateLobbyPlayers(players, mode) {
 
   playersListEl.innerHTML = html;
 
-  // Обновляем кнопку НАЧАТЬ БОЙ
   const canStart = players.length >= totalPlayers;
   const startBtn = document.querySelector('button[onclick="hostStartBattle()"]');
   if (startBtn) {
@@ -122,19 +119,22 @@ function updateLobbyPlayers(players, mode) {
 }
 
 function cancelMultiplayerSearch() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+
   const overlay = document.getElementById('waiting-overlay');
   if (overlay) overlay.remove();
 
   if (currentRoomId && supabaseClient) {
     if (isRoomHost) {
-      // Хост удаляет комнату
       supabaseClient
         .from('battle_rooms')
         .delete()
         .eq('id', currentRoomId);
       console.log('👑 Хост удалил комнату');
     } else {
-      // Игрок просто покидает
       supabaseClient
         .from('battle_rooms')
         .select('players')
@@ -169,7 +169,6 @@ async function hostStartBattle() {
   console.log('👑 Хост начинает бой!');
 
   try {
-    // Проверяем количество игроков
     const { data: room } = await supabaseClient
       .from('battle_rooms')
       .select('players, mode')
@@ -237,6 +236,7 @@ async function startMultiplayerSearch(mode) {
   }
 }
 
+// ========== ПОДПИСКА НА ИЗМЕНЕНИЯ КОМНАТЫ ==========
 async function subscribeToRoomChanges(roomId, mode) {
   if (!supabaseClient) {
     console.error('❌ supabaseClient не определён');
@@ -257,18 +257,20 @@ async function subscribeToRoomChanges(roomId, mode) {
       const players = room.players || [];
       const totalPlayers = mode * 2;
       
-      console.log(`👥 Игроков в комнате: ${players.length}/${totalPlayers}`);
+      console.log(`👥 [REALTIME] Игроков в комнате: ${players.length}/${totalPlayers}`);
       console.log(`📊 Статус: ${room.status}`);
-      console.log(`👤 Игроки:`, players);
 
-      // Обновляем список игроков в лобби
       updateLobbyPlayers(players, mode);
 
-      // Если хост запустил бой
       if (room.status === 'playing') {
         console.log('✅ ХОСТ ЗАПУСТИЛ БОЙ!');
         const overlay = document.getElementById('waiting-overlay');
         if (overlay) overlay.remove();
+        
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+        }
         
         setTimeout(() => {
           startMultiplayerBattle(roomId, mode);
@@ -277,7 +279,58 @@ async function subscribeToRoomChanges(roomId, mode) {
     })
     .subscribe((status) => {
       console.log('🔔 Статус подписки:', status);
+      
+      if (status === 'CHANNEL_ERROR') {
+        console.warn('⚠️ Ошибка канала, используем polling...');
+        startPolling(roomId, mode);
+      }
     });
+
+  startPolling(roomId, mode);
+}
+
+// ========== РЕЗЕРВНЫЙ POLLING ==========
+function startPolling(roomId, mode) {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+  }
+
+  console.log('📡 Запущен резервный polling...');
+
+  pollingInterval = setInterval(async () => {
+    try {
+      const { data, error } = await supabaseClient
+        .from('battle_rooms')
+        .select('*')
+        .eq('id', roomId)
+        .single();
+
+      if (error) throw error;
+
+      const room = data;
+      const players = room.players || [];
+      const totalPlayers = mode * 2;
+
+      console.log(`👥 [POLLING] Игроков: ${players.length}/${totalPlayers}`);
+
+      updateLobbyPlayers(players, mode);
+
+      if (room.status === 'playing') {
+        console.log('✅ БОЙ НАЧАЛСЯ (polling)!');
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+
+        const overlay = document.getElementById('waiting-overlay');
+        if (overlay) overlay.remove();
+        
+        setTimeout(() => {
+          startMultiplayerBattle(roomId, mode);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка polling:', error);
+    }
+  }, 2000);
 }
 
 // ========== ПРИСОЕДИНЕНИЕ К КОМНАТЕ ==========
@@ -339,20 +392,71 @@ async function joinRoom(roomCode) {
   }
 }
 
-// ========== БОЙ ==========
+// ========== НАЧАЛО БОЯ ==========
 async function startMultiplayerBattle(roomId, mode) {
   console.log('⚔️⚔️⚔️ ЗАПУСКАЕМ МУЛЬТИПЛЕЕР БОЙ!');
   console.log('Room ID:', roomId);
   console.log('Mode:', mode);
   
   multiplayerMode = true;
-  GameState.pendingBattle = mode * 2; // ✅ ИСПРАВЛЕНО: 1x1 = 2, 2x2 = 4
+  currentRoomId = roomId;
   
-  // Показываем экран выбора управления
+  try {
+    const { data: room } = await supabaseClient
+      .from('battle_rooms')
+      .select('players, host_username')
+      .eq('id', roomId)
+      .single();
+
+    const allPlayers = room.players || [];
+    const hostUsername = room.host_username;
+
+    console.log('👥 Все игроки:', allPlayers);
+    console.log('👑 Хост:', hostUsername);
+    console.log('👤 Я:', currentUser);
+
+    const hostTeam = [];
+    const enemyTeam = [];
+
+    allPlayers.forEach((player, index) => {
+      if (mode === 1) {
+        if (player === hostUsername) {
+          hostTeam.push(player);
+        } else {
+          enemyTeam.push(player);
+        }
+      } else {
+        if (index < 2) {
+          hostTeam.push(player);
+        } else {
+          enemyTeam.push(player);
+        }
+      }
+    });
+
+    console.log('🟢 Команда 1:', hostTeam);
+    console.log('🔴 Команда 2:', enemyTeam);
+
+    const isInHostTeam = hostTeam.includes(currentUser);
+    const myTeam = isInHostTeam ? hostTeam : enemyTeam;
+    const enemyPlayers = isInHostTeam ? enemyTeam : hostTeam;
+
+    console.log('✅ Моя команда:', myTeam);
+    console.log('❌ Враги:', enemyPlayers);
+
+    GameState.multiplayerEnemies = enemyPlayers;
+    GameState.multiplayerAllies = myTeam.filter(p => p !== currentUser);
+
+  } catch (error) {
+    console.error('❌ Ошибка получения игроков:', error);
+  }
+
+  GameState.pendingBattle = mode * 2;
+  
   document.getElementById('control-modal').classList.add('show');
 }
 
-// ========== СИНХРОНИЗАЦИЯ ==========
+// ========== СИНХРОНИЗАЦИЯ ПОЗИЦИЙ ==========
 async function syncPlayerPositions(roomId) {
   if (!multiplayerMode || !GameState.player || !supabaseClient) return;
 
@@ -371,7 +475,8 @@ async function syncPlayerPositions(roomId) {
         turret_angle: GameState.player.tAngle,
         is_alive: !GameState.player.dead,
         track_broken: GameState.player.trackBroken || false,
-        on_fire: GameState.player.onFire || false
+        on_fire: GameState.player.onFire || false,
+        updated_at: new Date().toISOString()
       }, { onConflict: 'room_id,username' });
 
     if (!positionSubscription) {
@@ -384,14 +489,35 @@ async function syncPlayerPositions(roomId) {
           filter: `room_id=eq.${roomId}`
         }, (payload) => {
           const pos = payload.new;
-          if (pos.username !== currentUser) {
+          if (pos && pos.username !== currentUser) {
+            console.log('📡 [REALTIME] Позиция игрока:', pos.username);
             updateOtherPlayer(pos);
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Подписка на позиции:', status);
+        });
+
+      setInterval(async () => {
+        try {
+          const { data } = await supabaseClient
+            .from('battle_players')
+            .select('*')
+            .eq('room_id', roomId)
+            .neq('username', currentUser);
+
+          if (data) {
+            data.forEach(pos => {
+              updateOtherPlayer(pos);
+            });
+          }
+        } catch (err) {
+          console.error('❌ Ошибка polling позиций:', err);
+        }
+      }, 500);
     }
 
-    if (multiplayerMode) {
+    if (multiplayerMode && GameState.gameActive) {
       setTimeout(() => syncPlayerPositions(roomId), 100);
     }
   } catch (error) {
@@ -400,15 +526,25 @@ async function syncPlayerPositions(roomId) {
 }
 
 function updateOtherPlayer(posData) {
+  const isEnemy = GameState.multiplayerEnemies && GameState.multiplayerEnemies.includes(posData.username);
+  const isAlly = GameState.multiplayerAllies && GameState.multiplayerAllies.includes(posData.username);
+
+  if (!isEnemy && !isAlly) {
+    return;
+  }
+
   if (!otherPlayers[posData.username]) {
+    console.log('➕ Создаём танк для игрока:', posData.username, isEnemy ? 'ВРАГ' : 'СОЮЗНИК');
+    
     otherPlayers[posData.username] = new Tank(
       posData.tank_id || 'T26',
       posData.x,
       posData.y,
-      'enemy'
+      isEnemy ? 'enemy' : 'ally'
     );
+    
     GameState.units.push(otherPlayers[posData.username]);
-    console.log('👤 Добавлен игрок:', posData.username);
+    updateScoreboard();
   }
 
   const player = otherPlayers[posData.username];
@@ -417,11 +553,13 @@ function updateOtherPlayer(posData) {
   player.angle = posData.angle;
   player.tAngle = posData.turret_angle;
   player.hp = Math.max(0, posData.hp);
+  player.maxHp = posData.max_hp;
   player.dead = !posData.is_alive;
   player.trackBroken = posData.track_broken;
   player.onFire = posData.on_fire;
 }
 
+// ========== СИНХРОНИЗАЦИЯ ВЫСТРЕЛОВ ==========
 async function syncPlayerShots(roomId) {
   if (!multiplayerMode || !supabaseClient) return;
 
@@ -436,6 +574,7 @@ async function syncPlayerShots(roomId) {
       }, (payload) => {
         const shot = payload.new;
         if (shot.username !== currentUser) {
+          console.log('💥 Выстрел от:', shot.username);
           GameState.bullets.push({
             x: shot.x,
             y: shot.y,
@@ -450,10 +589,33 @@ async function syncPlayerShots(roomId) {
           snd('shot');
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Подписка на выстрелы:', status);
+      });
   }
 }
 
+// ========== ОТПРАВКА ВЫСТРЕЛА ==========
+async function sendShot(x, y, angle, shellType) {
+  if (!currentRoomId || !multiplayerMode || !supabaseClient) return;
+
+  try {
+    await supabaseClient
+      .from('player_shots')
+      .insert([{
+        room_id: currentRoomId,
+        username: currentUser,
+        x: x,
+        y: y,
+        angle: angle,
+        shell_type: shellType
+      }]);
+  } catch (error) {
+    console.error('❌ Ошибка отправки выстрела:', error);
+  }
+}
+
+// ========== ЗАВЕРШЕНИЕ МУЛЬТИПЛЕЕРА ==========
 function endMultiplayerBattle() {
   multiplayerMode = false;
 
@@ -465,6 +627,11 @@ function endMultiplayerBattle() {
   if (shotSubscription) {
     shotSubscription.unsubscribe();
     shotSubscription = null;
+  }
+
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
   }
 
   otherPlayers = {};

@@ -194,15 +194,20 @@
         <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
         <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">10x10</button>
         <button class="btn" style="background:#7f8c8d" onclick="toggleTraining()">ТРЕНИРОВКА</button>
-        
-        <!-- ===== НОВОЕ: ОНЛАЙН РЕЖИМЫ ===== -->
-        <button class="btn" style="background:#27ae60;font-weight:bold" onclick="startMultiplayerSearch(1)">🌐 1x1 ОНЛАЙН</button>
-        <button class="btn" style="background:#27ae60;font-weight:bold" onclick="startMultiplayerSearch(2)">🌐 2x2 ОНЛАЙН</button>
-        <button class="btn" style="background:#3498db" onclick="showJoinRoomDialog()">🔗 ПРИСОЕДИНИТЬСЯ</button>
+      </div>
+      
+      <!-- ===== ОНЛАЙН РЕЖИМЫ ===== -->
+      <div style="margin-top:8px;">
+        <h3 style="text-align:center;color:#f1c40f;margin-bottom:5px;">🌐 ОНЛАЙН БОИ</h3>
+        <div class="btn-group">
+          <button class="btn" style="background:#27ae60;font-weight:bold;color:#fff" onclick="startMultiplayerSearch(1)">🌐 1x1 ОНЛАЙН</button>
+          <button class="btn" style="background:#27ae60;font-weight:bold;color:#fff" onclick="startMultiplayerSearch(2)">🌐 2x2 ОНЛАЙН</button>
+          <button class="btn" style="background:#3498db;font-weight:bold;color:#fff" onclick="showJoinRoomDialog()">🔗 ПРИСОЕДИНИТЬСЯ</button>
+        </div>
       </div>
 
       <!-- ТРЕНИРОВКА -->
-      <div id="training-panel" style="display:none">
+      <div id="training-panel" style="display:none;margin-top:8px;background:#222;padding:10px;border:1px solid #444">
         НАЦИЯ: <select id="train-nat-select" onchange="fillEnemySelect()"></select>
         ВРАГ: <select id="enemy-select"></select>
         <button class="btn" onclick="showControlModal('train')">НАЧАТЬ</button>
@@ -302,6 +307,16 @@
       initSupabase();
     }, 500);
   });
+  
+  // Функция для присоединения к комнате (для удобства)
+  function showJoinRoomDialog() {
+    const code = prompt('Введите код комнаты (6 букв):');
+    if (code && code.length >= 6) {
+      joinRoom(code.toUpperCase());
+    } else if (code) {
+      alert('❌ Неверный код! Должен быть 6 символов');
+    }
+  }
 </script>
 
 </body>

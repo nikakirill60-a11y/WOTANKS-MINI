@@ -31,7 +31,7 @@ function showWaitingScreen(roomCode, mode) {
         Код комнаты: <span style="color: #f1c40f; font-weight: bold; font-size: 20px;">${roomCode}</span>
       </div>
       <div style="font-size: 14px; color: #aaa; margin: 20px 0;">
-        ⏳ Ожидание противника...
+        ⏳ Ожидание противника... (${mode} игроков)
       </div>
       <div class="spinner" style="margin: 20px 0;">
         <div style="width: 40px; height: 40px; border: 4px solid #555; border-top-color: #f39c12; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
@@ -95,19 +95,26 @@ async function startMultiplayerSearch(mode) {
 
     currentRoomId = data.id;
     console.log(`✅ Комната создана: ${roomCode}`);
+    console.log(`✅ Room ID: ${currentRoomId}`);
+    
     showWaitingScreen(roomCode, mode);
     subscribeToRoomChanges(currentRoomId, mode);
 
   } catch (error) {
     console.error('❌ Ошибка создания комнаты:', error);
-    alert('Ошибка подключения к серверу');
+    alert('Ошибка подключения к серверу: ' + error.message);
   }
 }
 
 async function subscribeToRoomChanges(roomId, mode) {
-  if (!supabaseClient) return;
+  if (!supabaseClient) {
+    console.error('❌ supabaseClient не определён');
+    return;
+  }
 
-  const subscription = supabaseClient
+  console.log(`📡 Подписываемся на изменения комнаты ${roomId}`);
+
+  supabaseClient
     .channel(`room:${roomId}`)
     .on('postgres_changes', {
       event: 'UPDATE',
@@ -117,15 +124,22 @@ async function subscribeToRoomChanges(roomId, mode) {
     }, (payload) => {
       const room = payload.new;
       console.log(`👥 Игроков в комнате: ${room.players.length}/${mode}`);
+      console.log(`📊 Статус: ${room.status}`);
 
       if (room.players.length >= mode && room.status === 'playing') {
+        console.log('✅ УСЛОВИЕ ВЫПОЛНЕНО! Запускаем бой!');
         const overlay = document.getElementById('waiting-overlay');
         if (overlay) overlay.remove();
         
-        startMultiplayerBattle(roomId, mode);
+        // ✅ ВАЖНО: Добавляем небольшую задержку
+        setTimeout(() => {
+          startMultiplayerBattle(roomId, mode);
+        }, 500);
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('🔔 Статус подписки:', status);
+    });
 }
 
 // ========== ПРИСОЕДИНЕНИЕ К КОМНАТЕ ==========
@@ -155,6 +169,8 @@ async function joinRoom(roomCode) {
 
     players.push(currentUser);
 
+    console.log(`📤 Обновляем комнату: ${players.length} игроков`);
+
     await supabaseClient
       .from('battle_rooms')
       .update({ 
@@ -177,18 +193,34 @@ async function joinRoom(roomCode) {
 
 // ========== БОЙ ==========
 async function startMultiplayerBattle(roomId, mode) {
-  console.log('⚔️ Начинаем мультиплеер бой!');
+  console.log('⚔️⚔️⚔️ ЗАПУСКАЕМ МУЛЬТИПЛЕЕР БОЙ!');
+  console.log('Room ID:', roomId);
+  console.log('Mode:', mode);
   
   multiplayerMode = true;
+  GameState.pendingBattle = mode;
   
-  // Стартуем обычный бой
-  startBattle(mode);
+  // ✅ ПОКАЗЫВАЕМ ЭКРАН ВЫБОРА УПРАВЛЕНИЯ
+  showControlModal(mode);
+}
 
-  // Синхронизируем позиции
-  syncPlayerPositions(roomId);
+function showControlModal(mode) {
+  console.log('Показываем экран управления');
+  document.getElementById('control-modal').classList.add('show');
+  GameState.pendingBattle = mode;
+}
+
+function selectControl(type) {
+  console.log('Выбрано управление:', type);
+  GameState.controlMode = type;
+  document.getElementById('control-modal').classList.remove('show');
   
-  // Синхронизируем выстрелы
-  syncPlayerShots(roomId);
+  // ✅ СТАРТУЕМ БОЙ
+  startBattle(GameState.pendingBattle);
+  
+  // Синхронизируем позиции
+  syncPlayerPositions(currentRoomId);
+  syncPlayerShots(currentRoomId);
 }
 
 async function syncPlayerPositions(roomId) {
@@ -240,6 +272,7 @@ function updateOtherPlayer(posData) {
       posData.y,
       'enemy'
     );
+    GameState.units.push(otherPlayers[posData.username]);
   }
 
   const player = otherPlayers[posData.username];

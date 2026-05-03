@@ -2,8 +2,8 @@
 // ========== SUPABASE КОНФИГУРАЦИЯ ==========
 
 // 🔐 Вставьте свои значения из Supabase Settings → API
-const SUPABASE_URL = 'https://xxxxx.supabase.co'; // 👈 ЗАМЕНИТЕ
-const SUPABASE_KEY = 'ваш-anon-public-key'; // 👈 ЗАМЕНИТЕ
+const SUPABASE_URL = 'https://tkkpdtfhcwwondonfjsi.supabase.co'; // 👈 ЗАМЕНИТЕ
+const SUPABASE_KEY = 'sb_publishable_r2tEe8p_WJPrEzsN7aIpSw_OKQzzKTw'; // 👈 ЗАМЕНИТЕ
 
 let supabaseClient = null;
 

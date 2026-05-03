@@ -1,5 +1,73 @@
-// js/multiplayer.js (обновлённые функции)
+// js/multiplayer.js
+console.log('🌐 multiplayer.js загружен');
 
+let currentRoomId = null;
+let multiplayerMode = false;
+let otherPlayers = {};
+let positionSubscription = null;
+let shotSubscription = null;
+
+// ========== ЭКРАН ОЖИДАНИЯ ==========
+function showWaitingScreen(roomCode, mode) {
+  const overlay = document.createElement('div');
+  overlay.id = 'waiting-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  `;
+
+  overlay.innerHTML = `
+    <div style="text-align: center; color: #fff;">
+      <h2 style="margin-bottom: 20px;">🔍 ПОИСК ИГРОКОВ</h2>
+      <div style="font-size: 18px; margin: 10px 0;">
+        Режим: <strong>${mode}x${mode}</strong>
+      </div>
+      <div style="font-size: 16px; margin: 20px 0; padding: 15px; background: #222; border-radius: 8px;">
+        Код комнаты: <span style="color: #f1c40f; font-weight: bold; font-size: 20px;">${roomCode}</span>
+      </div>
+      <div style="font-size: 14px; color: #aaa; margin: 20px 0;">
+        ⏳ Ожидание противника...
+      </div>
+      <div class="spinner" style="margin: 20px 0;">
+        <div style="width: 40px; height: 40px; border: 4px solid #555; border-top-color: #f39c12; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+      </div>
+      <button class="btn" style="margin-top: 20px;" onclick="cancelMultiplayerSearch()">
+        ✕ ОТМЕНА
+      </button>
+    </div>
+    
+    <style>
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+function cancelMultiplayerSearch() {
+  const overlay = document.getElementById('waiting-overlay');
+  if (overlay) overlay.remove();
+
+  if (currentRoomId && supabaseClient) {
+    supabaseClient
+      .from('battle_rooms')
+      .delete()
+      .eq('id', currentRoomId);
+    
+    currentRoomId = null;
+  }
+
+  console.log('❌ Поиск отменён');
+}
+
+// ========== ПОИСК ИГРОКОВ ==========
 async function startMultiplayerSearch(mode) {
   console.log(`🔍 Ищем игроков на режим ${mode}x${mode}...`);
   
@@ -53,12 +121,14 @@ async function subscribeToRoomChanges(roomId, mode) {
       if (room.players.length >= mode && room.status === 'playing') {
         const overlay = document.getElementById('waiting-overlay');
         if (overlay) overlay.remove();
+        
         startMultiplayerBattle(roomId, mode);
       }
     })
     .subscribe();
 }
 
+// ========== ПРИСОЕДИНЕНИЕ К КОМНАТЕ ==========
 async function joinRoom(roomCode) {
   console.log(`📌 Присоединяемся к комнате: ${roomCode}`);
 
@@ -105,6 +175,22 @@ async function joinRoom(roomCode) {
   }
 }
 
+// ========== БОЙ ==========
+async function startMultiplayerBattle(roomId, mode) {
+  console.log('⚔️ Начинаем мультиплеер бой!');
+  
+  multiplayerMode = true;
+  
+  // Стартуем обычный бой
+  startBattle(mode);
+
+  // Синхронизируем позиции
+  syncPlayerPositions(roomId);
+  
+  // Синхронизируем выстрелы
+  syncPlayerShots(roomId);
+}
+
 async function syncPlayerPositions(roomId) {
   if (!multiplayerMode || !GameState.player || !supabaseClient) return;
 
@@ -142,8 +228,26 @@ async function syncPlayerPositions(roomId) {
       setTimeout(() => syncPlayerPositions(roomId), 100);
     }
   } catch (error) {
-    console.error('❌ Ошибка синхронизации позиций:', error);
+    console.error('❌ Ошибка синхронизации:', error);
   }
+}
+
+function updateOtherPlayer(posData) {
+  if (!otherPlayers[posData.username]) {
+    otherPlayers[posData.username] = new Tank(
+      'T26',
+      posData.x,
+      posData.y,
+      'enemy'
+    );
+  }
+
+  const player = otherPlayers[posData.username];
+  player.x = posData.x;
+  player.y = posData.y;
+  player.angle = posData.angle;
+  player.tAngle = posData.turret_angle;
+  player.hp = Math.max(0, posData.hp);
 }
 
 async function syncPlayerShots(roomId) {
@@ -203,3 +307,5 @@ function endMultiplayerBattle() {
 
   console.log('❌ Мультиплеер окончен');
 }
+
+console.log('🌐 multiplayer.js полностью загружен');

@@ -1,3 +1,5 @@
+// auth.js (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+
 let currentUser = null;
 let onlineStatusInterval = null;
 
@@ -37,7 +39,7 @@ async function saveProgress() {
   }
 
   // Сохраняем в облако
-  if (supabase) {
+  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
     await saveUserProgress(currentUser, progressData);
   }
 }
@@ -46,7 +48,7 @@ async function loadProgress(username) {
   let data = null;
 
   // Пытаемся загрузить из облака
-  if (supabase) {
+  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
     const result = await loadUserProgress(username);
     if (result.success) {
       data = result.data;
@@ -116,7 +118,7 @@ async function register() {
   }
 
   // Регистрация в облаке
-  if (supabase) {
+  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
     const result = await registerUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -144,7 +146,7 @@ async function login() {
   const msg = document.getElementById('login-msg');
 
   // Проверка в облаке
-  if (supabase) {
+  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
     const result = await loginUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -179,7 +181,7 @@ async function performLogin(username) {
   updateBoosterUI();
 
   // Обновляем онлайн статус
-  if (supabase) {
+  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
     await updateOnlineStatus(username, true);
     
     // Периодическое обновление статуса
@@ -195,7 +197,7 @@ async function performLogin(username) {
 async function logout() {
   await saveProgress();
   
-  if (supabase && currentUser) {
+  if (supabaseClient && currentUser) { // ✅ ИСПРАВЛЕНО
     await updateOnlineStatus(currentUser, false);
   }
 
@@ -211,7 +213,7 @@ async function logout() {
 window.addEventListener('beforeunload', async () => {
   if (currentUser) {
     await saveProgress();
-    if (supabase) {
+    if (supabaseClient) { // ✅ ИСПРАВЛЕНО
       await updateOnlineStatus(currentUser, false);
     }
   }

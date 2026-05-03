@@ -1,42 +1,46 @@
 // js/supabase.js
-// ========== SUPABASE КОНФИГУРАЦИЯ ==========
-
 console.log('✅ supabase.js загружен');
 
-// 🔐 ЗАМЕНИТЕ НА СВОИ ДАННЫЕ
-const SUPABASE_URL = 'https://tkkpdtfhcwwondonfjsi.supabase.co'; // 👈 ЗАМЕНИТЕ
-const SUPABASE_KEY = 'sb_publishable_r2tEe8p_WJPrEzsN7aIpSw_OKQzzKTw'; // 👈 ЗАМЕНИТЕ
+const SUPABASE_URL = 'https://tkkpdtfhcwwondonfjsi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_r2tEe8p_WJPrEzsN7aIpSw_OKQzzKTw';
 
 let supabaseClient = null;
 
 function initSupabase() {
   try {
+    // ✅ ПРАВИЛЬНЫЙ СПОСОБ - window.supabase
     if (typeof window.supabase === 'undefined') {
       console.warn('⚠️ Supabase библиотека не загружена');
+      // Работаем локально без Supabase
+      supabaseClient = {
+        from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({}) }) }) })
+      };
       return false;
     }
     
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true
-      }
-    });
+    // Используем глобальный объект supabase из CDN
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     console.log('✅ Supabase подключен');
     console.log('   URL:', SUPABASE_URL);
     return true;
   } catch (error) {
-    console.error('❌ Ошибка подключения Supabase:', error);
+    console.error('❌ Ошибка Supabase:', error.message);
     return false;
   }
 }
 
 // ========== РЕГИСТРАЦИЯ ==========
 async function registerUser(username, password) {
-  if (!supabaseClient) {
-    console.error('❌ Supabase не инициализирован');
-    return { success: false, error: 'Supabase не инициализирован' };
+  if (!supabaseClient || !supabaseClient.from) {
+    console.warn('⚠️ Supabase не доступен, работаем локально');
+    const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
+    if (users[username]) {
+      return { success: false, error: 'Пользователь уже существует!' };
+    }
+    users[username] = { pass: password, data: null };
+    localStorage.setItem('ct_users', JSON.stringify(users));
+    return { success: true };
   }
 
   try {
@@ -66,14 +70,11 @@ async function registerUser(username, password) {
         booster_stock: { xp: 0, gold: 0, silver: 0 },
         modules: {},
         upgrades: {},
-        upgrades_bought: {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        upgrades_bought: {}
       }])
       .select();
 
     if (error) throw error;
-
     console.log('✅ Пользователь создан:', username);
     return { success: true, data: data[0] };
   } catch (error) {
@@ -84,9 +85,13 @@ async function registerUser(username, password) {
 
 // ========== ВХОД ==========
 async function loginUser(username, password) {
-  if (!supabaseClient) {
-    console.error('❌ Supabase не инициализирован');
-    return { success: false, error: 'Supabase не инициализирован' };
+  if (!supabaseClient || !supabaseClient.from) {
+    console.warn('⚠️ Supabase не доступен, работаем локально');
+    const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
+    if (!users[username] || users[username].pass !== password) {
+      return { success: false, error: 'Неверные учётные данные!' };
+    }
+    return { success: true, data: { username } };
   }
 
   try {
@@ -98,7 +103,7 @@ async function loginUser(username, password) {
       .single();
 
     if (error || !data) {
-      return { success: false, error: 'Неверное имя или пароль!' };
+      return { success: false, error: 'Неверные учётные данные!' };
     }
 
     await supabaseClient
@@ -120,8 +125,13 @@ async function loginUser(username, password) {
 
 // ========== СОХРАНЕНИЕ ПРОГРЕССА ==========
 async function saveUserProgress(username, progressData) {
-  if (!supabaseClient) {
-    console.warn('⚠️ Supabase не доступен');
+  if (!supabaseClient || !supabaseClient.from) {
+    console.log('⚠️ Сохраняем локально (Supabase не доступен)');
+    const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
+    if (users[username]) {
+      users[username].data = progressData;
+      localStorage.setItem('ct_users', JSON.stringify(users));
+    }
     return { success: true };
   }
 
@@ -147,19 +157,27 @@ async function saveUserProgress(username, progressData) {
       .eq('username', username);
 
     if (error) throw error;
-
-    console.log('💾 Прогресс сохранён:', username);
+    console.log('💾 Прогресс сохранён (Supabase):', username);
     return { success: true };
   } catch (error) {
     console.error('⚠️ Ошибка сохранения:', error);
+    const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
+    if (users[username]) {
+      users[username].data = progressData;
+      localStorage.setItem('ct_users', JSON.stringify(users));
+    }
     return { success: true };
   }
 }
 
 // ========== ЗАГРУЗКА ПРОГРЕССА ==========
 async function loadUserProgress(username) {
-  if (!supabaseClient) {
-    console.warn('⚠️ Supabase не доступен');
+  if (!supabaseClient || !supabaseClient.from) {
+    console.log('⚠️ Загружаем локально (Supabase не доступен)');
+    const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
+    if (users[username] && users[username].data) {
+      return { success: true, data: users[username].data };
+    }
     return { success: false };
   }
 
@@ -174,7 +192,7 @@ async function loadUserProgress(username) {
       return { success: false };
     }
 
-    console.log('☁️ Прогресс загружен:', username);
+    console.log('☁️ Прогресс загружен (Supabase):', username);
     return {
       success: true,
       data: {
@@ -195,13 +213,17 @@ async function loadUserProgress(username) {
     };
   } catch (error) {
     console.error('⚠️ Ошибка загрузки:', error);
+    const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
+    if (users[username] && users[username].data) {
+      return { success: true, data: users[username].data };
+    }
     return { success: false };
   }
 }
 
 // ========== СТАТИСТИКА ==========
 async function saveBattleStats(username, stats) {
-  if (!supabaseClient) return { success: true };
+  if (!supabaseClient || !supabaseClient.from) return { success: true };
 
   try {
     const { data: user } = await supabaseClient
@@ -246,7 +268,7 @@ async function saveBattleStats(username, stats) {
 
 // ========== ТАБЛИЦА ЛИДЕРОВ ==========
 async function getLeaderboard(limit = 100) {
-  if (!supabaseClient) return { success: false, data: [] };
+  if (!supabaseClient || !supabaseClient.from) return { success: false, data: [] };
 
   try {
     const { data, error } = await supabaseClient
@@ -266,7 +288,7 @@ async function getLeaderboard(limit = 100) {
 
 // ========== ОНЛАЙН СТАТУС ==========
 async function updateOnlineStatus(username, isOnline) {
-  if (!supabaseClient) return { success: true };
+  if (!supabaseClient || !supabaseClient.from) return { success: true };
 
   try {
     await supabaseClient
@@ -286,7 +308,7 @@ async function updateOnlineStatus(username, isOnline) {
 
 // ========== ОНЛАЙН ИГРОКИ ==========
 async function getOnlinePlayers() {
-  if (!supabaseClient) return { success: false, data: [] };
+  if (!supabaseClient || !supabaseClient.from) return { success: false, data: [] };
 
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -308,7 +330,7 @@ async function getOnlinePlayers() {
 
 // ========== ЧАТ ==========
 async function sendChatMessage(username, message) {
-  if (!supabaseClient) return { success: true };
+  if (!supabaseClient || !supabaseClient.from) return { success: true };
 
   try {
     const { error } = await supabaseClient
@@ -328,7 +350,7 @@ async function sendChatMessage(username, message) {
 }
 
 async function getChatMessages(limit = 50) {
-  if (!supabaseClient) return { success: false, data: [] };
+  if (!supabaseClient || !supabaseClient.from) return { success: false, data: [] };
 
   try {
     const { data, error } = await supabaseClient
@@ -346,7 +368,7 @@ async function getChatMessages(limit = 50) {
 }
 
 function subscribeToChatMessages(callback) {
-  if (!supabaseClient) return null;
+  if (!supabaseClient || !supabaseClient.from) return null;
   
   try {
     const subscription = supabaseClient

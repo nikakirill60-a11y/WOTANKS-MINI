@@ -22,7 +22,7 @@ function showWaitingScreen(roomCode, mode, players, isHost) {
     z-index: 999;
   `;
 
-  const playersHtml = players.map((p, i) => `
+  let playersHtml = players.map((p, i) => `
     <div style="padding: 10px; background: #222; margin: 5px 0; border-radius: 4px; display: flex; align-items: center; gap: 10px;">
       <span style="font-size: 20px;">${i === 0 ? '👑' : '⚔️'}</span>
       <span style="color: ${i === 0 ? '#f1c40f' : '#2ecc71'}; font-weight: bold;">${p}</span>
@@ -30,8 +30,11 @@ function showWaitingScreen(roomCode, mode, players, isHost) {
     </div>
   `).join('');
 
+  // ✅ ИСПРАВЛЕНО: mode * 2 (1x1 = 2 игрока, 2x2 = 4 игрока)
+  const totalPlayers = mode * 2;
+
   // Добавляем пустые слоты
-  for (let i = players.length; i < mode; i++) {
+  for (let i = players.length; i < totalPlayers; i++) {
     playersHtml += `
       <div style="padding: 10px; background: #111; margin: 5px 0; border-radius: 4px; border: 1px dashed #444; text-align: center; color: #666;">
         <span>⏳ Ожидание игрока...</span>
@@ -39,9 +42,12 @@ function showWaitingScreen(roomCode, mode, players, isHost) {
     `;
   }
 
+  // ✅ ИСПРАВЛЕНО: проверка на totalPlayers
+  const canStart = players.length >= totalPlayers;
+
   const startButton = isHost 
-    ? `<button class="btn" style="background: #27ae60; font-size: 16px; font-weight: bold; margin-top: 20px; ${players.length < mode ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="hostStartBattle()" ${players.length < mode ? 'disabled' : ''}>
-        🚀 НАЧАТЬ БОЙ
+    ? `<button class="btn" style="background: #27ae60; font-size: 16px; font-weight: bold; margin-top: 20px; ${!canStart ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="hostStartBattle()" ${!canStart ? 'disabled' : ''}>
+        🚀 НАЧАТЬ БОЙ ${canStart ? '' : `(${players.length}/${totalPlayers})`}
       </button>`
     : `<div style="margin-top: 20px; color: #f39c12; font-size: 14px;">
         ⏳ Ожидание решения хоста...
@@ -57,7 +63,7 @@ function showWaitingScreen(roomCode, mode, players, isHost) {
       </div>
 
       <div style="margin: 20px 0;">
-        <h3 style="color: #3498db; margin-bottom: 10px;">ИГРОКИ (${players.length}/${mode})</h3>
+        <h3 style="color: #3498db; margin-bottom: 10px;">ИГРОКИ (${players.length}/${totalPlayers})</h3>
         <div id="players-list" style="max-height: 300px; overflow-y: auto;">
           ${playersHtml}
         </div>
@@ -81,6 +87,8 @@ function updateLobbyPlayers(players, mode) {
   const playersListEl = document.getElementById('players-list');
   if (!playersListEl) return;
 
+  const totalPlayers = mode * 2;
+
   let html = '';
   players.forEach((p, i) => {
     html += `
@@ -92,7 +100,7 @@ function updateLobbyPlayers(players, mode) {
     `;
   });
 
-  for (let i = players.length; i < mode; i++) {
+  for (let i = players.length; i < totalPlayers; i++) {
     html += `
       <div style="padding: 10px; background: #111; margin: 5px 0; border-radius: 4px; border: 1px dashed #444; text-align: center; color: #666;">
         <span>⏳ Ожидание игрока...</span>
@@ -101,6 +109,16 @@ function updateLobbyPlayers(players, mode) {
   }
 
   playersListEl.innerHTML = html;
+
+  // Обновляем кнопку НАЧАТЬ БОЙ
+  const canStart = players.length >= totalPlayers;
+  const startBtn = document.querySelector('button[onclick="hostStartBattle()"]');
+  if (startBtn) {
+    startBtn.disabled = !canStart;
+    startBtn.style.opacity = canStart ? '1' : '0.5';
+    startBtn.style.cursor = canStart ? 'pointer' : 'not-allowed';
+    startBtn.innerHTML = `🚀 НАЧАТЬ БОЙ ${canStart ? '' : `(${players.length}/${totalPlayers})`}`;
+  }
 }
 
 function cancelMultiplayerSearch() {
@@ -114,6 +132,7 @@ function cancelMultiplayerSearch() {
         .from('battle_rooms')
         .delete()
         .eq('id', currentRoomId);
+      console.log('👑 Хост удалил комнату');
     } else {
       // Игрок просто покидает
       supabaseClient
@@ -128,6 +147,7 @@ function cancelMultiplayerSearch() {
               .from('battle_rooms')
               .update({ players: players })
               .eq('id', currentRoomId);
+            console.log('👤 Игрок покинул лобби');
           }
         });
     }
@@ -149,6 +169,20 @@ async function hostStartBattle() {
   console.log('👑 Хост начинает бой!');
 
   try {
+    // Проверяем количество игроков
+    const { data: room } = await supabaseClient
+      .from('battle_rooms')
+      .select('players, mode')
+      .eq('id', currentRoomId)
+      .single();
+
+    const totalPlayers = room.mode * 2;
+
+    if (room.players.length < totalPlayers) {
+      alert(`❌ Недостаточно игроков! Нужно: ${totalPlayers}, есть: ${room.players.length}`);
+      return;
+    }
+
     await supabaseClient
       .from('battle_rooms')
       .update({ status: 'playing' })
@@ -221,8 +255,9 @@ async function subscribeToRoomChanges(roomId, mode) {
     }, (payload) => {
       const room = payload.new;
       const players = room.players || [];
+      const totalPlayers = mode * 2;
       
-      console.log(`👥 Игроков в комнате: ${players.length}/${mode}`);
+      console.log(`👥 Игроков в комнате: ${players.length}/${totalPlayers}`);
       console.log(`📊 Статус: ${room.status}`);
       console.log(`👤 Игроки:`, players);
 
@@ -265,6 +300,7 @@ async function joinRoom(roomCode) {
 
     const room = rooms;
     const players = room.players || [];
+    const totalPlayers = room.mode * 2;
 
     if (room.status !== 'waiting') {
       throw new Error('Бой уже начался!');
@@ -274,7 +310,7 @@ async function joinRoom(roomCode) {
       throw new Error('Вы уже в этой комнате!');
     }
 
-    if (players.length >= room.mode) {
+    if (players.length >= totalPlayers) {
       throw new Error('Комната полная!');
     }
 
@@ -310,7 +346,7 @@ async function startMultiplayerBattle(roomId, mode) {
   console.log('Mode:', mode);
   
   multiplayerMode = true;
-  GameState.pendingBattle = mode;
+  GameState.pendingBattle = mode * 2; // ✅ ИСПРАВЛЕНО: 1x1 = 2, 2x2 = 4
   
   // Показываем экран выбора управления
   document.getElementById('control-modal').classList.add('show');

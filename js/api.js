@@ -3,17 +3,28 @@
 
 console.log('✅ api.js загружен');
 
-let supabaseClient = { connected: true }; // Заглушка для совместимости
-
+/**
+ * Инициализация API
+ * @returns {boolean}
+ */
 function initSupabase() {
   console.log('✅ API инициализирован (Supabase mode)');
   return true;
 }
 
 // ========== РЕГИСТРАЦИЯ ==========
+
+/**
+ * Регистрация пользователя
+ * @param {string} username - имя пользователя
+ * @param {string} password - пароль
+ * @returns {Promise<Object>}
+ */
 async function registerUser(username, password) {
   if (!supabaseClient || !supabaseClient.from) {
     console.warn('⚠️ Supabase не инициализирован, работаем локально');
+    
+    // Fallback: локальное хранилище
     const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
     if (users[username]) {
       return { success: false, error: 'Пользователь уже существует!' };
@@ -24,7 +35,6 @@ async function registerUser(username, password) {
   }
 
   try {
-    // Проверка существования
     const { data: existingUser } = await supabaseClient
       .from('users')
       .select('username')
@@ -34,7 +44,6 @@ async function registerUser(username, password) {
       return { success: false, error: 'Пользователь уже существует!' };
     }
 
-    // Создание
     const { data, error } = await supabaseClient
       .from('users')
       .insert([{
@@ -49,7 +58,7 @@ async function registerUser(username, password) {
       .select();
 
     if (error) throw error;
-    console.log('✅ Пользователь создан (Supabase):', username);
+    console.log('✅ Пользователь зарегистрирован:', username);
     return { success: true, data: data[0] };
   } catch (error) {
     console.error('❌ Ошибка регистрации:', error);
@@ -58,9 +67,18 @@ async function registerUser(username, password) {
 }
 
 // ========== ВХОД ==========
+
+/**
+ * Вход пользователя
+ * @param {string} username - имя пользователя
+ * @param {string} password - пароль
+ * @returns {Promise<Object>}
+ */
 async function loginUser(username, password) {
   if (!supabaseClient || !supabaseClient.from) {
     console.warn('⚠️ Supabase не инициализирован, работаем локально');
+    
+    // Fallback: локальное хранилище
     const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
     if (!users[username] || users[username].pass !== password) {
       return { success: false, error: 'Неверные учётные данные!' };
@@ -80,7 +98,7 @@ async function loginUser(username, password) {
       return { success: false, error: 'Неверные учётные данные!' };
     }
 
-    console.log('✅ Вход успешен (Supabase):', username);
+    console.log('✅ Вход успешен:', username);
     return { success: true, data: data[0] };
   } catch (error) {
     console.error('❌ Ошибка входа:', error);
@@ -89,6 +107,13 @@ async function loginUser(username, password) {
 }
 
 // ========== СОХРАНЕНИЕ ПРОГРЕССА ==========
+
+/**
+ * Сохранение прогресса
+ * @param {string} username - имя игрока
+ * @param {Object} progressData - данные прогресса
+ * @returns {Promise<Object>}
+ */
 async function saveUserProgress(username, progressData) {
   if (!supabaseClient || !supabaseClient.from) {
     console.log('⚠️ Сохраняем локально (Supabase не доступен)');
@@ -125,8 +150,7 @@ async function saveUserProgress(username, progressData) {
     console.log('💾 Прогресс сохранён (Supabase):', username);
     return { success: true };
   } catch (error) {
-    console.error('⚠️ Ошибка сохранения в Supabase:', error);
-    // Падаём обратно на localStorage
+    console.error('⚠️ Ошибка сохранения:', error);
     const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
     if (users[username]) {
       users[username].data = progressData;
@@ -137,6 +161,12 @@ async function saveUserProgress(username, progressData) {
 }
 
 // ========== ЗАГРУЗКА ПРОГРЕССА ==========
+
+/**
+ * Загрузка прогресса
+ * @param {string} username - имя игрока
+ * @returns {Promise<Object>}
+ */
 async function loadUserProgress(username) {
   if (!supabaseClient || !supabaseClient.from) {
     console.log('⚠️ Загружаем локально (Supabase не доступен)');
@@ -163,11 +193,11 @@ async function loadUserProgress(username) {
     return {
       success: true,
       data: {
-        XP: user.xp,
-        GOLD: user.gold,
-        SILVER: user.silver,
+        XP: user.xp || 500,
+        GOLD: user.gold || 0,
+        SILVER: user.silver || 5000,
         owned: user.owned_tanks || ["T26"],
-        selected: user.selected_tank,
+        selected: user.selected_tank || "T26",
         usedPromos: user.used_promos || [],
         quest23: user.quest_23 || { active: true, kills: 0, target: 15, claimed: false },
         inventory: user.inventory || {},
@@ -179,8 +209,7 @@ async function loadUserProgress(username) {
       }
     };
   } catch (error) {
-    console.error('⚠️ Ошибка загрузки из Supabase:', error);
-    // Падаём на localStorage
+    console.error('⚠️ Ошибка загрузки:', error);
     const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
     if (users[username] && users[username].data) {
       return { success: true, data: users[username].data };
@@ -190,6 +219,13 @@ async function loadUserProgress(username) {
 }
 
 // ========== СТАТИСТИКА БОЁВ ==========
+
+/**
+ * Сохранение статистики боя
+ * @param {string} username - имя игрока
+ * @param {Object} stats - статистика
+ * @returns {Promise<Object>}
+ */
 async function saveBattleStats(username, stats) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: true };
@@ -218,15 +254,15 @@ async function saveBattleStats(username, stats) {
       .from('battle_history')
       .insert([{
         username: username,
-        tank_id: stats.tankId,
-        map: stats.map,
-        mode: stats.mode,
-        won: stats.won,
-        kills: stats.kills,
-        damage: stats.damage,
-        xp_earned: stats.xp,
-        silver_earned: stats.silver,
-        gold_earned: stats.gold
+        tank_id: stats.tankId || 'unknown',
+        map: stats.map || 'city',
+        mode: stats.mode || '7v7',
+        won: stats.won || false,
+        kills: stats.kills || 0,
+        damage: stats.damage || 0,
+        xp_earned: stats.xp || 0,
+        silver_earned: stats.silver || 0,
+        gold_earned: stats.gold || 0
       }]);
 
     return { success: true };
@@ -237,6 +273,12 @@ async function saveBattleStats(username, stats) {
 }
 
 // ========== ТАБЛИЦА ЛИДЕРОВ ==========
+
+/**
+ * Получение таблицы лидеров
+ * @param {number} limit - кол-во записей
+ * @returns {Promise<Object>}
+ */
 async function getLeaderboard(limit = 100) {
   if (!supabaseClient || !supabaseClient.from) {
     console.log('⚠️ Таблица лидеров недоступна (нет Supabase)');
@@ -260,6 +302,13 @@ async function getLeaderboard(limit = 100) {
 }
 
 // ========== ОНЛАЙН СТАТУС ==========
+
+/**
+ * Обновление онлайн статуса
+ * @param {string} username - имя игрока
+ * @param {boolean} isOnline - онлайн ли
+ * @returns {Promise<Object>}
+ */
 async function updateOnlineStatus(username, isOnline) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: true };
@@ -282,6 +331,11 @@ async function updateOnlineStatus(username, isOnline) {
 }
 
 // ========== ОНЛАЙН ИГРОКИ ==========
+
+/**
+ * Получение онлайн игроков
+ * @returns {Promise<Object>}
+ */
 async function getOnlinePlayers() {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: false, data: [] };
@@ -300,32 +354,45 @@ async function getOnlinePlayers() {
     if (error) throw error;
     return { success: true, data: data || [] };
   } catch (error) {
-    console.error('⚠️ Ошибка получения онлайн игроков:', error);
+    console.error('⚠️ Ошибка получения онлайн:', error);
     return { success: false, data: [] };
   }
 }
 
 // ========== ЧАТ ==========
+
+/**
+ * Отправка сообщения
+ * @param {string} username - автор
+ * @param {string} message - текст
+ * @returns {Promise<Object>}
+ */
 async function sendChatMessage(username, message) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: true };
   }
 
   try {
-    await supabaseClient
+    const { error } = await supabaseClient
       .from('chat_messages')
       .insert([{
         username: username,
         message: message
       }]);
 
+    if (error) throw error;
     return { success: true };
   } catch (error) {
-    console.error('⚠️ Ошибка отправки сообщения:', error);
+    console.error('⚠️ Ошибка отправки:', error);
     return { success: false };
   }
 }
 
+/**
+ * Получение сообщений
+ * @param {number} limit - кол-во
+ * @returns {Promise<Object>}
+ */
 async function getChatMessages(limit = 50) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: false, data: [] };
@@ -346,6 +413,11 @@ async function getChatMessages(limit = 50) {
   }
 }
 
+/**
+ * Подписка на чат
+ * @param {Function} callback - обработчик
+ * @returns {Object|null}
+ */
 function subscribeToChatMessages(callback) {
   if (!supabaseClient || !supabaseClient.from) {
     return null;
@@ -363,7 +435,7 @@ function subscribeToChatMessages(callback) {
 
     return subscription;
   } catch (error) {
-    console.error('⚠️ Ошибка подписки на чат:', error);
+    console.error('⚠️ Ошибка подписки:', error);
     return null;
   }
 }

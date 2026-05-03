@@ -101,10 +101,26 @@ function update(){
   if(aa===0&&GameState.units.length>1)endBattle(false);
 }
 
+// ========== УМНЫЙ ИИ ==========
 function updateAI(){
   for(var ai=0;ai<GameState.units.length;ai++){
     var u=GameState.units[ai];
     if(u.dead||u===GameState.player)continue;
+    
+    // Инициализация ИИ параметров
+    if(!u.aiState){
+      u.aiState={
+        coverPos:null,
+        healTimer:0,
+        lastDmgTime:0,
+        aggroLevel:0,
+        peekTimer:0,
+        flanking:false,
+        retreating:false,
+        aimTime:0
+      };
+    }
+
     if(u.justFired&&Date.now()>u.fireTimer)u.justFired=false;
     if(u.flame&&u.flameActive&&Date.now()-u.lastShot>200)u.flameActive=false;
     var spd2=u.trackBroken?u.baseSpeed*0.3:u.baseSpeed;
@@ -113,6 +129,7 @@ function updateAI(){
     if(dm<0.5)u.stuckTimer++;else u.stuckTimer=0;
     u.lastPos={x:u.x,y:u.y};
 
+    // Поиск целей
     var targets=[];
     for(var ti2=0;ti2<GameState.units.length;ti2++){
       var tgt=GameState.units[ti2];
@@ -120,6 +137,8 @@ function updateAI(){
       if(u.team==='enemy'&&tgt.team!=='enemy')targets.push(tgt);
       if(u.team!=='enemy'&&tgt.team==='enemy')targets.push(tgt);
     }
+    
+    // Фильтрация по видимости (разведка)
     targets=targets.filter(function(t){
       if(canSee(u,t))return true;
       for(var a2=0;a2<GameState.units.length;a2++){
@@ -131,44 +150,163 @@ function updateAI(){
       }
       return false;
     });
-    targets.sort(function(a,b){return Math.hypot(a.x-u.x,a.y-u.y)-Math.hypot(b.x-u.x,b.y-u.y);});
-    var target=targets[0];
 
+    // Приоритизация целей (ближайший, низкое HP, опасный)
+    targets.sort(function(a,b){
+      var distA=Math.hypot(a.x-u.x,a.y-u.y);
+      var distB=Math.hypot(b.x-u.x,b.y-u.y);
+      var scoreA=distA - (a.maxHp-a.hp)*0.5 - (a.dmg*0.3);
+      var scoreB=distB - (b.maxHp-b.hp)*0.5 - (b.dmg*0.3);
+      return scoreA-scoreB;
+    });
+
+    var target=targets[0];
     u.isMoving=false;
+
+    // === ТАКТИКА ===
+    var hpPercent=u.hp/u.maxHp;
+    
+    // Отступление при низком HP
+    if(hpPercent<0.3&&!u.aiState.retreating){
+      u.aiState.retreating=true;
+      u.aiState.coverPos={x:u.x-Math.random()*400-200,y:u.y+(Math.random()-0.5)*300};
+    }
+    
+    if(u.aiState.retreating&&hpPercent>0.5){
+      u.aiState.retreating=false;
+    }
+
     if(target){
       var dist=Math.hypot(target.x-u.x,target.y-u.y);
       var ta2=Math.atan2(target.y-u.y,target.x-u.x);
-      var ad2=ta2-u.angle;while(ad2>Math.PI)ad2-=Math.PI*2;while(ad2<-Math.PI)ad2+=Math.PI*2;
-      u.angle+=Math.sign(ad2)*Math.min(Math.abs(ad2),0.06);u.tAngle=u.angle;
-      var engR=u.flame?u.flameRange*0.8:300;
-      if(dist>engR){
-        if(u.stuckTimer>30){u.wanderAngle=u.angle+(Math.random()>0.5?1:-1)*(Math.PI/2+Math.random());u.stuckTimer=0;u.wanderTimer=60;}
-        var ma=u.wanderTimer>0?u.wanderAngle:u.angle;if(u.wanderTimer>0)u.wanderTimer--;
-        var nx3=u.x+Math.cos(ma)*spd2;var ny3=u.y+Math.sin(ma)*spd2;
-        if(!tankCollides(nx3,ny3,u.angle,sz2)){u.x=nx3;u.y=ny3;u.isMoving=true;}
-        else{
-          var offs=[0.4,-0.4,0.8,-0.8,1.2,-1.2];
-          for(var oi=0;oi<offs.length;oi++){
-            nx3=u.x+Math.cos(ma+offs[oi])*spd2;ny3=u.y+Math.sin(ma+offs[oi])*spd2;
-            if(!tankCollides(nx3,ny3,u.angle,sz2)){u.x=nx3;u.y=ny3;u.isMoving=true;break;}
+      var ad2=ta2-u.angle;
+      while(ad2>Math.PI)ad2-=Math.PI*2;
+      while(ad2<-Math.PI)ad2+=Math.PI*2;
+
+      // === УМНОЕ ДВИЖЕНИЕ ===
+      if(u.aiState.retreating){
+        // Отступление к укрытию
+        var retreatAngle=Math.atan2(u.aiState.coverPos.y-u.y,u.aiState.coverPos.x-u.x);
+        var adRetreat=retreatAngle-u.angle;
+        while(adRetreat>Math.PI)adRetreat-=Math.PI*2;
+        while(adRetreat<-Math.PI)adRetreat+=Math.PI*2;
+        u.angle+=Math.sign(adRetreat)*Math.min(Math.abs(adRetreat),0.08);
+        
+        var nx=u.x+Math.cos(u.angle)*spd2*1.3; // Быстрое отступление
+        var ny=u.y+Math.sin(u.angle)*spd2*1.3;
+        if(!tankCollides(nx,ny,u.angle,sz2)){
+          u.x=nx;u.y=ny;u.isMoving=true;
+        }
+        
+        // Поворот башни на врага
+        u.tAngle=ta2;
+        
+      } else {
+        // Оптимальная дистанция боя
+        var optimalRange=u.flame?u.flameRange*0.7:(u.isPT?450:350);
+        var rangeDiff=dist-optimalRange;
+        
+        // Фланговая атака для СТ/ЛТ
+        if((u.cls==='lt'||u.cls==='mt')&&dist>200&&dist<600&&Math.random()<0.3){
+          u.aiState.flanking=!u.aiState.flanking;
+        }
+        
+        if(u.aiState.flanking){
+          // Обход с фланга
+          var flankAngle=ta2+(Math.random()>0.5?Math.PI/2:-Math.PI/2);
+          var adFlank=flankAngle-u.angle;
+          while(adFlank>Math.PI)adFlank-=Math.PI*2;
+          while(adFlank<-Math.PI)adFlank+=Math.PI*2;
+          u.angle+=Math.sign(adFlank)*0.06;
+        } else {
+          // Поворот корпуса
+          u.angle+=Math.sign(ad2)*Math.min(Math.abs(ad2),0.06);
+        }
+        
+        u.tAngle=ta2; // Башня всегда на цель
+
+        // Движение вперёд/назад
+        if(Math.abs(rangeDiff)>50){
+          if(u.stuckTimer>30){
+            u.wanderAngle=u.angle+(Math.random()>0.5?1:-1)*(Math.PI/2+Math.random());
+            u.stuckTimer=0;
+            u.wanderTimer=60;
+          }
+          
+          var ma=u.wanderTimer>0?u.wanderAngle:u.angle;
+          if(u.wanderTimer>0)u.wanderTimer--;
+          
+          // Приближение или отдаление
+          var moveDir=rangeDiff>0?1:-0.6;
+          var nx3=u.x+Math.cos(ma)*spd2*moveDir;
+          var ny3=u.y+Math.sin(ma)*spd2*moveDir;
+          
+          if(!tankCollides(nx3,ny3,u.angle,sz2)){
+            u.x=nx3;u.y=ny3;u.isMoving=true;
+          } else {
+            // Обход препятствий
+            var offs=[0.4,-0.4,0.8,-0.8,1.2,-1.2];
+            for(var oi=0;oi<offs.length;oi++){
+              nx3=u.x+Math.cos(ma+offs[oi])*spd2*moveDir;
+              ny3=u.y+Math.sin(ma+offs[oi])*spd2*moveDir;
+              if(!tankCollides(nx3,ny3,u.angle,sz2)){
+                u.x=nx3;u.y=ny3;u.isMoving=true;break;
+              }
+            }
           }
         }
       }
-      var fR=u.flame?u.flameRange:600;
-      var fA=u.flame?u.flameCone*0.8:0.3;
-      if(dist<fR&&Math.abs(ad2)<fA){
-        u.fire(u.flame?0:(u.dmg>=400?1:0));
-      }else if(u.flame){u.flameActive=false;}
-    }else{
+
+      // === УМНАЯ СТРЕЛЬБА ===
+      var fR=u.flame?u.flameRange:700;
+      var aimError=Math.abs(ad2);
+      var aimThreshold=u.flame?u.flameCone*0.8:0.15;
+      
+      // Снижение точности при движении
+      if(u.isMoving)aimThreshold*=1.5;
+      
+      // Прицеливание
+      if(dist<fR&&aimError<aimThreshold){
+        u.aiState.aimTime++;
+        
+        // Стрельба после прицеливания (умнее стреляют)
+        if(u.aiState.aimTime>10||(u.flame&&u.aiState.aimTime>2)){
+          // Выбор снаряда (ББ для тяжёлой брони, ОФ для лёгкой)
+          var shellType=0;
+          if(target.armor&&target.armor>100&&u.dmg>=300)shellType=2; // Подкал
+          else if(target.armor<80&&u.dmg>=400)shellType=1; // ОФ
+          
+          u.fire(shellType);
+          u.aiState.aimTime=0;
+        }
+      } else {
+        u.aiState.aimTime=0;
+        if(u.flame)u.flameActive=false;
+      }
+      
+    } else {
+      // Нет целей - движение к центру
       if(u.flame)u.flameActive=false;
-      var ca=Math.atan2(-u.y,-u.x);var ad3=ca-u.angle;
-      while(ad3>Math.PI)ad3-=Math.PI*2;while(ad3<-Math.PI)ad3+=Math.PI*2;
-      u.angle+=Math.sign(ad3)*Math.min(Math.abs(ad3),0.04);u.tAngle=u.angle;
-      var nx4=u.x+Math.cos(u.angle)*spd2*0.7;var ny4=u.y+Math.sin(u.angle)*spd2*0.7;
-      if(!tankCollides(nx4,ny4,u.angle,sz2)){u.x=nx4;u.y=ny4;u.isMoving=true;}else u.angle+=0.15;
+      var ca=Math.atan2(-u.y,-u.x);
+      var ad3=ca-u.angle;
+      while(ad3>Math.PI)ad3-=Math.PI*2;
+      while(ad3<-Math.PI)ad3+=Math.PI*2;
+      u.angle+=Math.sign(ad3)*Math.min(Math.abs(ad3),0.04);
+      u.tAngle=u.angle;
+      
+      var nx4=u.x+Math.cos(u.angle)*spd2*0.7;
+      var ny4=u.y+Math.sin(u.angle)*spd2*0.7;
+      if(!tankCollides(nx4,ny4,u.angle,sz2)){
+        u.x=nx4;u.y=ny4;u.isMoving=true;
+      } else {
+        u.angle+=0.15;
+      }
     }
+    
     u.engineTick=(u.engineTick||0)+1;
-    if(u.isMoving&&u.engineTick%8===0)GameState.tracks.push({x:u.x,y:u.y,a:u.angle,life:150,s:u.s});
+    if(u.isMoving&&u.engineTick%8===0){
+      GameState.tracks.push({x:u.x,y:u.y,a:u.angle,life:150,s:u.s});
+    }
   }
 }
 

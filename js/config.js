@@ -65,7 +65,7 @@ const CONFIG={
 };
 
 const GameState={
-  XP:500000,GOLD:5000,SILVER:50000,
+  XP:500,GOLD:0,SILVER:500,
   owned:["T26","PZ2","CRUS2","VAEB","R35"],
   selected:"T26",curNat:"ussr",
   gameActive:false,controlMode:'pc',pendingBattle:null,

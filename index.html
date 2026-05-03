@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CITY TANKS</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/leaderboard.css">
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -79,6 +82,41 @@
 <div id="module-modal" class="module-modal"></div>
 <div id="upgrade-modal" class="upgrade-modal"></div>
 
+<!-- ТАБЛИЦА ЛИДЕРОВ -->
+<div id="leaderboard-modal" class="leaderboard-modal">
+  <div class="leaderboard-panel">
+    <div class="leaderboard-header">
+      <h2>🏆 ТАБЛИЦА ЛИДЕРОВ</h2>
+      <button class="btn-close-lb" onclick="hideLeaderboard()">✕</button>
+    </div>
+    <div class="leaderboard-tabs">
+      <button class="lb-tab active" onclick="switchLBTab('global', this)">🌍 ГЛОБАЛЬНАЯ</button>
+      <button class="lb-tab" onclick="switchLBTab('online', this)">👥 ОНЛАЙН</button>
+    </div>
+    <div id="lb-global" class="lb-content active-lb">
+      <div class="leaderboard-table">
+        <div class="lb-header">
+          <div class="lb-rank">МЕСТО</div>
+          <div class="lb-name">ИМЯ</div>
+          <div class="lb-xp">ОПЫТ</div>
+          <div class="lb-battles">БОИ</div>
+          <div class="lb-wins">ПОБЕДЫ</div>
+          <div class="lb-kills">ФРАГИ</div>
+        </div>
+        <div id="lb-global-list" class="lb-list"></div>
+      </div>
+    </div>
+    <div id="lb-online" class="lb-content">
+      <div class="online-players">
+        <div id="lb-online-list" class="online-list"></div>
+        <div id="lb-online-empty" style="text-align:center;padding:20px;color:#888;display:none;">
+          😴 Никого нет онлайн
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="ui" style="display:none;">
   <div id="top-bar">
     <div class="user-info">
@@ -96,6 +134,7 @@
       <span id="exchange-msg"></span>
     </div>
     <div class="top-btns">
+      <button class="btn btn-leaderboard" onclick="showLeaderboard()">🏆 ТОП</button>
       <button class="btn btn-promo" onclick="showPromo()">🎟️ КОД</button>
       <button class="btn btn-container" onclick="showContainerShop()">📦 КОНТЕЙНЕРЫ</button>
       <button class="btn btn-inventory" onclick="openInventoryTab()">🎒<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
@@ -212,15 +251,33 @@
 
 <canvas id="game"></canvas>
 
+<!-- СКРИПТЫ - ПОРЯДОК ВАЖЕН! -->
 <script src="js/config.js"></script>
 <script src="js/tanks.js"></script>
 <script src="js/containers.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/tank.js"></script>
+<script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/main.js"></script>
+
+<script>
+  // Инициализация при загрузке
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      console.log('🚀 Инициализация Supabase...');
+      initSupabase();
+      
+      // Проверяем что функции загружены
+      console.log('✅ showLeaderboard:', typeof showLeaderboard);
+      console.log('✅ hideLeaderboard:', typeof hideLeaderboard);
+      console.log('✅ switchLBTab:', typeof switchLBTab);
+    }, 500);
+  });
+</script>
+
 </body>
 </html>

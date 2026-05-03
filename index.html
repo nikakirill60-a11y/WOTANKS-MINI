@@ -6,11 +6,10 @@
   <title>CITY TANKS</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/leaderboard.css">
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
+<!-- ========== ЭКРАН ВХОДА ========== -->
 <div id="login-screen">
   <div class="login-box">
     <h1>CITY TANKS</h1>
@@ -24,6 +23,7 @@
   </div>
 </div>
 
+<!-- ========== ВЫБОР УПРАВЛЕНИЯ ========== -->
 <div id="control-modal">
   <h2>ВЫБЕРИТЕ УПРАВЛЕНИЕ</h2>
   <div class="control-options">
@@ -40,6 +40,7 @@
   </div>
 </div>
 
+<!-- ========== КОНТЕЙНЕРЫ ========== -->
 <div id="container-modal">
   <div class="modal-header">
     <h2>📦 КОНТЕЙНЕРЫ</h2>
@@ -64,6 +65,7 @@
   </div>
 </div>
 
+<!-- ========== ПРОМОКОД ========== -->
 <div id="promo-modal">
   <div class="promo-content">
     <h2>🎟️ ПРОМОКОД</h2>
@@ -74,15 +76,17 @@
   </div>
 </div>
 
+<!-- ========== ОТКРЫТИЕ КОНТЕЙНЕРА ========== -->
 <div id="container-opening">
   <div id="anim-container"></div>
   <div id="reward-display"></div>
 </div>
 
+<!-- ========== МОДУЛИ И ПРОКАЧКА ========== -->
 <div id="module-modal" class="module-modal"></div>
 <div id="upgrade-modal" class="upgrade-modal"></div>
 
-<!-- ТАБЛИЦА ЛИДЕРОВ -->
+<!-- ========== ТАБЛИЦА ЛИДЕРОВ ========== -->
 <div id="leaderboard-modal" class="leaderboard-modal">
   <div class="leaderboard-panel">
     <div class="leaderboard-header">
@@ -117,7 +121,9 @@
   </div>
 </div>
 
+<!-- ========== ГЛАВНЫЙ ИНТЕРФЕЙС ========== -->
 <div id="ui" style="display:none;">
+  <!-- ===== TOP BAR ===== -->
   <div id="top-bar">
     <div class="user-info">
       👤 <span id="current-user">Player</span>
@@ -143,9 +149,12 @@
     </div>
   </div>
 
+  <!-- ===== БУСТЕРЫ ===== -->
   <div id="booster-display" class="booster-bar"></div>
 
+  <!-- ===== ОСНОВНАЯ ЗОНА АНГАРА ===== -->
   <div id="main-garage-area">
+    <!-- КВЕСТ -->
     <div id="quest-widget">
       <div class="quest-title">⭐ 23 ФЕВРАЛЯ: ПОБЕДА ⭐</div>
       <div class="quest-desc">Уничтожь 15 танков врага</div>
@@ -156,6 +165,7 @@
       <button id="quest-claim-btn" class="btn quest-btn" onclick="claimQuestReward()" style="display:none;">ЗАБРАТЬ T-34-85 ПОБЕДНЫЙ</button>
     </div>
 
+    <!-- ВЫБОР НАЦИИ -->
     <div id="nat-buttons">
       <button class="n-btn active-n" onclick="setNat('ussr',this)">СССР</button>
       <button class="n-btn" onclick="setNat('germany',this)">ГЕРМАНИЯ</button>
@@ -164,10 +174,14 @@
       <button class="n-btn" onclick="setNat('china',this)">КИТАЙ</button>
       <button class="n-btn" onclick="setNat('japan',this)">ЯПОНИЯ</button>
     </div>
+
+    <!-- ДЕРЕВО РАЗВИТИЯ -->
     <div class="tree-view" id="tree-container">
       <canvas id="tree-canvas"></canvas>
       <div id="nodes"></div>
     </div>
+
+    <!-- УПРАВЛЕНИЕ БОЕМ -->
     <div id="battle-controls">
       <div style="margin-bottom:5px;font-size:14px">
         КАРТА: <select id="map-select">
@@ -180,7 +194,14 @@
         <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
         <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">10x10</button>
         <button class="btn" style="background:#7f8c8d" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+        
+        <!-- ===== НОВОЕ: ОНЛАЙН РЕЖИМЫ ===== -->
+        <button class="btn" style="background:#27ae60;font-weight:bold" onclick="startMultiplayerSearch(1)">🌐 1x1 ОНЛАЙН</button>
+        <button class="btn" style="background:#27ae60;font-weight:bold" onclick="startMultiplayerSearch(2)">🌐 2x2 ОНЛАЙН</button>
+        <button class="btn" style="background:#3498db" onclick="showJoinRoomDialog()">🔗 ПРИСОЕДИНИТЬСЯ</button>
       </div>
+
+      <!-- ТРЕНИРОВКА -->
       <div id="training-panel" style="display:none">
         НАЦИЯ: <select id="train-nat-select" onchange="fillEnemySelect()"></select>
         ВРАГ: <select id="enemy-select"></select>
@@ -189,14 +210,18 @@
     </div>
   </div>
 
+  <!-- ===== КАРУСЕЛЬ ТАНКОВ ===== -->
   <div id="tank-carousel-container">
     <div id="tank-carousel"></div>
   </div>
 </div>
 
+<!-- ========== HUD (ВО ВРЕМЯ БОЯ) ========== -->
 <div id="hud">
   <div id="allies-list" class="team-list"></div>
   <div id="enemies-list" class="team-list"></div>
+  
+  <!-- НИЖНЯЯ ПАНЕЛЬ -->
   <div id="bottom-bar">
     <div id="hp-ui"><div id="hp-bar"></div></div>
     <div id="ammo-ui"><span id="ammo-val">ЗАРЯЖЕНО</span></div>
@@ -214,11 +239,14 @@
       <span class="cons-btn ready" id="cons6" onclick="useCons(5)">9:Топливо</span>
     </div>
   </div>
+
+  <!-- ЛОГИ И ИНФОРМАЦИЯ -->
   <div id="dmg-log"></div>
   <div id="crew-msg"></div>
   <canvas id="minimap"></canvas>
 </div>
 
+<!-- ========== МОБИЛЬНОЕ УПРАВЛЕНИЕ ========== -->
 <div id="mobile-controls">
   <div id="joystick-zone">
     <div id="joystick-base">
@@ -243,38 +271,35 @@
   </div>
 </div>
 
+<!-- ========== ЭКРАН РЕЗУЛЬТАТОВ ========== -->
 <div id="result-screen">
   <div id="result-title"></div>
   <div id="result-stats"></div>
   <button class="btn" style="margin-top:15px" onclick="backToGarage()">В АНГАР</button>
 </div>
 
+<!-- ========== CANVAS ДЛЯ ИГРЫ ========== -->
 <canvas id="game"></canvas>
 
-<!-- СКРИПТЫ - ПОРЯДОК ВАЖЕН! -->
+<!-- ========== СКРИПТЫ ========== -->
 <script src="js/config.js"></script>
 <script src="js/tanks.js"></script>
 <script src="js/containers.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/tank.js"></script>
-<script src="js/supabase.js"></script>
+<script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/battle.js"></script>
+<script src="js/multiplayer.js"></script>
 <script src="js/main.js"></script>
 
 <script>
   // Инициализация при загрузке
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-      console.log('🚀 Инициализация Supabase...');
       initSupabase();
-      
-      // Проверяем что функции загружены
-      console.log('✅ showLeaderboard:', typeof showLeaderboard);
-      console.log('✅ hideLeaderboard:', typeof hideLeaderboard);
-      console.log('✅ switchLBTab:', typeof switchLBTab);
     }, 500);
   });
 </script>

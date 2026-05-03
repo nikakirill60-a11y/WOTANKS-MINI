@@ -1,27 +1,21 @@
+// js/supabase.js
 // ========== SUPABASE КОНФИГУРАЦИЯ ==========
-const SUPABASE_URL = 'https://tkkpdtfhcwwondonfjsi.supabase.co'; // Замените на ваш URL
-const SUPABASE_KEY = 'sb_publishable_r2tEe8p_WJPrEzsN7aIpSw_OKQzzKTw'; // Замените на ваш ключ
 
-// Инициализация Supabase
+// 🔐 Вставьте свои значения из Supabase Settings → API
+const SUPABASE_URL = 'https://xxxxx.supabase.co'; // 👈 ЗАМЕНИТЕ
+const SUPABASE_KEY = 'ваш-anon-public-key'; // 👈 ЗАМЕНИТЕ
+
 let supabaseClient = null;
 
 function initSupabase() {
   try {
     if (typeof window.supabase === 'undefined') {
-      console.warn('⚠️ Supabase библиотека не загружена, работаем локально');
+      console.warn('⚠️ Supabase библиотека не загружена');
       return false;
     }
     
-    // ВАЖНО: URL должен быть БЕЗ /rest/v1
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true
-      }
-    });
-    
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     console.log('✅ Supabase подключен');
-    console.log('URL:', SUPABASE_URL);
     return true;
   } catch (error) {
     console.error('❌ Ошибка подключения Supabase:', error);
@@ -31,74 +25,44 @@ function initSupabase() {
 
 // ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
 async function registerUser(username, password) {
-  if (!supabaseClient) {
-    console.warn('Supabase не инициализирован');
-    return { success: false, error: 'Сервис недоступен' };
-  }
+  if (!supabaseClient) return { success: false, error: 'Sервис недоступен' };
 
   try {
     // Проверка существования пользователя
-    const { data: existingUser, error: checkError } = await supabaseClient
+    const { data: existingUser } = await supabaseClient
       .from('users')
       .select('username')
       .eq('username', username);
-
-    if (checkError) {
-      console.error('Ошибка проверки:', checkError);
-      throw checkError;
-    }
 
     if (existingUser && existingUser.length > 0) {
       return { success: false, error: 'Пользователь уже существует!' };
     }
 
     // Создание нового пользователя
-    const newUser = {
-      username: username,
-      password: password,
-      xp: 500,
-      gold: 0,
-      silver: 5000,
-      owned_tanks: JSON.stringify(["T26", "PZ2", "CRUS2", "VAEB", "R35"]),
-      selected_tank: "T26",
-      used_promos: JSON.stringify([]),
-      quest_23: JSON.stringify({ active: true, kills: 0, target: 15, claimed: false }),
-      inventory: JSON.stringify({}),
-      boosters: JSON.stringify({ xp: 0, gold: 0, silver: 0 }),
-      booster_stock: JSON.stringify({ xp: 0, gold: 0, silver: 0 }),
-      modules: JSON.stringify({}),
-      upgrades: JSON.stringify({}),
-      upgrades_bought: JSON.stringify({}),
-      total_battles: 0,
-      total_wins: 0,
-      total_kills: 0,
-      total_damage: 0,
-      created_at: new Date().toISOString()
-    };
-
     const { data, error } = await supabaseClient
       .from('users')
-      .insert([newUser])
+      .insert([{
+        username: username,
+        password: password, // ⚠️ В продакшене используйте bcrypt!
+        xp: 500,
+        gold: 0,
+        silver: 5000,
+        owned_tanks: ["T26", "PZ2", "CRUS2", "VAEB", "R35"],
+        selected_tank: "T26"
+      }])
       .select();
 
-    if (error) {
-      console.error('Ошибка вставки:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     console.log('✅ Пользователь создан:', data);
     return { success: true, data: data[0] };
   } catch (error) {
-    console.error('Ошибка регистрации:', error);
-    return { success: false, error: error.message || 'Ошибка регистрации' };
+    console.error('❌ Ошибка регистрации:', error);
+    return { success: false, error: error.message };
   }
 }
 
 async function loginUser(username, password) {
-  if (!supabaseClient) {
-    console.warn('Supabase не инициализирован');
-    return { success: false, error: 'Сервис недоступен' };
-  }
+  if (!supabaseClient) return { success: false, error: 'Сервис недоступен' };
 
   try {
     const { data, error } = await supabaseClient
@@ -107,28 +71,22 @@ async function loginUser(username, password) {
       .eq('username', username)
       .eq('password', password);
 
-    if (error) {
-      console.error('Ошибка запроса:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     if (!data || data.length === 0) {
       return { success: false, error: 'Неверное имя или пароль!' };
     }
 
     const user = data[0];
-
-    // Обновляем последний вход
     await supabaseClient
       .from('users')
       .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 
-    console.log('✅ Пользователь вошёл:', username);
+    console.log('✅ Вход выполнен:', username);
     return { success: true, data: user };
   } catch (error) {
-    console.error('Ошибка входа:', error);
-    return { success: false, error: error.message || 'Ошибка входа' };
+    console.error('❌ Ошибка входа:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -136,34 +94,31 @@ async function saveUserProgress(username, progressData) {
   if (!supabaseClient) return { success: false };
 
   try {
-    const updateData = {
-      xp: progressData.XP,
-      gold: progressData.GOLD,
-      silver: progressData.SILVER,
-      owned_tanks: JSON.stringify(progressData.owned),
-      selected_tank: progressData.selected,
-      used_promos: JSON.stringify(progressData.usedPromos),
-      quest_23: JSON.stringify(progressData.quest23),
-      inventory: JSON.stringify(progressData.inventory),
-      boosters: JSON.stringify(progressData.boosters),
-      booster_stock: JSON.stringify(progressData.boosterStock),
-      modules: JSON.stringify(progressData.modules),
-      upgrades: JSON.stringify(progressData.upgrades),
-      upgrades_bought: JSON.stringify(progressData.upgradesBought),
-      updated_at: new Date().toISOString()
-    };
-
     const { error } = await supabaseClient
       .from('users')
-      .update(updateData)
+      .update({
+        xp: progressData.XP,
+        gold: progressData.GOLD,
+        silver: progressData.SILVER,
+        owned_tanks: progressData.owned,
+        selected_tank: progressData.selected,
+        used_promos: progressData.usedPromos,
+        quest_23: progressData.quest23,
+        inventory: progressData.inventory,
+        boosters: progressData.boosters,
+        booster_stock: progressData.boosterStock,
+        modules: progressData.modules,
+        upgrades: progressData.upgrades,
+        upgrades_bought: progressData.upgradesBought,
+        updated_at: new Date().toISOString()
+      })
       .eq('username', username);
 
     if (error) throw error;
-
     console.log('💾 Прогресс сохранён:', username);
     return { success: true };
   } catch (error) {
-    console.error('Ошибка сохранения:', error);
+    console.error('❌ Ошибка сохранения:', error);
     return { success: false };
   }
 }
@@ -178,34 +133,32 @@ async function loadUserProgress(username) {
       .eq('username', username);
 
     if (error) throw error;
-
     if (!data || data.length === 0) {
       return { success: false, error: 'Пользователь не найден' };
     }
 
     const user = data[0];
-
     return {
       success: true,
       data: {
         XP: user.xp,
         GOLD: user.gold,
         SILVER: user.silver,
-        owned: JSON.parse(user.owned_tanks || '["T26"]'),
+        owned: user.owned_tanks || ["T26"],
         selected: user.selected_tank,
-        usedPromos: JSON.parse(user.used_promos || '[]'),
-        quest23: JSON.parse(user.quest_23 || '{"active":true,"kills":0,"target":15,"claimed":false}'),
-        inventory: JSON.parse(user.inventory || '{}'),
-        boosters: JSON.parse(user.boosters || '{"xp":0,"gold":0,"silver":0}'),
-        boosterStock: JSON.parse(user.booster_stock || '{"xp":0,"gold":0,"silver":0}'),
-        modules: JSON.parse(user.modules || '{}'),
-        upgrades: JSON.parse(user.upgrades || '{}'),
-        upgradesBought: JSON.parse(user.upgrades_bought || '{}')
+        usedPromos: user.used_promos || [],
+        quest23: user.quest_23 || { active: true, kills: 0, target: 15, claimed: false },
+        inventory: user.inventory || {},
+        boosters: user.boosters || { xp: 0, gold: 0, silver: 0 },
+        boosterStock: user.booster_stock || { xp: 0, gold: 0, silver: 0 },
+        modules: user.modules || {},
+        upgrades: user.upgrades || {},
+        upgradesBought: user.upgrades_bought || {}
       }
     };
   } catch (error) {
-    console.error('Ошибка загрузки:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Ошибка загрузки:', error);
+    return { success: false };
   }
 }
 
@@ -213,19 +166,17 @@ async function saveBattleStats(username, stats) {
   if (!supabaseClient) return { success: false };
 
   try {
-    const { data: user, error: getUserError } = await supabaseClient
+    const { data: user } = await supabaseClient
       .from('users')
       .select('total_battles, total_wins, total_kills, total_damage')
-      .eq('username', username);
+      .eq('username', username)
+      .single();
 
-    if (getUserError) throw getUserError;
-
-    const userData = user[0];
     const updateData = {
-      total_battles: (userData.total_battles || 0) + 1,
-      total_wins: (userData.total_wins || 0) + (stats.won ? 1 : 0),
-      total_kills: (userData.total_kills || 0) + stats.kills,
-      total_damage: (userData.total_damage || 0) + stats.damage
+      total_battles: (user?.total_battles || 0) + 1,
+      total_wins: (user?.total_wins || 0) + (stats.won ? 1 : 0),
+      total_kills: (user?.total_kills || 0) + stats.kills,
+      total_damage: (user?.total_damage || 0) + stats.damage
     };
 
     await supabaseClient
@@ -245,13 +196,12 @@ async function saveBattleStats(username, stats) {
         damage: stats.damage,
         xp_earned: stats.xp,
         silver_earned: stats.silver,
-        gold_earned: stats.gold,
-        created_at: new Date().toISOString()
+        gold_earned: stats.gold
       }]);
 
     return { success: true };
   } catch (error) {
-    console.error('Ошибка сохранения статистики:', error);
+    console.error('❌ Ошибка сохранения статистики:', error);
     return { success: false };
   }
 }
@@ -262,15 +212,14 @@ async function getLeaderboard(limit = 100) {
   try {
     const { data, error } = await supabaseClient
       .from('users')
-      .select('username, xp, total_battles, total_wins, total_kills, total_damage')
+      .select('username, xp, total_battles, total_wins, total_kills')
       .order('xp', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-
     return { success: true, data: data || [] };
   } catch (error) {
-    console.error('Ошибка получения таблицы лидеров:', error);
+    console.error('❌ Ошибка получения таблицы лидеров:', error);
     return { success: false, data: [] };
   }
 }
@@ -307,7 +256,6 @@ async function getOnlinePlayers() {
       .order('last_online', { ascending: false });
 
     if (error) throw error;
-
     return { success: true, data: data || [] };
   } catch (error) {
     return { success: false, data: [] };
@@ -322,15 +270,13 @@ async function sendChatMessage(username, message) {
       .from('chat_messages')
       .insert([{
         username: username,
-        message: message,
-        created_at: new Date().toISOString()
+        message: message
       }]);
 
     if (error) throw error;
-
     return { success: true };
   } catch (error) {
-    console.error('Ошибка отправки сообщения:', error);
+    console.error('❌ Ошибка отправки сообщения:', error);
     return { success: false };
   }
 }
@@ -346,7 +292,6 @@ async function getChatMessages(limit = 50) {
       .limit(limit);
 
     if (error) throw error;
-
     return { success: true, data: (data || []).reverse() };
   } catch (error) {
     return { success: false, data: [] };
@@ -368,7 +313,9 @@ function subscribeToChatMessages(callback) {
 
     return subscription;
   } catch (error) {
-    console.error('Ошибка подписки на чат:', error);
+    console.error('❌ Ошибка подписки на чат:', error);
     return null;
   }
 }
+
+console.log('✅ supabase.js загружен');

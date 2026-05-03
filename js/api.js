@@ -1,30 +1,13 @@
 // js/api.js
 // ========== API ПРОСЛОЙКА (ИСПОЛЬЗУЕТ SUPABASE) ==========
 
-console.log('✅ api.js загружен');
-
-/**
- * Инициализация API
- * @returns {boolean}
- */
-function initSupabase() {
-  console.log('✅ API инициализирован (Supabase mode)');
-  return true;
-}
+// ✅ НЕ ОБЪЯВЛЯЕМ supabaseClient - он из supabase.js!
 
 // ========== РЕГИСТРАЦИЯ ==========
-
-/**
- * Регистрация пользователя
- * @param {string} username - имя пользователя
- * @param {string} password - пароль
- * @returns {Promise<Object>}
- */
 async function registerUser(username, password) {
   if (!supabaseClient || !supabaseClient.from) {
     console.warn('⚠️ Supabase не инициализирован, работаем локально');
     
-    // Fallback: локальное хранилище
     const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
     if (users[username]) {
       return { success: false, error: 'Пользователь уже существует!' };
@@ -67,18 +50,10 @@ async function registerUser(username, password) {
 }
 
 // ========== ВХОД ==========
-
-/**
- * Вход пользователя
- * @param {string} username - имя пользователя
- * @param {string} password - пароль
- * @returns {Promise<Object>}
- */
 async function loginUser(username, password) {
   if (!supabaseClient || !supabaseClient.from) {
     console.warn('⚠️ Supabase не инициализирован, работаем локально');
     
-    // Fallback: локальное хранилище
     const users = JSON.parse(localStorage.getItem('ct_users') || '{}');
     if (!users[username] || users[username].pass !== password) {
       return { success: false, error: 'Неверные учётные данные!' };
@@ -107,13 +82,6 @@ async function loginUser(username, password) {
 }
 
 // ========== СОХРАНЕНИЕ ПРОГРЕССА ==========
-
-/**
- * Сохранение прогресса
- * @param {string} username - имя игрока
- * @param {Object} progressData - данные прогресса
- * @returns {Promise<Object>}
- */
 async function saveUserProgress(username, progressData) {
   if (!supabaseClient || !supabaseClient.from) {
     console.log('⚠️ Сохраняем локально (Supabase не доступен)');
@@ -161,12 +129,6 @@ async function saveUserProgress(username, progressData) {
 }
 
 // ========== ЗАГРУЗКА ПРОГРЕССА ==========
-
-/**
- * Загрузка прогресса
- * @param {string} username - имя игрока
- * @returns {Promise<Object>}
- */
 async function loadUserProgress(username) {
   if (!supabaseClient || !supabaseClient.from) {
     console.log('⚠️ Загружаем локально (Supabase не доступен)');
@@ -219,13 +181,6 @@ async function loadUserProgress(username) {
 }
 
 // ========== СТАТИСТИКА БОЁВ ==========
-
-/**
- * Сохранение статистики боя
- * @param {string} username - имя игрока
- * @param {Object} stats - статистика
- * @returns {Promise<Object>}
- */
 async function saveBattleStats(username, stats) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: true };
@@ -273,12 +228,6 @@ async function saveBattleStats(username, stats) {
 }
 
 // ========== ТАБЛИЦА ЛИДЕРОВ ==========
-
-/**
- * Получение таблицы лидеров
- * @param {number} limit - кол-во записей
- * @returns {Promise<Object>}
- */
 async function getLeaderboard(limit = 100) {
   if (!supabaseClient || !supabaseClient.from) {
     console.log('⚠️ Таблица лидеров недоступна (нет Supabase)');
@@ -302,13 +251,6 @@ async function getLeaderboard(limit = 100) {
 }
 
 // ========== ОНЛАЙН СТАТУС ==========
-
-/**
- * Обновление онлайн статуса
- * @param {string} username - имя игрока
- * @param {boolean} isOnline - онлайн ли
- * @returns {Promise<Object>}
- */
 async function updateOnlineStatus(username, isOnline) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: true };
@@ -331,11 +273,6 @@ async function updateOnlineStatus(username, isOnline) {
 }
 
 // ========== ОНЛАЙН ИГРОКИ ==========
-
-/**
- * Получение онлайн игроков
- * @returns {Promise<Object>}
- */
 async function getOnlinePlayers() {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: false, data: [] };
@@ -360,13 +297,6 @@ async function getOnlinePlayers() {
 }
 
 // ========== ЧАТ ==========
-
-/**
- * Отправка сообщения
- * @param {string} username - автор
- * @param {string} message - текст
- * @returns {Promise<Object>}
- */
 async function sendChatMessage(username, message) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: true };
@@ -388,11 +318,6 @@ async function sendChatMessage(username, message) {
   }
 }
 
-/**
- * Получение сообщений
- * @param {number} limit - кол-во
- * @returns {Promise<Object>}
- */
 async function getChatMessages(limit = 50) {
   if (!supabaseClient || !supabaseClient.from) {
     return { success: false, data: [] };
@@ -413,11 +338,6 @@ async function getChatMessages(limit = 50) {
   }
 }
 
-/**
- * Подписка на чат
- * @param {Function} callback - обработчик
- * @returns {Object|null}
- */
 function subscribeToChatMessages(callback) {
   if (!supabaseClient || !supabaseClient.from) {
     return null;

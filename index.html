@@ -287,17 +287,21 @@
 <canvas id="game"></canvas>
 
 <!-- ========== СКРИПТЫ ========== -->
-<script src="js/config.js"></script>
-<script src="js/tanks.js"></script>
+<!-- ПОРЯДОК ВАЖЕН! -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  <!-- 1️⃣ ПЕРВЫМ -->
+<script src="js/config.js"></script>                                         <!-- 2️⃣ -->
+<script src="js/supabase.js"></script>                                       <!-- 3️⃣ -->
+<script src="js/tanks.js"></script>                                          <!-- 4️⃣ -->
 <script src="js/containers.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/tank.js"></script>
+<script src="js/api.js"></script>                                            <!-- БЕЗ дублирования! -->
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/controls.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/multiplayer.js"></script>
-<script src="js/main.js"></script>
+<script src="js/main.js"></script>                                           <!-- ПОСЛЕДНИЙ -->
 
 <script>
   // Инициализация при загрузке

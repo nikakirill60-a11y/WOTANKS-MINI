@@ -84,9 +84,9 @@ async function loadProgress(username) {
     }
   } else {
     // Дефолтные значения
-    GameState.XP = 500000;
-    GameState.GOLD = 5000;
-    GameState.SILVER = 50000;
+    GameState.XP = 500;
+    GameState.GOLD = 0;
+    GameState.SILVER = 5000;
     GameState.owned = ["T26", "PZ2", "CRUS2", "VAEB", "R35"];
     GameState.selected = "T26";
     GameState.usedPromos = [];

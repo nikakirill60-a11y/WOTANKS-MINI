@@ -56,9 +56,9 @@ async function registerUser(username, password) {
     const newUser = {
       username: username,
       password: password,
-      xp: 500000,
-      gold: 5000,
-      silver: 50000,
+      xp: 500,
+      gold: 0,
+      silver: 5000,
       owned_tanks: JSON.stringify(["T26", "PZ2", "CRUS2", "VAEB", "R35"]),
       selected_tank: "T26",
       used_promos: JSON.stringify([]),

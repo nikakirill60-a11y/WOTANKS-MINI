@@ -6,9 +6,10 @@ let multiplayerMode = false;
 let otherPlayers = {};
 let positionSubscription = null;
 let shotSubscription = null;
+let isRoomHost = false;
 
-// ========== ЭКРАН ОЖИДАНИЯ ==========
-function showWaitingScreen(roomCode, mode) {
+// ========== ЭКРАН ЛОББИ ==========
+function showWaitingScreen(roomCode, mode, players, isHost) {
   const overlay = document.createElement('div');
   overlay.id = 'waiting-overlay';
   overlay.style.cssText = `
@@ -21,34 +22,85 @@ function showWaitingScreen(roomCode, mode) {
     z-index: 999;
   `;
 
+  const playersHtml = players.map((p, i) => `
+    <div style="padding: 10px; background: #222; margin: 5px 0; border-radius: 4px; display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 20px;">${i === 0 ? '👑' : '⚔️'}</span>
+      <span style="color: ${i === 0 ? '#f1c40f' : '#2ecc71'}; font-weight: bold;">${p}</span>
+      ${i === 0 ? '<span style="color: #888; font-size: 11px; margin-left: auto;">ХОСТ</span>' : ''}
+    </div>
+  `).join('');
+
+  // Добавляем пустые слоты
+  for (let i = players.length; i < mode; i++) {
+    playersHtml += `
+      <div style="padding: 10px; background: #111; margin: 5px 0; border-radius: 4px; border: 1px dashed #444; text-align: center; color: #666;">
+        <span>⏳ Ожидание игрока...</span>
+      </div>
+    `;
+  }
+
+  const startButton = isHost 
+    ? `<button class="btn" style="background: #27ae60; font-size: 16px; font-weight: bold; margin-top: 20px; ${players.length < mode ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="hostStartBattle()" ${players.length < mode ? 'disabled' : ''}>
+        🚀 НАЧАТЬ БОЙ
+      </button>`
+    : `<div style="margin-top: 20px; color: #f39c12; font-size: 14px;">
+        ⏳ Ожидание решения хоста...
+      </div>`;
+
   overlay.innerHTML = `
-    <div style="text-align: center; color: #fff;">
-      <h2 style="margin-bottom: 20px;">🔍 ПОИСК ИГРОКОВ</h2>
-      <div style="font-size: 18px; margin: 10px 0;">
-        Режим: <strong>${mode}x${mode}</strong>
+    <div style="text-align: center; color: #fff; max-width: 500px; width: 90%;">
+      <h2 style="margin-bottom: 20px; color: #f1c40f;">🎮 ЛОББИ</h2>
+      
+      <div style="font-size: 16px; margin: 15px 0; padding: 15px; background: #222; border-radius: 8px;">
+        <div style="margin-bottom: 10px;">Режим: <strong>${mode}x${mode}</strong></div>
+        <div>Код комнаты: <span style="color: #f1c40f; font-weight: bold; font-size: 20px;">${roomCode}</span></div>
       </div>
-      <div style="font-size: 16px; margin: 20px 0; padding: 15px; background: #222; border-radius: 8px;">
-        Код комнаты: <span style="color: #f1c40f; font-weight: bold; font-size: 20px;">${roomCode}</span>
+
+      <div style="margin: 20px 0;">
+        <h3 style="color: #3498db; margin-bottom: 10px;">ИГРОКИ (${players.length}/${mode})</h3>
+        <div id="players-list" style="max-height: 300px; overflow-y: auto;">
+          ${playersHtml}
+        </div>
       </div>
-      <div style="font-size: 14px; color: #aaa; margin: 20px 0;">
-        ⏳ Ожидание противника... (${mode} игроков)
-      </div>
-      <div class="spinner" style="margin: 20px 0;">
-        <div style="width: 40px; height: 40px; border: 4px solid #555; border-top-color: #f39c12; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-      </div>
-      <button class="btn" style="margin-top: 20px;" onclick="cancelMultiplayerSearch()">
-        ✕ ОТМЕНА
+
+      ${startButton}
+
+      <button class="btn" style="background: #e74c3c; margin-top: 10px;" onclick="cancelMultiplayerSearch()">
+        ✕ ПОКИНУТЬ ЛОББИ
       </button>
     </div>
-    
-    <style>
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    </style>
   `;
 
+  const existingOverlay = document.getElementById('waiting-overlay');
+  if (existingOverlay) existingOverlay.remove();
+  
   document.body.appendChild(overlay);
+}
+
+function updateLobbyPlayers(players, mode) {
+  const playersListEl = document.getElementById('players-list');
+  if (!playersListEl) return;
+
+  let html = '';
+  players.forEach((p, i) => {
+    html += `
+      <div style="padding: 10px; background: #222; margin: 5px 0; border-radius: 4px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 20px;">${i === 0 ? '👑' : '⚔️'}</span>
+        <span style="color: ${i === 0 ? '#f1c40f' : '#2ecc71'}; font-weight: bold;">${p}</span>
+        ${i === 0 ? '<span style="color: #888; font-size: 11px; margin-left: auto;">ХОСТ</span>' : ''}
+      </div>
+    `;
+  });
+
+  for (let i = players.length; i < mode; i++) {
+    html += `
+      <div style="padding: 10px; background: #111; margin: 5px 0; border-radius: 4px; border: 1px dashed #444; text-align: center; color: #666;">
+        <span>⏳ Ожидание игрока...</span>
+      </div>
+    `;
+  }
+
+  playersListEl.innerHTML = html;
 }
 
 function cancelMultiplayerSearch() {
@@ -56,15 +108,57 @@ function cancelMultiplayerSearch() {
   if (overlay) overlay.remove();
 
   if (currentRoomId && supabaseClient) {
-    supabaseClient
-      .from('battle_rooms')
-      .delete()
-      .eq('id', currentRoomId);
+    if (isRoomHost) {
+      // Хост удаляет комнату
+      supabaseClient
+        .from('battle_rooms')
+        .delete()
+        .eq('id', currentRoomId);
+    } else {
+      // Игрок просто покидает
+      supabaseClient
+        .from('battle_rooms')
+        .select('players')
+        .eq('id', currentRoomId)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            const players = data.players.filter(p => p !== currentUser);
+            supabaseClient
+              .from('battle_rooms')
+              .update({ players: players })
+              .eq('id', currentRoomId);
+          }
+        });
+    }
     
     currentRoomId = null;
+    isRoomHost = false;
   }
 
-  console.log('❌ Поиск отменён');
+  console.log('❌ Покинули лобби');
+}
+
+// ========== ХОСТ НАЧИНАЕТ БОЙ ==========
+async function hostStartBattle() {
+  if (!isRoomHost || !currentRoomId) {
+    alert('❌ Только хост может начать бой!');
+    return;
+  }
+
+  console.log('👑 Хост начинает бой!');
+
+  try {
+    await supabaseClient
+      .from('battle_rooms')
+      .update({ status: 'playing' })
+      .eq('id', currentRoomId);
+
+    console.log('✅ Статус комнаты обновлён на playing');
+  } catch (error) {
+    console.error('❌ Ошибка запуска боя:', error);
+    alert('Ошибка запуска боя');
+  }
 }
 
 // ========== ПОИСК ИГРОКОВ ==========
@@ -94,10 +188,13 @@ async function startMultiplayerSearch(mode) {
     if (error) throw error;
 
     currentRoomId = data.id;
+    isRoomHost = true;
+    
     console.log(`✅ Комната создана: ${roomCode}`);
     console.log(`✅ Room ID: ${currentRoomId}`);
+    console.log(`👑 Вы хост!`);
     
-    showWaitingScreen(roomCode, mode);
+    showWaitingScreen(roomCode, mode, [currentUser], true);
     subscribeToRoomChanges(currentRoomId, mode);
 
   } catch (error) {
@@ -123,15 +220,21 @@ async function subscribeToRoomChanges(roomId, mode) {
       filter: `id=eq.${roomId}`
     }, (payload) => {
       const room = payload.new;
-      console.log(`👥 Игроков в комнате: ${room.players.length}/${mode}`);
+      const players = room.players || [];
+      
+      console.log(`👥 Игроков в комнате: ${players.length}/${mode}`);
       console.log(`📊 Статус: ${room.status}`);
+      console.log(`👤 Игроки:`, players);
 
-      if (room.players.length >= mode && room.status === 'playing') {
-        console.log('✅ УСЛОВИЕ ВЫПОЛНЕНО! Запускаем бой!');
+      // Обновляем список игроков в лобби
+      updateLobbyPlayers(players, mode);
+
+      // Если хост запустил бой
+      if (room.status === 'playing') {
+        console.log('✅ ХОСТ ЗАПУСТИЛ БОЙ!');
         const overlay = document.getElementById('waiting-overlay');
         if (overlay) overlay.remove();
         
-        // ✅ ВАЖНО: Добавляем небольшую задержку
         setTimeout(() => {
           startMultiplayerBattle(roomId, mode);
         }, 500);
@@ -163,8 +266,16 @@ async function joinRoom(roomCode) {
     const room = rooms;
     const players = room.players || [];
 
+    if (room.status !== 'waiting') {
+      throw new Error('Бой уже начался!');
+    }
+
     if (players.includes(currentUser)) {
       throw new Error('Вы уже в этой комнате!');
+    }
+
+    if (players.length >= room.mode) {
+      throw new Error('Комната полная!');
     }
 
     players.push(currentUser);
@@ -174,15 +285,16 @@ async function joinRoom(roomCode) {
     await supabaseClient
       .from('battle_rooms')
       .update({ 
-        players: players,
-        status: players.length >= room.mode ? 'playing' : 'waiting'
+        players: players
       })
       .eq('id', room.id);
 
     currentRoomId = room.id;
+    isRoomHost = false;
+    
     console.log('✅ Присоединились к комнате');
 
-    showWaitingScreen(roomCode, room.mode);
+    showWaitingScreen(roomCode, room.mode, players, false);
     subscribeToRoomChanges(room.id, room.mode);
 
   } catch (error) {
@@ -200,44 +312,31 @@ async function startMultiplayerBattle(roomId, mode) {
   multiplayerMode = true;
   GameState.pendingBattle = mode;
   
-  // ✅ ПОКАЗЫВАЕМ ЭКРАН ВЫБОРА УПРАВЛЕНИЯ
-  showControlModal(mode);
-}
-
-function showControlModal(mode) {
-  console.log('Показываем экран управления');
+  // Показываем экран выбора управления
   document.getElementById('control-modal').classList.add('show');
-  GameState.pendingBattle = mode;
 }
 
-function selectControl(type) {
-  console.log('Выбрано управление:', type);
-  GameState.controlMode = type;
-  document.getElementById('control-modal').classList.remove('show');
-  
-  // ✅ СТАРТУЕМ БОЙ
-  startBattle(GameState.pendingBattle);
-  
-  // Синхронизируем позиции
-  syncPlayerPositions(currentRoomId);
-  syncPlayerShots(currentRoomId);
-}
-
+// ========== СИНХРОНИЗАЦИЯ ==========
 async function syncPlayerPositions(roomId) {
   if (!multiplayerMode || !GameState.player || !supabaseClient) return;
 
   try {
     await supabaseClient
-      .from('player_positions')
+      .from('battle_players')
       .upsert({
         room_id: roomId,
         username: currentUser,
+        tank_id: GameState.selected,
+        hp: GameState.player.hp,
+        max_hp: GameState.player.maxHp,
         x: GameState.player.x,
         y: GameState.player.y,
         angle: GameState.player.angle,
         turret_angle: GameState.player.tAngle,
-        hp: GameState.player.hp
-      }, { onConflict: ['room_id', 'username'] });
+        is_alive: !GameState.player.dead,
+        track_broken: GameState.player.trackBroken || false,
+        on_fire: GameState.player.onFire || false
+      }, { onConflict: 'room_id,username' });
 
     if (!positionSubscription) {
       positionSubscription = supabaseClient
@@ -245,7 +344,7 @@ async function syncPlayerPositions(roomId) {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'player_positions',
+          table: 'battle_players',
           filter: `room_id=eq.${roomId}`
         }, (payload) => {
           const pos = payload.new;
@@ -267,12 +366,13 @@ async function syncPlayerPositions(roomId) {
 function updateOtherPlayer(posData) {
   if (!otherPlayers[posData.username]) {
     otherPlayers[posData.username] = new Tank(
-      'T26',
+      posData.tank_id || 'T26',
       posData.x,
       posData.y,
       'enemy'
     );
     GameState.units.push(otherPlayers[posData.username]);
+    console.log('👤 Добавлен игрок:', posData.username);
   }
 
   const player = otherPlayers[posData.username];
@@ -281,6 +381,9 @@ function updateOtherPlayer(posData) {
   player.angle = posData.angle;
   player.tAngle = posData.turret_angle;
   player.hp = Math.max(0, posData.hp);
+  player.dead = !posData.is_alive;
+  player.trackBroken = posData.track_broken;
+  player.onFire = posData.on_fire;
 }
 
 async function syncPlayerShots(roomId) {
@@ -308,6 +411,7 @@ async function syncPlayerShots(roomId) {
             st: shot.shell_type,
             shooter: { name: shot.username }
           });
+          snd('shot');
         }
       })
       .subscribe();
@@ -336,6 +440,7 @@ function endMultiplayerBattle() {
       .eq('id', currentRoomId);
     
     currentRoomId = null;
+    isRoomHost = false;
   }
 
   console.log('❌ Мультиплеер окончен');

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="css/leaderboard.css">
   
   <!-- SUPABASE БИБЛИОТЕКА -->
-  <script src="https://esm.sh/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -305,14 +305,18 @@
 <script src="js/main.js"></script>
 
 <script>
-  // Инициализация при загрузке
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎮 DOM готов');
     setTimeout(() => {
-      initSupabase();
-    }, 500);
+      if (typeof initSupabase === 'function') {
+        initSupabase();
+        console.log('✅ initSupabase вызвана');
+      } else {
+        console.error('❌ initSupabase не найдена!');
+      }
+    }, 1000); // ← УВЕЛИЧИЛ ЗАДЕРЖКУ
   });
   
-  // Функция для присоединения к комнате
   function showJoinRoomDialog() {
     const code = prompt('Введите код комнаты (6 букв):');
     if (code && code.length >= 6) {

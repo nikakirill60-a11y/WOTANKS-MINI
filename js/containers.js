@@ -18,6 +18,11 @@ const COLLECTION_DB={
   TF4:{n:"TF4",nat:"ussr",tier:9,hp:1750,dmg:55,s:1.15,off:10,vr:370,camo:.12,cls:'ht',nc:'#ff4500',premium:true,collection:true,armor:150,flame:true,mag:60,reload:5500,flameRange:220,flameCone:.3,flameDPS:55,desc:"Усиленный огнемёт!"},
   ASTRONFL:{n:"ASTRON FL",nat:"ussr",tier:10,hp:2100,dmg:70,s:1.2,off:12,vr:390,camo:.1,cls:'ht',nc:'#ff4500',premium:true,collection:true,armor:180,flame:true,mag:80,reload:6000,flameRange:250,flameCone:.35,flameDPS:70,desc:"Апогей огнемётов. Ад на гусеницах!"},
   SHERIDAN:{n:"Sheridan Missile",nat:"ussr",tier:10,hp:1800,dmg:560,s:1.15,off:5,vr:420,camo:0.35,cls:'lt',nc:'#00ccff',premium:true,collection:true,missile:true,mag:1,reload:12000,desc:"Легендарный ПТУР! Управляйте ракетой курсором мыши."},
+  MS11:{n:"МС-11",x:50,y:50,nat:"ussr",tier:10,gold:3000,hp:1750,dmg:110,s:.8,mag:11,reload:12000,off:0,vr:350,camo:.3,cls:'mt',nc:'#4a7a3a',premium:true,collection:true},
+  SPRUT99:{n:"Спрут-99",x:50,y:150,nat:"ussr",tier:10,gold:4999,hp:1400,dmg:45,s:.85,mag:99,reload:1000,off:5,vr:360,camo:.28,cls:'mt',nc:'#ff6600',premium:true,collection:true},
+  WTE100:{n:"WT auf E100",x:50,y:50,nat:"germany",tier:10,gold:2000,hp:2000,dmg:490,s:1.3,mag:5,off:-12,vr:400,camo:.05,cls:'td',nc:'#7a7a7a',premium:true,collection:true},
+  MAUSKONIG:{n:"Mausekönig",x:200,y:50,nat:"germany",tier:11,gold:9999,hp:4000,dmg:650,s:1.8,off:5,vr:380,camo:.02,cls:'ht',armor:350,nc:'#7a7a7a',premium:true,collection:true,dualGun:true,dualDelay:400,reload:6000,desc:"Король мышей. Двуствольный монстр XI уровня."},
+  TYPE5:{n:"Type 5 Heavy",x:100,y:100,nat:"japan",tier:10,gold:5000,hp:3500,dmg:900,s:1.8,reload:8000,off:0,vr:350,camo:.02,cls:'ht',armor:300,nc:'#d4a574',premium:true,collection:true}
   KV220BT:{
     n:"КВ-220-2 Бета",nat:"ussr",tier:6,hp:950,dmg:160,s:0.9,off:5,vr:330,camo:0.1,
     cls:'ht',nc:'#8e44ad',premium:true,collection:true,armor:120,

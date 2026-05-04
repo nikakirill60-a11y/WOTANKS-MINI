@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CITY TANKS</title>
+  
+  <!-- СТИЛИ -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles1.css">
+  <link rel="stylesheet" href="css/leaderboard.css">
+  
+  <!-- SUPABASE БИБЛИОТЕКА -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ========== ЭКРАН ВХОДА ========== -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>CITY TANKS</h1>
+    <input type="text" id="username-input" placeholder="Имя пользователя">
+    <input type="password" id="password-input" placeholder="Пароль">
+    <div class="login-btns">
+      <button class="btn" onclick="login()">ВОЙТИ</button>
+      <button class="btn" onclick="register()">РЕГИСТРАЦИЯ</button>
+    </div>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<!-- ========== ВЫБОР УПРАВЛЕНИЯ ========== -->
+<div id="control-modal">
+  <h2>ВЫБЕРИТЕ УПРАВЛЕНИЕ</h2>
+  <div class="control-options">
+    <div class="control-option" onclick="selectControl('pc')">
+      <div class="control-icon">🖥️</div>
+      <h3>ПК / Ноутбук</h3>
+      <p>WASD - движение<br>Мышь - прицел<br>ЛКМ - стрельба</p>
+    </div>
+    <div class="control-option" onclick="selectControl('mobile')">
+      <div class="control-icon">📱</div>
+      <h3>Телефон / Планшет</h3>
+      <p>Джойстик - направление<br>Кнопка - стрельба</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== КОНТЕЙНЕРЫ ========== -->
+<div id="container-modal">
+  <div class="modal-header">
+    <h2>📦 КОНТЕЙНЕРЫ</h2>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchTab('shop',this)">МАГАЗИН</button>
+      <button class="modal-tab" onclick="switchTab('inventory',this)">🎒 ИНВЕНТАРЬ (<span id="inv-count">0</span>)</button>
+      <button class="modal-tab" onclick="switchTab('collection',this)">КОЛЛЕКЦИЯ</button>
+    </div>
+    <button class="modal-close" onclick="hideContainerShop()">✕</button>
+  </div>
+  <div id="tab-shop" class="tab-content active-tab">
+    <div id="container-grid"></div>
+  </div>
+  <div id="tab-inventory" class="tab-content">
+    <div id="inventory-grid"></div>
+    <div id="inventory-empty" style="text-align:center;padding:40px;color:#666;font-size:16px;display:none;">
+      🎒 Инвентарь пуст<br><span style="font-size:12px;color:#555">Купите контейнеры в магазине</span>
+    </div>
+  </div>
+  <div id="tab-collection" class="tab-content">
+    <div id="collection-grid"></div>
+  </div>
+</div>
+
+<!-- ========== ПРОМОКОД ========== -->
+<div id="promo-modal">
+  <div class="promo-content">
+    <h2>🎟️ ПРОМОКОД</h2>
+    <input type="text" id="promo-input" placeholder="Введите код...">
+    <button class="btn" onclick="activatePromo()">АКТИВИРОВАТЬ</button>
+    <button class="btn btn-close" onclick="hidePromo()">ЗАКРЫТЬ</button>
+    <div id="promo-result"></div>
+  </div>
+</div>
+
+<!-- ========== ОТКРЫТИЕ КОНТЕЙНЕРА ========== -->
+<div id="container-opening">
+  <div id="anim-container"></div>
+  <div id="reward-display"></div>
+</div>
+
+<!-- ========== МОДУЛИ И ПРОКАЧКА ========== -->
+<div id="module-modal" class="module-modal"></div>
+<div id="upgrade-modal" class="upgrade-modal"></div>
+
+<!-- ========== ТАБЛИЦА ЛИДЕРОВ ========== -->
+<div id="leaderboard-modal" class="leaderboard-modal">
+  <div class="leaderboard-panel">
+    <div class="leaderboard-header">
+      <h2>🏆 ТАБЛИЦА ЛИДЕРОВ</h2>
+      <button class="btn-close-lb" onclick="hideLeaderboard()">✕</button>
+    </div>
+    <div class="leaderboard-tabs">
+      <button class="lb-tab active" onclick="switchLBTab('global', this)">🌍 ГЛОБАЛЬНАЯ</button>
+      <button class="lb-tab" onclick="switchLBTab('online', this)">👥 ОНЛАЙН</button>
+    </div>
+    <div id="lb-global" class="lb-content active-lb">
+      <div class="leaderboard-table">
+        <div class="lb-header">
+          <div class="lb-rank">МЕСТО</div>
+          <div class="lb-name">ИМЯ</div>
+          <div class="lb-xp">ОПЫТ</div>
+          <div class="lb-battles">БОИ</div>
+          <div class="lb-wins">ПОБЕДЫ</div>
+          <div class="lb-kills">ФРАГИ</div>
+        </div>
+        <div id="lb-global-list" class="lb-list"></div>
+      </div>
+    </div>
+    <div id="lb-online" class="lb-content">
+      <div class="online-players">
+        <div id="lb-online-list" class="online-list"></div>
+        <div id="lb-online-empty" style="text-align:center;padding:20px;color:#888;display:none;">
+          😴 Никого нет онлайн
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ГЛАВНЫЙ ИНТЕРФЕЙС ========== -->
+<div id="ui" style="display:none;">
+  <!-- ===== TOP BAR ===== -->
+  <div id="top-bar">
+    <div class="user-info">
+      👤 <span id="current-user">Player</span>
+      <button class="btn btn-sm btn-logout" onclick="logout()">ВЫЙТИ</button>
+    </div>
+    <div id="res-panel">
+      <div>ОПЫТ: <span id="xp-val">0</span> XP</div>
+      <div class="gold-txt">ЗОЛОТО: <span id="gold-val">0</span> G</div>
+      <div class="silver-txt">СЕРЕБРО: <span id="silver-val">0</span> ₽</div>
+    </div>
+    <div id="exchange-panel">
+      100 XP → 10 G
+      <button class="btn btn-sm" onclick="exchangeXP()">ОБМЕН</button>
+      <span id="exchange-msg"></span>
+    </div>
+    <div class="top-btns">
+      <button class="btn btn-leaderboard" onclick="showLeaderboard()">🏆 ТОП</button>
+      <button class="btn btn-promo" onclick="showPromo()">🎟️ КОД</button>
+      <button class="btn btn-container" onclick="showContainerShop()">📦 КОНТЕЙНЕРЫ</button>
+      <button class="btn btn-inventory" onclick="openInventoryTab()">🎒<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
+      <button class="btn btn-modules" onclick="showModules()">⚙️ МОДУЛИ</button>
+      <button class="btn btn-upgrade" onclick="showUpgrades()">🔩 ПРОКАЧКА</button>
+    </div>
+  </div>
+
+  <!-- ===== БУСТЕРЫ ===== -->
+  <div id="booster-display" class="booster-bar"></div>
+
+  <!-- ===== ОСНОВНАЯ ЗОНА АНГАРА ===== -->
+  <div id="main-garage-area">
+    <!-- КВЕСТ -->
+    <div id="quest-widget">
+      <div class="quest-title">⭐ 23 ФЕВРАЛЯ: ПОБЕДА ⭐</div>
+      <div class="quest-desc">Уничтожь 15 танков врага</div>
+      <div class="quest-progress-bg">
+        <div id="quest-bar" class="quest-progress-fill"></div>
+      </div>
+      <div id="quest-text" class="quest-text">0 / 15</div>
+      <button id="quest-claim-btn" class="btn quest-btn" onclick="claimQuestReward()" style="display:none;">ЗАБРАТЬ T-34-85 ПОБЕДНЫЙ</button>
+    </div>
+
+    <!-- ВЫБОР НАЦИИ -->
+    <div id="nat-buttons">
+      <button class="n-btn active-n" onclick="setNat('ussr',this)">СССР</button>
+      <button class="n-btn" onclick="setNat('germany',this)">ГЕРМАНИЯ</button>
+      <button class="n-btn" onclick="setNat('france',this)">ФРАНЦИЯ</button>
+      <button class="n-btn" onclick="setNat('uk',this)">БРИТАНИЯ</button>
+      <button class="n-btn" onclick="setNat('china',this)">КИТАЙ</button>
+      <button class="n-btn" onclick="setNat('japan',this)">ЯПОНИЯ</button>
+    </div>
+
+    <!-- ДЕРЕВО РАЗВИТИЯ -->
+    <div class="tree-view" id="tree-container">
+      <canvas id="tree-canvas"></canvas>
+      <div id="nodes"></div>
+    </div>
+
+    <!-- УПРАВЛЕНИЕ БОЕМ -->
+    <div id="battle-controls">
+      <div style="margin-bottom:5px;font-size:14px">
+        КАРТА: <select id="map-select">
+          <option value="city">Город</option>
+          <option value="field">Поле</option>
+          <option value="desert">Пустыня</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
+        <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">10x10</button>
+        <button class="btn" style="background:#7f8c8d" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+      </div>
+      
+      <!-- ===== ОНЛАЙН РЕЖИМЫ ===== -->
+      <div style="margin-top:8px;">
+        <h3 style="text-align:center;color:#f1c40f;margin-bottom:5px;">🌐 ОНЛАЙН БОИ</h3>
+        <div class="btn-group">
+          <button class="btn" style="background:#27ae60;font-weight:bold;color:#fff" onclick="startMultiplayerSearch(1)">🌐 1x1 ОНЛАЙН</button>
+          <button class="btn" style="background:#27ae60;font-weight:bold;color:#fff" onclick="startMultiplayerSearch(2)">🌐 2x2 ОНЛАЙН</button>
+          <button class="btn" style="background:#3498db;font-weight:bold;color:#fff" onclick="showJoinRoomDialog()">🔗 ПРИСОЕДИНИТЬСЯ</button>
+        </div>
+      </div>
+
+      <!-- ТРЕНИРОВКА -->
+      <div id="training-panel" style="display:none;margin-top:8px;background:#222;padding:10px;border:1px solid #444">
+        НАЦИЯ: <select id="train-nat-select" onchange="fillEnemySelect()"></select>
+        ВРАГ: <select id="enemy-select"></select>
+        <button class="btn" onclick="showControlModal('train')">НАЧАТЬ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== КАРУСЕЛЬ ТАНКОВ ===== -->
+  <div id="tank-carousel-container">
+    <div id="tank-carousel"></div>
+  </div>
+</div>
+
+<!-- ========== HUD (ВО ВРЕМЯ БОЯ) ========== -->
+<div id="hud">
+  <div id="allies-list" class="team-list"></div>
+  <div id="enemies-list" class="team-list"></div>
+  
+  <!-- НИЖНЯЯ ПАНЕЛЬ -->
+  <div id="bottom-bar">
+    <div id="hp-ui"><div id="hp-bar"></div></div>
+    <div id="ammo-ui"><span id="ammo-val">ЗАРЯЖЕНО</span></div>
+    <div id="shell-ui">
+      <span class="shell-opt active" onclick="setShell(0)">1:ББ</span>
+      <span class="shell-opt" onclick="setShell(1)">2:ОФ</span>
+      <span class="shell-opt" onclick="setShell(2)">3:Подкал</span>
+    </div>
+    <div id="cons-ui">
+      <span class="cons-btn ready" id="cons1" onclick="useCons(0)">4:Ремкомплект</span>
+      <span class="cons-btn ready" id="cons2" onclick="useCons(1)">5:Аптечка</span>
+      <span class="cons-btn ready" id="cons3" onclick="useCons(2)">6:Адреналин</span>
+      <span class="cons-btn ready" id="cons4" onclick="useCons(3)">7:Огнетушитель</span>
+      <span class="cons-btn ready" id="cons5" onclick="useCons(4)">8:Доп.паёк</span>
+      <span class="cons-btn ready" id="cons6" onclick="useCons(5)">9:Топливо</span>
+    </div>
+  </div>
+
+  <!-- ЛОГИ И ИНФОРМАЦИЯ -->
+  <div id="dmg-log"></div>
+  <div id="crew-msg"></div>
+  <canvas id="minimap"></canvas>
+</div>
+
+<!-- ========== МОБИЛЬНОЕ УПРАВЛЕНИЕ ========== -->
+<div id="mobile-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-stick"></div>
+    </div>
+  </div>
+  <div id="fire-zone">
+    <div class="mobile-btn fire" id="fire-btn">ОГОНЬ</div>
+  </div>
+  <div id="mobile-shells">
+    <div class="m-shell active" onclick="setShell(0)">ББ</div>
+    <div class="m-shell" onclick="setShell(1)">ОФ</div>
+    <div class="m-shell" onclick="setShell(2)">ПК</div>
+  </div>
+  <div id="mobile-cons">
+    <div class="m-cons" id="mcons1" onclick="useCons(0)">РЕМ</div>
+    <div class="m-cons" id="mcons2" onclick="useCons(1)">АПТ</div>
+    <div class="m-cons" id="mcons3" onclick="useCons(2)">АДР</div>
+    <div class="m-cons" id="mcons4" onclick="useCons(3)">ОГН</div>
+    <div class="m-cons" id="mcons5" onclick="useCons(4)">ПАЁ</div>
+    <div class="m-cons" id="mcons6" onclick="useCons(5)">ТОП</div>
+  </div>
+</div>
+
+<!-- ========== ЭКРАН РЕЗУЛЬТАТОВ ========== -->
+<div id="result-screen">
+  <div id="result-title"></div>
+  <div id="result-stats"></div>
+  <button class="btn" style="margin-top:15px" onclick="backToGarage()">В АНГАР</button>
+</div>
+
+<!-- ========== CANVAS ДЛЯ ИГРЫ ========== -->
+<canvas id="game"></canvas>
+
+<!-- ========== ЧАТ ========== -->
+<div id="chat-panel" style="display:none;position:fixed;bottom:0;right:20px;width:350px;height:400px;background:rgba(0,0,0,0.9);border:2px solid #3498db;border-radius:10px 10px 0 0;z-index:1000;">
+  <div class="chat-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(52,152,219,0.3);border-bottom:1px solid #3498db;">
+    <h3 style="margin:0;color:#3498db;">💬 ЧАТ</h3>
+    <div>
+      <button class="btn btn-sm" onclick="switchChatTab('global')" id="chat-tab-global" style="background:#3498db;">🌍</button>
+      <button class="btn btn-sm" onclick="switchChatTab('room')" id="chat-tab-room" style="background:#555;">👥</button>
+      <button class="btn btn-sm" onclick="toggleChat()" style="background:#e74c3c;">✕</button>
+    </div>
+  </div>
+  
+  <div id="chat-messages" style="height:320px;overflow-y:auto;padding:10px;font-size:12px;"></div>
+  
+  <div style="display:flex;padding:10px;gap:5px;">
+    <input type="text" id="chat-input" placeholder="Введите сообщение..." style="flex:1;padding:8px;background:#222;border:1px solid #555;color:#fff;border-radius:4px;" onkeypress="if(event.key==='Enter')sendChatMessage()">
+    <button class="btn btn-sm" onclick="sendChatMessage()" style="background:#27ae60;">➤</button>
+  </div>
+</div>
+
+<!-- Кнопка открытия чата -->
+<button id="chat-toggle-btn" onclick="toggleChat()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#3498db;border:2px solid #fff;border-radius:50%;font-size:24px;cursor:pointer;z-index:999;box-shadow:0 0 10px rgba(52,152,219,0.5);">💬</button>
+
+<!-- ========== СКРИПТЫ (ПРАВИЛЬНЫЙ ПОРЯДОК!) ========== -->
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/tanks.js"></script>
+<script src="js/containers.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/tank.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/multiplayer.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/main.js"></script>
+
+<script>
+  // Инициализация при загрузке
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      initSupabase();
+    }, 500);
+  });
+  
+  // Функция для присоединения к комнате
+  function showJoinRoomDialog() {
+    const code = prompt('Введите код комнаты (6 букв):');
+    if (code && code.length >= 6) {
+      joinRoom(code.toUpperCase());
+    } else if (code) {
+      alert('❌ Неверный код! Должен быть 6 символов');
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -43,9 +43,6 @@ const DB={
     T54O:{n:"Т-54 обл.",x:950,y:700,p:"LTTB",nat:"ussr",tier:8,hp:1250,dmg:250,xp:55000,s:1,off:5,vr:400,camo:.36,cls:'lt',nc:'#4a7a3a'},
     OB84:{n:"Объект 84",x:1100,y:700,p:"T54O",nat:"ussr",tier:9,hp:1550,dmg:310,xp:110000,s:1.05,off:5,vr:410,camo:.35,cls:'lt',nc:'#4a7a3a'},
     T100LT:{n:"Т-100 ЛТ",x:1400,y:700,p:"OB84",nat:"ussr",tier:10,hp:1800,dmg:310,xp:195000,s:1.1,off:5,vr:420,camo:.4,cls:'lt',nc:'#4a7a3a'},
-    // Премиум СССР
-    MS11:{n:"МС-11",x:50,y:50,nat:"ussr",tier:10,gold:3000,hp:1750,dmg:110,s:.8,mag:11,reload:12000,off:0,vr:350,camo:.3,cls:'mt',nc:'#4a7a3a',premium:true},
-    SPRUT99:{n:"Спрут-99",x:50,y:150,nat:"ussr",tier:10,gold:4999,hp:1400,dmg:45,s:.85,mag:99,reload:1000,off:5,vr:360,camo:.28,cls:'mt',nc:'#ff6600',premium:true},
 
     // ===================== ГЕРМАНИЯ =====================
     PZ2:{n:"Pz.2",x:50,y:400,nat:"germany",tier:1,hp:200,dmg:15,xp:0,s:.7,mag:4,off:5,vr:300,camo:.35,cls:'lt',nc:'#7a7a7a'},
@@ -103,8 +100,6 @@ const DB={
     HWK12:{n:"HWK 12",x:1250,y:750,p:"RU251",nat:"germany",tier:9,hp:1350,dmg:250,xp:120000,s:1,off:5,vr:420,camo:.38,cls:'lt',nc:'#7a7a7a'},
     RHMPZW:{n:"Rhm. Pzw.",x:1400,y:750,p:"HWK12",nat:"germany",tier:10,hp:1600,dmg:310,xp:195000,s:1.05,off:5,vr:440,camo:.42,cls:'lt',nc:'#7a7a7a'},
     // Премиум Германия
-    WTE100:{n:"WT auf E100",x:50,y:50,nat:"germany",tier:10,gold:2000,hp:2000,dmg:490,s:1.3,mag:5,off:-12,vr:400,camo:.05,cls:'td',nc:'#7a7a7a',premium:true},
-	MAUSKONIG:{n:"Mausekönig",x:200,y:50,nat:"germany",tier:11,gold:9999,hp:4000,dmg:650,s:1.8,off:5,vr:380,camo:.02,cls:'ht',armor:350,nc:'#7a7a7a',premium:true,dualGun:true,dualDelay:400,reload:6000,desc:"Король мышей. Двуствольный монстр XI уровня."},
 
     // ===================== ФРАНЦИЯ =====================
     // Общий ствол tier 1-3
@@ -185,7 +180,6 @@ const DB={
 	FV205B:{n:"FV205b Alligator",x:1400,y:780,p:"TORTOISE",nat:"uk",tier:10,hp:2400,dmg:550,xp:195000,s:1.35,isPT:true,off:12,vr:390,camo:.12,cls:'td',armor:270,nc:'#c2a64a'},
     // Премиум Британия
     MK1HEAVY:{n:"Mk I* Heavy",x:200,y:50,nat:"uk",tier:1,gold:500,hp:350,dmg:90,s:1.1,off:0,vr:280,camo:.1,cls:'td',armor:50,nc:'#8e44ad',premium:true,isLong:true},
-    MED1:{n:"Medium I",x:50,y:50,nat:"uk",tier:1,gold:10,hp:200,dmg:10,s:.8,mag:15,reload:5000,off:0,vr:300,camo:.25,cls:'mt',nc:'#c2a64a',premium:true},
     TOG2:{n:"TOG II*",x:400,y:50,nat:"uk",tier:6,gold:350,hp:1400,dmg:150,s:1.2,isLong:true,off:20,vr:330,camo:.02,cls:'ht',armor:76,nc:'#c2a64a',premium:true},
 
     // ===================== КИТАЙ =====================

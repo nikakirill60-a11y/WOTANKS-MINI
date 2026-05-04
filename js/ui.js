@@ -1,7 +1,7 @@
 // js/ui.js
-console.log('?? ui.js ß©ß°ß§ß≤ßµß®ß°ß¶ß¥ß≥ß¡...');
+console.log('üîÑ ui.js –∑–∞–≥—Ä—É–∂–∞–µ—Ç—Å—è...');
 
-// ========== ß≥ß∞ß∞ß¢ßªß¶ßØß™ß¡ ßøß¨ß™ß±ß°ß®ß° ==========
+// ========== –°–æ–æ–±—â–µ–Ω–∏—è —ç–∫–∏–ø–∞–∂–∞ ==========
 function crewMsg(msg, color) {
   var el = document.getElementById('crew-msg');
   if (!el) return;
@@ -11,7 +11,7 @@ function crewMsg(msg, color) {
   setTimeout(function() { el.style.opacity = 0; }, 1500);
 }
 
-// ========== ß≠ß∞ß§ ßµß≤ß∞ßØß° ==========
+// ========== –õ–æ–≥ —É—Ä–æ–Ω–∞ ==========
 function dmgLog(msg, color) {
   var el = document.getElementById('dmg-log');
   if (!el) return;
@@ -23,7 +23,7 @@ function dmgLog(msg, color) {
   setTimeout(function() { d.remove(); }, 2000);
 }
 
-// ========== ß∞ß¢ßØß∞ß£ß≠ß¶ßØß™ß¶ ß≤ß¶ß≥ßµß≤ß≥ß∞ß£ ==========
+// ========== –û–±–Ω–æ–≤–ª–µ–Ω–∏–µ —Ä–µ—Å—É—Ä—Å–æ–≤ ==========
 function updateResources() {
   var xp = document.getElementById('xp-val');
   var gold = document.getElementById('gold-val');
@@ -33,18 +33,18 @@ function updateResources() {
   if (silver) silver.innerText = GameState.SILVER;
 }
 
-// ========== ß∞ß¢ßÆß¶ßØ XP ßØß° ß©ß∞ß≠ß∞ß¥ß∞ ==========
+// ========== –û–±–º–µ–Ω XP –Ω–∞ –∑–æ–ª–æ—Ç–æ ==========
 function exchangeXP() {
   if (GameState.XP >= 100) {
     GameState.XP -= 100;
     GameState.GOLD += 10;
     var msg = document.getElementById('exchange-msg');
-    if (msg) { msg.innerText = "?"; setTimeout(function() { msg.innerText = ""; }, 1500); }
+    if (msg) { msg.innerText = "‚úÖ"; setTimeout(function() { msg.innerText = ""; }, 1500); }
     updateResources();
   }
 }
 
-// ========== ß£ßΩß¢ß∞ß≤ ßØß°ß∏ß™ß™ ==========
+// ========== –í—ã–±–æ—Ä –Ω–∞—Ü–∏–∏ ==========
 function setNat(nat, btn) {
   GameState.curNat = nat;
   renderTree();
@@ -52,19 +52,19 @@ function setNat(nat, btn) {
   if (btn) btn.classList.add('active-n');
 }
 
-// ========== ß£ßΩß¢ß∞ß≤ ß≥ßØß°ß≤ß¡ß•ß° ==========
+// ========== –í—ã–±–æ—Ä —Å–Ω–∞—Ä—è–¥–∞ ==========
 function setShell(i) {
   GameState.curShell = i;
   document.querySelectorAll('.shell-opt').forEach(function(e, j) { e.classList.toggle('active', j === i); });
   document.querySelectorAll('.m-shell').forEach(function(e, j) { e.classList.toggle('active', j === i); });
 }
 
-// ========== ß≤ß°ß≥ß∑ß∞ß•ßØß™ß¨ß™ ==========
+// ========== –†–∞—Å—Ö–æ–¥–Ω–∏–∫–∏ ==========
 function useCons(i) {
   if (!GameState.gameActive || !GameState.player || GameState.player.dead || GameState.consumables[i]) return;
   var cons = CONFIG.CONSUMABLES[i];
   if (!cons) return;
-  if (GameState.SILVER < cons.cost) { crewMsg("ßØß÷ß‰ ß„ß÷ß‚ß÷ß“ß‚ß—!", "#e74c3c"); return; }
+  if (GameState.SILVER < cons.cost) { crewMsg("–ù–µ—Ç —Å–µ—Ä–µ–±—Ä–∞!", "#e74c3c"); return; }
   GameState.SILVER -= cons.cost;
   GameState.consumables[i] = true;
   var el = document.getElementById('cons' + (i + 1));
@@ -72,16 +72,16 @@ function useCons(i) {
   var mel = document.getElementById('mcons' + (i + 1));
   if (mel) mel.classList.add('used');
   switch (i) {
-    case 0: GameState.player.trackBroken = false; crewMsg("ß±ß‡ßÈß⁄ßﬂß÷ßﬂß‡!", "#2ecc71"); snd('hit'); break;
-    case 1: GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.15); crewMsg("+15%HP", "#2ecc71"); snd('hit'); break;
-    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = Date.now() + 10000; crewMsg("ß°ß’ß‚ß÷ßﬂß—ß›ß⁄ßﬂ!", "#f39c12"); snd('hit'); break;
-    case 3: GameState.player.onFire = false; GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.05); crewMsg("ß∞ß‘ß‡ßﬂßÓ ß·ß‡ß‰ßÂßÍß÷ßﬂ!", "#2ecc71"); snd('hit'); break;
-    case 4: GameState.paiokActive = true; crewMsg("ß•ß‡ß·.ß·ß—ß◊ß‹! +5% ßÂß‚ß‡ßﬂ", "#f39c12"); snd('hit'); break;
-    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = Date.now() + 15000; crewMsg("ß¥ß‡ß·ß›ß⁄ß”ß‡ 105!", "#f39c12"); snd('hit'); break;
+    case 0: GameState.player.trackBroken = false; crewMsg("üîß –ü–æ—á–∏–Ω–µ–Ω–æ!", "#2ecc71"); snd('hit'); break;
+    case 1: GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.15); crewMsg("+15% HP", "#2ecc71"); snd('hit'); break;
+    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = Date.now() + 10000; crewMsg("üíâ –ê–¥—Ä–µ–Ω–∞–ª–∏–Ω!", "#f39c12"); snd('hit'); break;
+    case 3: GameState.player.onFire = false; GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.05); crewMsg("üßØ –û–≥–æ–Ω—å –ø–æ—Ç—É—à–µ–Ω!", "#2ecc71"); snd('hit'); break;
+    case 4: GameState.paiokActive = true; crewMsg("‚õΩ –î–æ–ø.–±–∞—á–æ–∫! +5% —É—Ä–æ–Ω", "#f39c12"); snd('hit'); break;
+    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = Date.now() + 15000; crewMsg("‚õΩ –¢–æ–ø–ª–∏–≤–æ 105!", "#f39c12"); snd('hit'); break;
   }
 }
 
-// ========== ß¢ßµß≥ß¥ß¶ß≤ßΩ ==========
+// ========== –ë—É—Å—Ç–µ—Ä—ã ==========
 function updateBoosterUI() {
   var el = document.getElementById('booster-display');
   if (!el) return;
@@ -95,8 +95,8 @@ function updateBoosterUI() {
     html += '<div class="booster-item' + (active ? ' active' : '') + '" style="border-color:' + b.color + '">';
     html += '<span class="booster-icon">' + b.icon + '</span><span class="booster-info">';
     if (active) { html += '<span style="color:' + b.color + '">x' + b.multiplier + ' (' + GameState.boosters[type] + ')</span>'; }
-    else { html += '<span style="color:#666">ß”ßÌß‹ß›</span>'; }
-    html += '</span><span class="booster-stock">' + stock + 'ßÍß‰</span>';
+    else { html += '<span style="color:#666">–í—ã–∫–ª</span>'; }
+    html += '</span><span class="booster-stock">' + stock + ' —à—Ç</span>';
     if (!active && stock > 0) { html += '<button class="btn btn-sm" style="background:' + b.color + '" onclick="activateBooster(\'' + type + '\')">ON</button>'; }
     else if (!active) { html += '<button class="btn btn-sm" onclick="buyBooster(\'' + type + '\')">' + b.costGold + 'G</button>'; }
     html += '</div>';
@@ -107,7 +107,7 @@ function updateBoosterUI() {
 function buyBooster(type) {
   var b = CONFIG.BOOSTERS[type];
   if (!b) return;
-  if (GameState.GOLD < b.costGold) { alert("ßÆß—ß›ß‡ ßŸß‡ß›ß‡ß‰ß—!"); return; }
+  if (GameState.GOLD < b.costGold) { alert("–ú–∞–ª–æ –∑–æ–ª–æ—Ç–∞!"); return; }
   GameState.GOLD -= b.costGold;
   GameState.boosterStock[type] = (GameState.boosterStock[type] || 0) + 3;
   updateResources();
@@ -123,23 +123,23 @@ function activateBooster(type) {
   saveProgress();
 }
 
-// ========== ßÆß∞ß•ßµß≠ß™ ==========
+// ========== –ú–æ–¥—É–ª–∏ ==========
 function showModules() {
   var tid = GameState.selected;
   var t = DB[tid];
   if (!t) return;
   var mods = GameState.modules[tid] || [null, null, null];
-  var html = '<div class="module-panel"><h3>?? ßÆß‡ß’ßÂß›ß⁄: ' + t.n + '</h3><div class="module-slots">';
+  var html = '<div class="module-panel"><h3>‚öôÔ∏è –ú–æ–¥—É–ª–∏: ' + t.n + '</h3><div class="module-slots">';
   for (var i = 0; i < 3; i++) {
     var m = mods[i];
     var mod = m ? CONFIG.MODULES[m] : null;
     html += '<div class="module-slot' + (mod ? ' equipped' : '') + '" onclick="selectModule(' + i + ')">';
     if (mod) { html += '<span class="mod-icon">' + mod.icon + '</span><span class="mod-name">' + mod.name + '</span><span class="mod-desc">' + mod.desc + '</span>'; }
-    else { html += '<span class="mod-empty">+ ß≥ß›ß‡ß‰ ' + (i + 1) + '</span>'; }
+    else { html += '<span class="mod-empty">üîå –°–ª–æ—Ç ' + (i + 1) + '</span>'; }
     html += '</div>';
   }
   html += '</div><div class="module-shop" id="module-shop-list"></div>';
-  html += '<button class="btn btn-close" onclick="hideModules()">ß©ß°ß¨ß≤ßΩß¥ßæ</button></div>';
+  html += '<button class="btn btn-close" onclick="hideModules()">‚ùå –ó–∞–∫—Ä—ã—Ç—å</button></div>';
   document.getElementById('module-modal').innerHTML = html;
   document.getElementById('module-modal').classList.add('show');
 }
@@ -150,14 +150,14 @@ function selectModule(slot) {
   var tid = GameState.selected;
   var mods = GameState.modules[tid] || [null, null, null];
   var el = document.getElementById('module-shop-list');
-  var html = '<h4>ß≥ß›ß‡ß‰ ' + (slot + 1) + ':</h4>';
-  if (mods[slot]) { html += '<div class="mod-option" onclick="unequipModule(' + slot + ')"><span style="color:#e74c3c">? ß≥ßﬂßÒß‰ßÓ</span></div>'; }
+  var html = '<h4>üîå –°–ª–æ—Ç ' + (slot + 1) + ':</h4>';
+  if (mods[slot]) { html += '<div class="mod-option" onclick="unequipModule(' + slot + ')"><span style="color:#e74c3c">‚ùå –°–Ω—è—Ç—å</span></div>'; }
   for (var id in CONFIG.MODULES) {
     var m = CONFIG.MODULES[id];
     var eq = mods.indexOf(id) !== -1;
     html += '<div class="mod-option' + (eq ? ' disabled' : '') + '" onclick="' + (eq ? '' : 'equipModule(\'' + id + '\',' + slot + ')') + '">';
-    html += m.icon + ' <b>' + m.name + '</b> ' + m.desc + '<span class="mod-cost">' + m.cost + '?</span>';
-    if (eq) { html += ' ?'; }
+    html += m.icon + ' <b>' + m.name + '</b> ' + m.desc + '<span class="mod-cost">' + m.cost + 'üí∞</span>';
+    if (eq) { html += ' ‚úÖ'; }
     html += '</div>';
   }
   el.innerHTML = html;
@@ -167,7 +167,7 @@ function equipModule(modId, slot) {
   var tid = GameState.selected;
   var mod = CONFIG.MODULES[modId];
   if (!mod) return;
-  if (GameState.SILVER < mod.cost) { alert("ßÆß—ß›ß‡ ß„ß÷ß‚ß÷ß“ß‚ß—!"); return; }
+  if (GameState.SILVER < mod.cost) { alert("–ú–∞–ª–æ —Å–µ—Ä–µ–±—Ä–∞!"); return; }
   if (!GameState.modules[tid]) { GameState.modules[tid] = [null, null, null]; }
   if (GameState.modules[tid].indexOf(modId) !== -1) return;
   GameState.SILVER -= mod.cost;
@@ -185,7 +185,7 @@ function unequipModule(slot) {
   saveProgress();
 }
 
-// ========== ß±ß≤ß∞ß¨ß°ßπß¨ß° ß¥ß°ßØß¨ß∞ß£ ==========
+// ========== –ü—Ä–æ–∫–∞—á–∫–∞ —Ç–∞–Ω–∫–∞ ==========
 function initTankUpgrades(tid) {
   if (!GameState.upgrades[tid]) { GameState.upgrades[tid] = { gun: 0, engine: 0, turret: 0 }; }
   if (!GameState.upgradesBought[tid]) { GameState.upgradesBought[tid] = { gun: [true,false,false], engine: [true,false,false], turret: [true,false,false] }; }
@@ -201,11 +201,11 @@ function showUpgrades() {
   var tier = t.tier;
   var costs = CONFIG.UPGRADE_COSTS[tier] || CONFIG.UPGRADE_COSTS[10] || [40000, 80000];
   var cats = [
-    { key: 'gun', icon: '??', title: 'ß∞ß‚ßÂß’ß⁄ß÷', items: CONFIG.UPGRADES.gun },
-    { key: 'engine', icon: '??', title: 'ß•ß”ß⁄ß‘ß—ß‰ß÷ß›ßÓ', items: CONFIG.UPGRADES.engine },
-    { key: 'turret', icon: '???', title: 'ß¢ß—ßÍßﬂßÒ', items: CONFIG.UPGRADES.turret }
+    { key: 'gun', icon: 'üî´', title: '–û—Ä—É–¥–∏–µ', items: CONFIG.UPGRADES.gun },
+    { key: 'engine', icon: '‚öôÔ∏è', title: '–î–≤–∏–≥–∞—Ç–µ–ª—å', items: CONFIG.UPGRADES.engine },
+    { key: 'turret', icon: 'üõ°Ô∏è', title: '–ë–∞—à–Ω—è', items: CONFIG.UPGRADES.turret }
   ];
-  var html = '<div class="upgrade-panel"><h3>?? ß±ß‚ß‡ß‹ß—ßÈß‹ß—: ' + t.n + ' [' + (CONFIG.TIER_ROMAN[tier] || 'XI') + ']</h3><div class="upgrade-columns">';
+  var html = '<div class="upgrade-panel"><h3>üìà –ü—Ä–æ–∫–∞—á–∫–∞: ' + t.n + ' [' + (CONFIG.TIER_ROMAN[tier] || 'XI') + ']</h3><div class="upgrade-columns">';
   for (var ci = 0; ci < cats.length; ci++) {
     var cat = cats[ci];
     html += '<div class="upgrade-col"><div class="upgrade-col-title">' + cat.icon + ' ' + cat.title + '</div>';
@@ -221,15 +221,15 @@ function showUpgrades() {
       else if (isBought) cardClass += ' bought';
       else if (!canBuy) cardClass += ' locked';
       html += '<div class="' + cardClass + '"><div class="upg-name">' + item.name + '</div><div class="upg-desc">' + item.desc + '</div>';
-      if (isEquipped) { html += '<div class="upg-btn installed">ßµß≥ß¥ß°ßØß∞ß£ß≠ß¶ßØß∞</div>'; }
-      else if (isBought) { html += '<div class="upg-btn equip" onclick="equipUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ')">ßµß≥ß¥ß°ßØß∞ß£ß™ß¥ßæ</div>'; }
-      else if (canBuy && canAfford) { html += '<div class="upg-btn buy" onclick="buyUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ',' + cost + ')">ß¨ßµß±ß™ß¥ßæ ' + cost + '?</div>'; }
-      else if (canBuy && !canAfford) { html += '<div class="upg-btn buy no-money">ßØßµß®ßØß∞ ' + cost + '?</div>'; }
-      else { html += '<div class="upg-btn locked-btn">??</div>'; }
+      if (isEquipped) { html += '<div class="upg-btn installed">‚úÖ –£—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–æ</div>'; }
+      else if (isBought) { html += '<div class="upg-btn equip" onclick="equipUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ')">‚öôÔ∏è –£—Å—Ç–∞–Ω–æ–≤–∏—Ç—å</div>'; }
+      else if (canBuy && canAfford) { html += '<div class="upg-btn buy" onclick="buyUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ',' + cost + ')">üí∞ –ö—É–ø–∏—Ç—å ' + cost + 'üí∞</div>'; }
+      else if (canBuy && !canAfford) { html += '<div class="upg-btn buy no-money">üí∞ –ù—É–∂–Ω–æ ' + cost + 'üí∞</div>'; }
+      else { html += '<div class="upg-btn locked-btn">üîí</div>'; }
       html += '</div></div>';
     }
   }
-  html += '</div><button class="btn btn-close" style="margin-top:15px" onclick="hideUpgrades()">ß©ß°ß¨ß≤ßΩß¥ßæ</button></div>';
+  html += '</div><button class="btn btn-close" style="margin-top:15px" onclick="hideUpgrades()">‚ùå –ó–∞–∫—Ä—ã—Ç—å</button></div>';
   document.getElementById('upgrade-modal').innerHTML = html;
   document.getElementById('upgrade-modal').classList.add('show');
 }
@@ -237,7 +237,7 @@ function showUpgrades() {
 function hideUpgrades() { document.getElementById('upgrade-modal').classList.remove('show'); }
 
 function buyUpgrade(tid, cat, lvl, cost) {
-  if (GameState.SILVER < cost) { alert("ßØß÷ß’ß‡ß„ß‰ß—ß‰ß‡ßÈßﬂß‡ ß„ß÷ß‚ß÷ß“ß‚ß—!"); return; }
+  if (GameState.SILVER < cost) { alert("–ù–µ–¥–æ—Å—Ç–∞—Ç–æ—á–Ω–æ —Å–µ—Ä–µ–±—Ä–∞!"); return; }
   initTankUpgrades(tid);
   GameState.SILVER -= cost;
   GameState.upgradesBought[tid][cat][lvl] = true;
@@ -254,7 +254,7 @@ function equipUpgrade(tid, cat, lvl) {
   saveProgress();
 }
 
-// ========== ß¨ß£ß¶ß≥ß¥ ==========
+// ========== –ö–≤–µ—Å—Ç ==========
 function updateQuestUI() {
   var q = GameState.quest23;
   if (!q) return;
@@ -275,7 +275,7 @@ function claimQuestReward() {
   if (!GameState.quest23.claimed) {
     GameState.quest23.claimed = true;
     if (GameState.owned.indexOf('T3485VIC') === -1) { GameState.owned.push('T3485VIC'); }
-    alert("?? ß¥ß—ßﬂß‹ ß¥-34-85 ß±ß‡ß“ß÷ß’ßﬂßÌß€ ß·ß‡ß›ßÂßÈß÷ßﬂ!");
+    alert("üéâ –¢–∞–Ω–∫ –¢-34-85 –ø–æ–ª—É—á–µ–Ω!");
     updateResources();
     renderCarousel();
     updateQuestUI();
@@ -283,7 +283,7 @@ function claimQuestReward() {
   }
 }
 
-// ========== ß±ß≤ß∞ßÆß∞ß¨ß∞ß• ==========
+// ========== –ü—Ä–æ–º–æ–∫–æ–¥ ==========
 function showPromo() {
   var modal = document.getElementById('promo-modal');
   if (modal) modal.classList.add('show');
@@ -299,34 +299,34 @@ function activatePromo() {
   var code = document.getElementById('promo-input').value.trim().toUpperCase();
   var result = document.getElementById('promo-result');
   if (!code) return;
-  if (GameState.usedPromos.indexOf(code) !== -1) { if (result) { result.innerText = "ßµßÿß÷ ß⁄ß„ß·ß‡ß›ßÓßŸß‡ß”ß—ßﬂ!"; result.style.color = "#e74c3c"; } return; }
+  if (GameState.usedPromos.indexOf(code) !== -1) { if (result) { result.innerText = "‚ö†Ô∏è –£–∂–µ –∏—Å–ø–æ–ª—å–∑–æ–≤–∞–Ω!"; result.style.color = "#e74c3c"; } return; }
   var reward = CONFIG.PROMOCODES[code];
   if (reward) {
     var msg = "";
     if (reward.gold) { GameState.GOLD += reward.gold; msg += reward.gold + 'G '; }
-    if (reward.silver) { GameState.SILVER += reward.silver; msg += reward.silver + '? '; }
+    if (reward.silver) { GameState.SILVER += reward.silver; msg += reward.silver + 'üí∞ '; }
     if (reward.xp) { GameState.XP += reward.xp; msg += reward.xp + 'XP '; }
     if (reward.tank) {
-      if (GameState.owned.indexOf(reward.tank) === -1) { GameState.owned.push(reward.tank); msg += 'ß¥ß—ßﬂß‹: ' + DB[reward.tank].n; }
+      if (GameState.owned.indexOf(reward.tank) === -1) { GameState.owned.push(reward.tank); msg += '–¢–∞–Ω–∫: ' + DB[reward.tank].n; }
       else { msg += '+500G'; GameState.GOLD += 500; }
     }
     if (reward.boosterXP) { GameState.boosterStock.xp += (reward.boosterXP || 0); }
     if (reward.boosterSilver) { GameState.boosterStock.silver += (reward.boosterSilver || 0); }
     GameState.usedPromos.push(code);
-    if (result) { result.innerText = "ßµß„ß·ß÷ßÍßﬂß‡! " + msg; result.style.color = "#2ecc71"; }
+    if (result) { result.innerText = "‚úÖ –£—Å–ø–µ—à–Ω–æ! " + msg; result.style.color = "#2ecc71"; }
     updateResources();
     renderCarousel();
     updateBoosterUI();
     saveProgress();
-  } else { if (result) { result.innerText = "ßØß÷ß”ß÷ß‚ßﬂßÌß€ ß‹ß‡ß’!"; result.style.color = "#e74c3c"; } }
+  } else { if (result) { result.innerText = "‚ùå –ù–µ–≤–µ—Ä–Ω—ã–π –∫–æ–¥!"; result.style.color = "#e74c3c"; } }
 }
 
-// ========== ß±ß≤ß∞ß•ß°ß®ß° ß¥ß°ßØß¨ß° ==========
+// ========== –ü—Ä–æ–¥–∞–∂–∞ —Ç–∞–Ω–∫–∞ ==========
 function sellTank(tid) {
-  if (GameState.owned.length <= 1) { alert("ßØß÷ß›ßÓßŸßÒ ß·ß‚ß‡ß’ß—ß‰ßÓ ß·ß‡ß„ß›ß÷ß’ßﬂß⁄ß€ ß‰ß—ßﬂß‹!"); return; }
+  if (GameState.owned.length <= 1) { alert("‚ö†Ô∏è –ù–µ–ª—å–∑—è –ø—Ä–æ–¥–∞—Ç—å –ø–æ—Å–ª–µ–¥–Ω–∏–π —Ç–∞–Ω–∫!"); return; }
   var t = DB[tid];
   var price = t.collection ? t.tier * 15000 : t.gold ? t.gold * 200 : t.tier * 5000;
-  if (confirm('ß±ß‚ß‡ß’ß—ß‰ßÓ ' + t.n + ' ßŸß— ' + price + '??')) {
+  if (confirm('üí∞ –ü—Ä–æ–¥–∞—Ç—å ' + t.n + ' –∑–∞ ' + price + 'üí∞?')) {
     GameState.SILVER += price;
     GameState.owned = GameState.owned.filter(function(id) { return id !== tid; });
     if (GameState.selected === tid) GameState.selected = GameState.owned[0];
@@ -340,7 +340,7 @@ function sellTank(tid) {
   }
 }
 
-// ========== ß¥ß≤ß¶ßØß™ß≤ß∞ß£ß¨ß° ==========
+// ========== –¢—Ä–µ–Ω–∏—Ä–æ–≤–∫–∞ ==========
 function fillTrainNatSelect() {
   var s = document.getElementById('train-nat-select');
   if (!s) return;
@@ -379,7 +379,7 @@ function toggleTraining() {
   if (p) { p.style.display = p.style.display === 'none' ? 'block' : 'none'; }
 }
 
-// ========== ß¨ß°ß≤ßµß≥ß¶ß≠ßæ ß¥ß°ßØß¨ß∞ß£ ==========
+// ========== –ö–∞—Ä—É—Å–µ–ª—å —Ç–∞–Ω–∫–æ–≤ ==========
 function renderCarousel() {
   var c = document.getElementById('tank-carousel');
   if (!c) return;
@@ -418,7 +418,7 @@ function renderCarousel() {
     })(id);
     var sb = document.createElement('button');
     sb.className = 'sell-btn';
-    sb.innerText = '?';
+    sb.innerText = 'üí∞';
     (function(tankId) {
       sb.onclick = function(e) { e.stopPropagation(); sellTank(tankId); };
     })(id);
@@ -430,17 +430,17 @@ function renderCarousel() {
       if (isTitan) bg.className += ' titan-badge';
       if (isDual) bg.className += ' dualgun-badge';
       if (isMissile) bg.style.background = '#00ccff';
-      bg.innerText = isFlame ? '??' : (isMissile ? '??' : (isTitan ? '??' : (isDual ? '??' : '°Ô')));
+      bg.innerText = isFlame ? 'üî•' : (isMissile ? 'üöÄ' : (isTitan ? 'üõ°Ô∏è' : (isDual ? 'üî´' : '‚≠ê')));
       slot.appendChild(bg);
     }
     var upg = GameState.upgrades[id];
     if (upg) {
       var total = (upg.gun || 0) + (upg.engine || 0) + (upg.turret || 0);
-      if (total > 0) { var ui2 = document.createElement('div'); ui2.className = 'upg-indicator'; ui2.innerText = '??' + total; slot.appendChild(ui2); }
+      if (total > 0) { var ui2 = document.createElement('div'); ui2.className = 'upg-indicator'; ui2.innerText = '‚öôÔ∏è' + total; slot.appendChild(ui2); }
     }
     var mods = GameState.modules[id] || [null, null, null];
     var modCount = mods.filter(function(m) { return m; }).length;
-    if (modCount > 0) { var mi = document.createElement('div'); mi.className = 'mod-indicator'; mi.innerText = '??+' + modCount; slot.appendChild(mi); }
+    if (modCount > 0) { var mi = document.createElement('div'); mi.className = 'mod-indicator'; mi.innerText = 'üîß+' + modCount; slot.appendChild(mi); }
     var wrap = document.createElement('div');
     wrap.className = 'slot-bg';
     var cv = document.createElement('canvas');
@@ -463,7 +463,7 @@ function renderCarousel() {
     nameEl.innerText = t.n;
     var clsEl = document.createElement('span');
     clsEl.className = 'slot-cls';
-    clsEl.innerText = isFlame ? '??ß∞ß¥' : (isMissile ? '??ß≠ß¥' : (isTitan ? '??' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : (isDual ? '??' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : CONFIG.TANK_CLASSES[t.cls || 'mt'])));
+    clsEl.innerText = isFlame ? 'üî•AT' : (isMissile ? 'üöÄNT' : (isTitan ? 'üõ°Ô∏è' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : (isDual ? 'üî´' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : CONFIG.TANK_CLASSES[t.cls || 'mt'])));
     info.appendChild(tierEl);
     info.appendChild(nameEl);
     info.appendChild(clsEl);
@@ -473,7 +473,7 @@ function renderCarousel() {
   }
 }
 
-// ========== ß™ß¨ß∞ßØß¨ß° ß¥ß°ßØß¨ß° ==========
+// ========== –ò–∫–æ–Ω–∫–∞ —Ç–∞–Ω–∫–∞ ==========
 function drawTankIcon(canvas, tankId) {
   var ctx2 = canvas.getContext('2d');
   var t = DB[tankId];
@@ -531,7 +531,7 @@ function drawTankIcon(canvas, tankId) {
   ctx2.restore();
 }
 
-// ========== ß•ß¶ß≤ß¶ß£ß∞ ß≤ß°ß©ß£ß™ß¥ß™ß¡ ==========
+// ========== –î–µ—Ä–µ–≤–æ –∏—Å—Å–ª–µ–¥–æ–≤–∞–Ω–∏–π ==========
 function renderTree() {
   var nodes = document.getElementById('nodes');
   var tc = document.getElementById('tree-canvas');
@@ -561,9 +561,9 @@ function renderTree() {
     div.style.cssText = 'left:' + sx + 'px;top:' + sy + 'px;width:' + (120 * sc) + 'px;height:' + (48 * sc) + 'px;font-size:' + (9 * sc) + 'px';
     var cost = t.gold ? t.gold + 'G' : (t.xp !== undefined ? t.xp + 'XP' : '');
     var clsStr = CONFIG.TANK_CLASSES[t.cls || 'mt'] || '';
-    var mag = t.mag && t.mag > 1 ? '??' + t.mag : '';
-    var dualTag = t.dualGun ? '?? ' : '';
-    div.innerHTML = '<b style="color:' + (t.premium ? '#f1c40f' : '#fff') + '">' + dualTag + (t.premium ? '°Ô ' : '') + t.n + '</b><br><span style="color:#f1c40f">[' + (CONFIG.TIER_ROMAN[t.tier] || 'XI') + ']</span> ' + clsStr + ' ' + mag + '<br>' + cost;
+    var mag = t.mag && t.mag > 1 ? 'üî¢' + t.mag : '';
+    var dualTag = t.dualGun ? 'üî´ ' : '';
+    div.innerHTML = '<b style="color:' + (t.premium ? '#f1c40f' : '#fff') + '">' + dualTag + (t.premium ? '‚≠ê ' : '') + t.n + '</b><br><span style="color:#f1c40f">[' + (CONFIG.TIER_ROMAN[t.tier] || 'XI') + ']</span> ' + clsStr + ' ' + mag + '<br>' + cost;
     (function(tankId, tankData) {
       div.onclick = function() {
         if (GameState.owned.indexOf(tankId) !== -1) { GameState.selected = tankId; }
@@ -584,26 +584,26 @@ function renderTree() {
   }
 }
 
-// ========== ß¥ß°ß¢ß≠ß™ß∏ß° ß¨ß∞ßÆß°ßØß• ==========
+// ========== –¢–∞–±–ª–∏—Ü–∞ –∫–æ–º–∞–Ω–¥ ==========
 function updateScoreboard() {
   var al = document.getElementById('allies-list');
   var en = document.getElementById('enemies-list');
   if (!al || !en) return;
-  al.innerHTML = '<b>ß≥ß∞ß¿ß©ßØß™ß¨ß™</b><br>';
-  en.innerHTML = '<b>ß£ß≤ß°ß§ß™</b><br>';
+  al.innerHTML = '<b>ü§ù –°–æ—é–∑–Ω–∏–∫–∏</b><br>';
+  en.innerHTML = '<b>‚öîÔ∏è –í—Ä–∞–≥–∏</b><br>';
   for (var i = 0; i < GameState.units.length; i++) {
     var u = GameState.units[i];
     if (u.team === 'enemy' && !u.visible && !u.dead) continue;
-    var mk = u.flame ? '??' : (u.missile ? '??' : (u.titan ? '??' : (u.dualGun ? '??' : (u.collection ? '°Ô' : ''))));
+    var mk = u.flame ? 'üî•' : (u.missile ? 'üöÄ' : (u.titan ? 'üõ°Ô∏è' : (u.dualGun ? 'üî´' : (u.collection ? '‚≠ê' : ''))));
     var sp = '<span class="' + (u.dead ? 'dead' : '') + '">' + (CONFIG.TIER_ROMAN[u.tier] || 'XI') + '|' + mk + u.name + '</span><br>';
     if (u.team === 'enemy') en.innerHTML += sp;
     else al.innerHTML += sp;
   }
 }
 
-// ========== ß¥ß°ß¢ß≠ß™ß∏ß° ß≠ß™ß•ß¶ß≤ß∞ß£ ==========
+// ========== –¢–∞–±–ª–∏—Ü–∞ –ª–∏–¥–µ—Ä–æ–≤ ==========
 function showLeaderboard() {
-  console.log('?? ß∞ß‰ß‹ß‚ßÌß”ß—ß÷ßﬁ ß‰ß—ß“ß›ß⁄ßËßÂ ß›ß⁄ß’ß÷ß‚ß‡ß”');
+  console.log('üèÜ –û—Ç–∫—Ä—ã–≤–∞–µ–º —Ç–∞–±–ª–∏—Ü—É –ª–∏–¥–µ—Ä–æ–≤');
   var modal = document.getElementById('leaderboard-modal');
   if (modal) modal.classList.add('show');
   loadLeaderboard();
@@ -624,31 +624,31 @@ function switchLBTab(tab, btn) {
 }
 
 async function loadLeaderboard() {
-  console.log('?? ß©ß—ß‘ß‚ßÂßÿß—ß÷ßﬁ ß‰ß—ß“ß›ß⁄ßËßÂ ß›ß⁄ß’ß÷ß‚ß‡ß”');
+  console.log('üåê –ó–∞–≥—Ä—É–∂–∞–µ–º —Ç–∞–±–ª–∏—Ü—É –ª–∏–¥–µ—Ä–æ–≤');
   var listEl = document.getElementById('lb-global-list');
   if (!supabaseClient) {
-    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">?? ßØß÷ß‰ ß„ß‡ß÷ß’ß⁄ßﬂß÷ßﬂß⁄ßÒ</div>';
+    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">‚ùå –ù–µ—Ç —Å–æ–µ–¥–∏–Ω–µ–Ω–∏—è</div>';
     return;
   }
   try {
     const result = await getLeaderboard(100);
     if (!result.success || !result.data || result.data.length === 0) {
-      if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">?? ß±ß‡ß‹ß— ßﬂß⁄ß‹ß‡ß‘ß‡ ßﬂß÷ß‰</div>';
+      if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">üò¥ –ü–æ–∫–∞ –Ω–∏–∫–æ–≥–æ –Ω–µ—Ç</div>';
       return;
     }
     var html = '';
     result.data.forEach(function(user, index) {
       var place = index + 1;
-      var medal = '?';
+      var medal = 'üèÖ';
       var medalClass = '';
-      if (place === 1) { medal = '??'; medalClass = 'gold'; }
-      else if (place === 2) { medal = '??'; medalClass = 'silver'; }
-      else if (place === 3) { medal = '??'; medalClass = 'bronze'; }
+      if (place === 1) { medal = 'ü•á'; medalClass = 'gold'; }
+      else if (place === 2) { medal = 'ü•à'; medalClass = 'silver'; }
+      else if (place === 3) { medal = 'ü•â'; medalClass = 'bronze'; }
       var isYou = currentUser && user.username === currentUser ? ' you' : '';
       var winRate = user.total_battles > 0 ? Math.round((user.total_wins / user.total_battles) * 100) : 0;
       html += '<div class="lb-row' + isYou + '">';
       html += '<div class="lb-row-rank ' + medalClass + '">' + medal + ' ' + place + '</div>';
-      html += '<div class="lb-row-name"><span class="lb-row-name-icon">' + (isYou ? '??' : '??') + '</span><span>' + user.username + (isYou ? ' (ß£ßÌ)' : '') + '</span></div>';
+      html += '<div class="lb-row-name"><span class="lb-row-name-icon">' + (isYou ? 'üë§' : 'üë§') + '</span><span>' + user.username + (isYou ? ' (–í—ã)' : '') + '</span></div>';
       html += '<div class="lb-row-value lb-row-xp">' + user.xp.toLocaleString() + ' XP</div>';
       html += '<div class="lb-row-value">' + user.total_battles + '</div>';
       html += '<div class="lb-row-value">' + user.total_wins + ' (' + winRate + '%)</div>';
@@ -657,18 +657,18 @@ async function loadLeaderboard() {
     });
     if (listEl) listEl.innerHTML = html;
   } catch (error) {
-    console.error('? ß∞ßÍß⁄ß“ß‹ß— ß›ß⁄ß’ß÷ß‚ß‡ß”:', error);
-    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">ß∞ßÍß⁄ß“ß‹ß—</div>';
+    console.error('‚ö†Ô∏è –û—à–∏–±–∫–∞ –ª–∏–¥–µ—Ä–æ–≤:', error);
+    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">‚ö†Ô∏è –û—à–∏–±–∫–∞</div>';
   }
 }
 
 async function loadOnlinePlayers() {
-  console.log('?? ß©ß—ß‘ß‚ßÂßÿß—ß÷ßﬁ ß‡ßﬂß›ß—ß€ßﬂ ß⁄ß‘ß‚ß‡ß‹ß‡ß”');
+  console.log('üåê –ó–∞–≥—Ä—É–∂–∞–µ–º –æ–Ω–ª–∞–π–Ω –∏–≥—Ä–æ–∫–æ–≤');
   var onlineListEl = document.getElementById('lb-online-list');
   var emptyEl = document.getElementById('lb-online-empty');
   if (!supabaseClient) {
     if (onlineListEl) onlineListEl.innerHTML = '';
-    if (emptyEl) { emptyEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">?? ß∞ßﬂß›ß—ß€ßﬂ ßﬂß÷ß’ß‡ß„ß‰ßÂß·ß÷ßﬂ</div>'; emptyEl.style.display = 'block'; }
+    if (emptyEl) { emptyEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">üì° –û–Ω–ª–∞–π–Ω –Ω–µ–¥–æ—Å—Ç—É–ø–µ–Ω</div>'; emptyEl.style.display = 'block'; }
     return;
   }
   try {
@@ -686,30 +686,30 @@ async function loadOnlinePlayers() {
       var timeAgo = getTimeAgo(new Date(player.last_online));
       var card = document.createElement('div');
       card.className = 'online-card';
-      card.innerHTML = '<div style="font-size:16px;margin-bottom:5px;">' + (tank && tank.nc ? '<span style="color:' + tank.nc + '">???</span>' : '??') + '</div>';
+      card.innerHTML = '<div style="font-size:16px;margin-bottom:5px;">' + (tank && tank.nc ? '<span style="color:' + tank.nc + '">üõ°Ô∏è</span>' : 'üõ°Ô∏è') + '</div>';
       card.innerHTML += '<div class="online-name"><span class="online-status"></span>' + player.username + '</div>';
       card.innerHTML += '<div class="online-tank">' + tankName + '</div>';
       card.innerHTML += '<div class="online-time">' + timeAgo + '</div>';
       if (onlineListEl) onlineListEl.appendChild(card);
     });
   } catch (error) {
-    console.error('? ß∞ßÍß⁄ß“ß‹ß— ß‡ßﬂß›ß—ß€ßﬂ:', error);
+    console.error('‚ö†Ô∏è –û—à–∏–±–∫–∞ –æ–Ω–ª–∞–π–Ω:', error);
     if (emptyEl) emptyEl.style.display = 'block';
   }
 }
 
 function getTimeAgo(date) {
   var seconds = Math.floor((new Date() - date) / 1000);
-  if (seconds < 60) return 'ß¥ß‡ß›ßÓß‹ß‡ ßÈß‰ß‡';
+  if (seconds < 60) return 'üïí –¢–æ–ª—å–∫–æ —á—Ç–æ';
   var minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return minutes + 'ßﬁ ßﬂß—ßŸß—ß’';
+  if (minutes < 60) return minutes + '–º –Ω–∞–∑–∞–¥';
   var hours = Math.floor(minutes / 60);
-  if (hours < 24) return hours + 'ßÈ ßﬂß—ßŸß—ß’';
+  if (hours < 24) return hours + '—á –Ω–∞–∑–∞–¥';
   var days = Math.floor(hours / 24);
-  return days + 'ß’ ßﬂß—ßŸß—ß’';
+  return days + '–¥ –Ω–∞–∑–∞–¥';
 }
 
-// ========== ßøß¨ß≥ß±ß∞ß≤ß¥ ß£ß≥ß¶ß∑ ß∂ßµßØß¨ß∏ß™ß´ ==========
+// ========== –≠–∫—Å–ø–æ—Ä—Ç –≤—Å–µ—Ö —Ñ—É–Ω–∫—Ü–∏–π ==========
 window.crewMsg = crewMsg;
 window.dmgLog = dmgLog;
 window.updateResources = updateResources;
@@ -754,4 +754,4 @@ window.openInventoryTab = openInventoryTab;
 window.updateInvCount = updateInvCount;
 window.collectReward = collectReward;
 
-console.log('? ui.js ß©ß°ß§ß≤ßµß®ß¶ßØß° ß±ß∞ß≠ßØß∞ß≥ß¥ßæß¿!');
+console.log('‚úÖ ui.js –∑–∞–≥—Ä—É–∂–µ–Ω–∞ –ø–æ–ª–Ω–æ—Å—Ç—å—é!');

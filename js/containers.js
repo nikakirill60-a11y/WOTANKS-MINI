@@ -23,16 +23,8 @@ const COLLECTION_DB={
   WTE100:{n:"WT auf E100",x:50,y:50,nat:"germany",tier:10,gold:2000,hp:2000,dmg:490,s:1.3,mag:5,off:-12,vr:400,camo:.05,cls:'td',nc:'#7a7a7a',premium:true,collection:true},
   MAUSKONIG:{n:"Mausekönig",x:200,y:50,nat:"germany",tier:11,gold:9999,hp:4000,dmg:650,s:1.8,off:5,vr:380,camo:.02,cls:'ht',armor:350,nc:'#7a7a7a',premium:true,collection:true,dualGun:true,dualDelay:400,reload:6000,desc:"Король мышей. Двуствольный монстр XI уровня."},
   TYPE5:{n:"Type 5 Heavy",x:100,y:100,nat:"japan",tier:10,gold:5000,hp:3500,dmg:900,s:1.8,reload:8000,off:0,vr:350,camo:.02,cls:'ht',armor:300,nc:'#d4a574',premium:true,collection:true}
-  KV220BT:{
-    n:"КВ-220-2 Бета",nat:"ussr",tier:6,hp:950,dmg:160,s:0.9,off:5,vr:330,camo:0.1,
-    cls:'ht',nc:'#8e44ad',premium:true,collection:true,armor:120,
-    desc:"Уникальный танк бета-теста. Недоступен в контейнерах."
-  },
-  T3485VIC:{
-    n:"Т-34-85 Победный",nat:"ussr",tier:6,hp:950,dmg:180,s:1,off:5,vr:360,camo:0.25,
-    cls:'mt',nc:'#e74c3c',premium:true,collection:true,
-    desc:"Специальная версия в честь 23 февраля. За победу!"
-  },
+  KV220BT:{n:"КВ-220-2 Бета",nat:"ussr",tier:6,hp:950,dmg:160,s:0.9,off:5,vr:330,camo:0.1,cls:'ht',nc:'#8e44ad',premium:true,collection:true,armor:120,desc:"Уникальный танк бета-теста. Недоступен в контейнерах."},
+  T3485VIC:{n:"Т-34-85 Победный",nat:"ussr",tier:6,hp:950,dmg:180,s:1,off:5,vr:360,camo:0.25,cls:'mt',nc:'#e74c3c',premium:true,collection:true,desc:"Специальная версия в честь 23 февраля. За победу!"},
 
   // ===================== TITAN СЕРИЯ =====================
   TITAN_MK1:{

@@ -826,7 +826,7 @@ async function loadLeaderboard() {
   }
 
   const result = await getLeaderboard(100);
-  const listEl = document.getElementById('lb-global-list');
+  let onlineListEl = document.getElementById('lb-online-list');
 
   if (!result.success || !result.data || result.data.length === 0) {
     if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">?? §±§à§Ü§Ñ §ß§Ú§Ü§à§Ô§à §ß§Ö§ä</div>';
@@ -960,5 +960,10 @@ window.hideLeaderboard = hideLeaderboard;
 window.switchLBTab = switchLBTab;
 window.loadLeaderboard = loadLeaderboard;
 window.loadOnlinePlayers = loadOnlinePlayers;
+window.showContainerShop = showContainerShop;
+window.hideContainerShop = hideContainerShop;
+window.switchTab = switchTab;
+window.openInventoryTab = openInventoryTab;
+window.updateInvCount = updateInvCount;
 
 console.log('? ui.js §©§¡§¤§²§µ§¨§¦§¯§¡ §±§°§­§¯§°§³§´§¾§À!');

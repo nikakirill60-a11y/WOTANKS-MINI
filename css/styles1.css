@@ -1,0 +1,65 @@
+/* ========== ЧАТ ========== */
+#chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: #3498db #222;
+}
+
+#chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+  background: #222;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+  background: #3498db;
+  border-radius: 3px;
+}
+
+.chat-message {
+  padding: 6px 8px;
+  margin: 4px 0;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  word-wrap: break-word;
+}
+
+.chat-message.system {
+  background: rgba(241,196,15,0.1);
+  border-left: 3px solid #f1c40f;
+}
+
+.chat-message.room {
+  background: rgba(46,204,113,0.1);
+  border-left: 3px solid #2ecc71;
+}
+
+.chat-username {
+  font-weight: bold;
+  color: #3498db;
+}
+
+.chat-username.self {
+  color: #2ecc71;
+}
+
+.chat-username.host {
+  color: #f1c40f;
+}
+
+.chat-time {
+  font-size: 10px;
+  color: #666;
+  margin-left: 8px;
+}
+
+.chat-text {
+  color: #eee;
+  margin-top: 3px;
+}
+
+#chat-tab-global.active,
+#chat-tab-room.active {
+  background: #3498db !important;
+}

@@ -18,7 +18,7 @@ const CONFIG = {
   PROMOCODES: {
     "BETA_TEST": { tank: "KV220BT" },
     "START2025": { gold: 100, silver: 5000 },
-    "TANKS": { xp: 1000 }
+    "TANKS": { xp: 1000 },
 	"MAUS": { gold: 5000, xp: 10000, silver: 50000 }
   },
   MODULES: {

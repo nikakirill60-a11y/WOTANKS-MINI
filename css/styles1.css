@@ -98,3 +98,52 @@
     transform: scale(1.2) rotate(5deg);
   }
 }
+
+/* Контейнер "Малые уровни" */
+.lowlevels-card {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a) !important;
+  border-color: #95a5a6 !important;
+  animation: llPulse 2s ease-in-out infinite;
+}
+
+@keyframes llPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(149, 165, 166, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(149, 165, 166, 0.6), 0 0 50px rgba(149, 165, 166, 0.2);
+  }
+}
+
+/* Специальный визуал для Mausekönig */
+.mauskonig-reward {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 60px #ffd700, 0 0 120px rgba(255, 215, 0, 0.5) !important;
+  animation: crownGlow 1s ease-in-out infinite !important;
+}
+
+@keyframes crownGlow {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.5) hue-rotate(10deg);
+  }
+}
+
+.mauskonig-fx {
+  font-size: 40px;
+  animation: crownSpin 2s linear infinite;
+}
+
+@keyframes crownSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}

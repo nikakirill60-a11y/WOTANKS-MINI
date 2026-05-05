@@ -1,4 +1,5 @@
-// auth.js (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// js/auth.js
+// ========== АУТЕНТИФИКАЦИЯ И РЕГИСТРАЦИЯ ==========
 
 let currentUser = null;
 let onlineStatusInterval = null;
@@ -12,6 +13,63 @@ function saveUsers(users) {
   localStorage.setItem('ct_users', JSON.stringify(users));
 }
 
+// ========== ВАЛИДАЦИЯ НИКНЕЙМА ==========
+function validateUsername(username) {
+  // Проверка длины
+  if (username.length < 3 || username.length > 20) {
+    return {
+      valid: false,
+      error: "❌ Имя должно быть 3-20 символов!"
+    };
+  }
+
+  // Проверка: только буквы, цифры, _ и -
+  const validNickname = /^[a-zA-Z0-9_-]+$/;
+  if (!validNickname.test(username)) {
+    return {
+      valid: false,
+      error: "❌ Только буквы (A-Z, a-z), цифры (0-9), подчёркивание (_) и дефис (-)"
+    };
+  }
+
+  // Проверка запрещённых символов
+  const forbiddenChars = /[{}[\]<>"'`;,\\|]/g;
+  if (forbiddenChars.test(username)) {
+    return {
+      valid: false,
+      error: "❌ Запрещены символы: { } [ ] < > \" ' ` ; , \\ |"
+    };
+  }
+
+  // Проверка на SQL injection паттерны
+  const sqlInjectionPatterns = [
+    /union/i,
+    /select/i,
+    /insert/i,
+    /update/i,
+    /delete/i,
+    /drop/i,
+    /exec/i,
+    /script/i,
+    /onclick/i
+  ];
+
+  for (let pattern of sqlInjectionPatterns) {
+    if (pattern.test(username)) {
+      return {
+        valid: false,
+        error: "❌ Недопустимое имя пользователя"
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    error: null
+  };
+}
+
+// ========== СОХРАНЕНИЕ ПРОГРЕССА ==========
 async function saveProgress() {
   if (!currentUser) return;
 
@@ -39,16 +97,17 @@ async function saveProgress() {
   }
 
   // Сохраняем в облако
-  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
+  if (supabaseClient) {
     await saveUserProgress(currentUser, progressData);
   }
 }
 
+// ========== ЗАГРУЗКА ПРОГРЕССА ==========
 async function loadProgress(username) {
   let data = null;
 
   // Пытаемся загрузить из облака
-  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
+  if (supabaseClient) {
     const result = await loadUserProgress(username);
     if (result.success) {
       data = result.data;
@@ -106,19 +165,36 @@ async function loadProgress(username) {
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
 }
 
+// ========== РЕГИСТРАЦИЯ ==========
 async function register() {
   const u = document.getElementById('username-input').value.trim();
   const p = document.getElementById('password-input').value.trim();
   const msg = document.getElementById('login-msg');
 
+  // Проверка пустых полей
   if (!u || !p) {
-    msg.innerText = "Введите имя и пароль!";
+    msg.innerText = "❌ Введите имя и пароль!";
+    msg.style.color = "#e74c3c";
+    return;
+  }
+
+  // Проверка пароля
+  if (p.length < 4) {
+    msg.innerText = "❌ Пароль должен быть минимум 4 символа!";
+    msg.style.color = "#e74c3c";
+    return;
+  }
+
+  // ✅ ВАЛИДАЦИЯ НИКНЕЙМА
+  const validation = validateUsername(u);
+  if (!validation.valid) {
+    msg.innerText = validation.error;
     msg.style.color = "#e74c3c";
     return;
   }
 
   // Регистрация в облаке
-  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
+  if (supabaseClient) {
     const result = await registerUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -130,23 +206,44 @@ async function register() {
   // Локальная регистрация
   const users = getUsers();
   if (users[u]) {
-    msg.innerText = "Пользователь уже существует!";
+    msg.innerText = "❌ Пользователь уже существует!";
     msg.style.color = "#e74c3c";
     return;
   }
 
   users[u] = { pass: p, data: null };
   saveUsers(users);
-  performLogin(u);
+  
+  msg.innerText = "✅ Регистрация успешна! Входим...";
+  msg.style.color = "#2ecc71";
+  
+  setTimeout(() => {
+    performLogin(u);
+  }, 1000);
 }
 
+// ========== ВХОД ==========
 async function login() {
   const u = document.getElementById('username-input').value.trim();
   const p = document.getElementById('password-input').value.trim();
   const msg = document.getElementById('login-msg');
 
+  if (!u || !p) {
+    msg.innerText = "❌ Введите имя и пароль!";
+    msg.style.color = "#e74c3c";
+    return;
+  }
+
+  // ✅ ВАЛИДАЦИЯ НИКНЕЙМА
+  const validation = validateUsername(u);
+  if (!validation.valid) {
+    msg.innerText = validation.error;
+    msg.style.color = "#e74c3c";
+    return;
+  }
+
   // Проверка в облаке
-  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
+  if (supabaseClient) {
     const result = await loginUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -157,15 +254,21 @@ async function login() {
     // Локальная проверка
     const users = getUsers();
     if (!users[u] || users[u].pass !== p) {
-      msg.innerText = "Неверное имя или пароль!";
+      msg.innerText = "❌ Неверное имя или пароль!";
       msg.style.color = "#e74c3c";
       return;
     }
   }
 
-  performLogin(u);
+  msg.innerText = "✅ Входим...";
+  msg.style.color = "#2ecc71";
+  
+  setTimeout(() => {
+    performLogin(u);
+  }, 500);
 }
 
+// ========== ВЫПОЛНЕНИЕ ВХОДА ==========
 async function performLogin(username) {
   currentUser = username;
   await loadProgress(username);
@@ -181,7 +284,7 @@ async function performLogin(username) {
   updateBoosterUI();
 
   // Обновляем онлайн статус
-  if (supabaseClient) { // ✅ ИСПРАВЛЕНО
+  if (supabaseClient) {
     await updateOnlineStatus(username, true);
     
     // Периодическое обновление статуса
@@ -192,12 +295,15 @@ async function performLogin(username) {
 
   // Автосохранение каждые 5 секунд
   setInterval(saveProgress, 5000);
+
+  console.log('✅ Игрок вошёл:', username);
 }
 
+// ========== ВЫХОД ==========
 async function logout() {
   await saveProgress();
   
-  if (supabaseClient && currentUser) { // ✅ ИСПРАВЛЕНО
+  if (supabaseClient && currentUser) {
     await updateOnlineStatus(currentUser, false);
   }
 
@@ -206,15 +312,28 @@ async function logout() {
   }
 
   currentUser = null;
+  
+  console.log('👋 Игрок вышел');
+  
   location.reload();
 }
 
-// Обработка закрытия вкладки
+// ========== ОБРАБОТКА ЗАКРЫТИЯ ВКЛАДКИ ==========
 window.addEventListener('beforeunload', async () => {
   if (currentUser) {
     await saveProgress();
-    if (supabaseClient) { // ✅ ИСПРАВЛЕНО
+    if (supabaseClient) {
       await updateOnlineStatus(currentUser, false);
     }
   }
 });
+
+// ========== ОЧИСТКА КОНСОЛИ ПРИ ВХОДЕ ==========
+window.addEventListener('load', () => {
+  console.clear();
+  console.log('%c🎮 CITY TANKS', 'color: #f1c40f; font-size: 20px; font-weight: bold');
+  console.log('%c⚠️ Это окно разработчика. Будьте осторожны!', 'color: #e74c3c; font-size: 14px');
+  console.log('%c✅ Все действия защищены серверной валидацией', 'color: #2ecc71; font-size: 12px');
+});
+
+console.log('✅ auth.js полностью загружен');

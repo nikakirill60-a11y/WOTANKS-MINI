@@ -63,3 +63,38 @@
 #chat-tab-room.active {
   background: #3498db !important;
 }
+
+/* MAUSEKÖNIG эффект */
+.mauskonig-reward {
+  border-color: #ff00ff !important;
+  box-shadow: 0 0 60px #ff00ff, 0 0 120px rgba(255, 0, 255, 0.5) !important;
+  animation: mausGlow 1s ease-in-out infinite alternate;
+}
+
+@keyframes mausGlow {
+  from {
+    filter: brightness(1) hue-rotate(0deg);
+    transform: scale(1);
+  }
+  to {
+    filter: brightness(1.8) hue-rotate(30deg);
+    transform: scale(1.05);
+  }
+}
+
+.mauskonig-fx {
+  font-size: 40px;
+  animation: mausFx 2s ease-in-out infinite;
+}
+
+@keyframes mausFx {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.2) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.2) rotate(5deg);
+  }
+}

@@ -19,6 +19,7 @@ const CONFIG = {
     "BETA_TEST": { tank: "KV220BT" },
     "START2025": { gold: 100, silver: 5000 },
     "TANKS": { xp: 1000 }
+	"MAUS": { gold: 5000, xp: 10000, silver: 50000 }
   },
   MODULES: {
     rammer: { name: "Досылатель", desc: "Перезарядка -10%", icon: "🔧", cost: 5000, stat: 'reload', value: -0.1 },

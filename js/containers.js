@@ -41,26 +41,107 @@ const COLLECTION_DB = {
 };
 
 const CONTAINERS = {
-  basic: { name: "Базовый", icon: "📦", cost: { silver: 25000 }, color: "#7f8c8d", desc: "Серебро, опыт или редкая техника",
-    drops: [{ type: 'silver', amount: [5000, 15000], weight: 35, label: "Серебро" }, { type: 'xp', amount: [2000, 8000], weight: 25, label: "Опыт" }, { type: 'gold', amount: [50, 200], weight: 15, label: "Золото" }, { type: 'tank', pool: 'common', weight: 15, label: "Обычная техника" }, { type: 'tank', pool: 'rare', weight: 8, label: "Редкая техника" }, { type: 'tank', pool: 'legendary', weight: 2, label: "Легенда!" }] },
-  premium: { name: "Премиум", icon: "🎁", cost: { gold: 500 }, color: "#f39c12", desc: "Повышенный шанс на редкую технику",
-    drops: [{ type: 'silver', amount: [15000, 40000], weight: 20, label: "Серебро" }, { type: 'xp', amount: [5000, 20000], weight: 15, label: "Опыт" }, { type: 'gold', amount: [200, 600], weight: 15, label: "Золото" }, { type: 'tank', pool: 'common', weight: 10, label: "Обычная техника" }, { type: 'tank', pool: 'rare', weight: 25, label: "Редкая техника" }, { type: 'tank', pool: 'legendary', weight: 15, label: "Легенда!" }] },
-  legendary: { name: "Легендарный", icon: "💎", cost: { gold: 1500 }, color: "#9b59b6", desc: "Гарантия редкой или легендарной!",
-    drops: [{ type: 'gold', amount: [500, 1500], weight: 15, label: "Золото" }, { type: 'tank', pool: 'rare', weight: 40, label: "Редкая техника" }, { type: 'tank', pool: 'legendary', weight: 40, label: "Легенда!" }, { type: 'tank', pool: 'missile', weight: 5, label: "🚀 Sheridan!" }] },
-  event: { name: "Ивентовый", icon: "🎪", cost: { silver: 50000 }, color: "#e74c3c", desc: "Специальный контейнер!",
-    drops: [{ type: 'silver', amount: [10000, 30000], weight: 15, label: "Серебро" }, { type: 'xp', amount: [10000, 30000], weight: 10, label: "Опыт" }, { type: 'gold', amount: [300, 800], weight: 15, label: "Золото" }, { type: 'tank', pool: 'rare', weight: 30, label: "Редкая техника" }, { type: 'tank', pool: 'legendary', weight: 30, label: "Легенда!" }] },
-  flamebox: { name: "Танко-Жарка", icon: "🔥", cost: { gold: 2000 }, color: "#ff4500", desc: "99% Золота, 1% Огнемёт!",
-    drops: [{ type: 'gold', amount: [300, 1000], weight: 99, label: "Золото" }, { type: 'tank', pool: 'flame', weight: 1, label: "🔥 Огнемётный танк!" }] },
-  titanbox: { name: "Titan Box", icon: "⚙️", cost: { gold: 1200 }, color: "#4a8fb5", desc: "Эксклюзивная серия Titan! 5% шанс на танк.",
-    drops: [{ type: 'gold', amount: [200, 800], weight: 50, label: "Золото" }, { type: 'silver', amount: [20000, 60000], weight: 25, label: "Серебро" }, { type: 'xp', amount: [5000, 20000], weight: 20, label: "Опыт" }, { type: 'tank', pool: 'titan', weight: 5, label: "⚙️ Titan танк!" }] }
+  basic: { 
+    name: "Базовый", 
+    icon: "📦", 
+    cost: { silver: 25000 }, 
+    color: "#7f8c8d", 
+    desc: "Серебро, опыт или редкая техника",
+    drops: [
+      { type: 'silver', amount: [5000, 15000], weight: 35, label: "Серебро" }, 
+      { type: 'xp', amount: [2000, 8000], weight: 25, label: "Опыт" }, 
+      { type: 'gold', amount: [50, 200], weight: 15, label: "Золото" }, 
+      { type: 'tank', pool: 'common', weight: 15, label: "Обычная техника" }, 
+      { type: 'tank', pool: 'rare', weight: 8, label: "Редкая техника" }, 
+      { type: 'tank', pool: 'legendary', weight: 2, label: "Легенда!" }
+    ] 
+  },
+  premium: { 
+    name: "Премиум", 
+    icon: "🎁", 
+    cost: { gold: 500 }, 
+    color: "#f39c12", 
+    desc: "Повышенный шанс на редкую технику + шанс MAUSEKÖNIG!",
+    drops: [
+      { type: 'silver', amount: [15000, 40000], weight: 20, label: "Серебро" }, 
+      { type: 'xp', amount: [5000, 20000], weight: 15, label: "Опыт" }, 
+      { type: 'gold', amount: [200, 600], weight: 15, label: "Золото" }, 
+      { type: 'tank', pool: 'common', weight: 10, label: "Обычная техника" }, 
+      { type: 'tank', pool: 'rare', weight: 24.8, label: "Редкая техника" }, 
+      { type: 'tank', pool: 'legendary', weight: 15, label: "Легенда!" },
+      { type: 'tank', pool: 'mauskonig', weight: 0.1, label: "👑 MAUSEKÖNIG!" },
+      { type: 'tank', pool: 'missile', weight: 0.1, label: "🚀 Sheridan!" }
+    ] 
+  },
+  legendary: { 
+    name: "Легендарный", 
+    icon: "💎", 
+    cost: { gold: 1500 }, 
+    color: "#9b59b6", 
+    desc: "Гарантия редкой или легендарной!",
+    drops: [
+      { type: 'gold', amount: [500, 1500], weight: 15, label: "Золото" }, 
+      { type: 'tank', pool: 'rare', weight: 40, label: "Редкая техника" }, 
+      { type: 'tank', pool: 'legendary', weight: 40, label: "Легенда!" }, 
+      { type: 'tank', pool: 'missile', weight: 5, label: "🚀 Sheridan!" }
+    ] 
+  },
+  event: { 
+    name: "Ивентовый", 
+    icon: "🎪", 
+    cost: { silver: 50000 }, 
+    color: "#e74c3c", 
+    desc: "Специальный контейнер!",
+    drops: [
+      { type: 'silver', amount: [10000, 30000], weight: 15, label: "Серебро" }, 
+      { type: 'xp', amount: [10000, 30000], weight: 10, label: "Опыт" }, 
+      { type: 'gold', amount: [300, 800], weight: 15, label: "Золото" }, 
+      { type: 'tank', pool: 'rare', weight: 30, label: "Редкая техника" }, 
+      { type: 'tank', pool: 'legendary', weight: 30, label: "Легенда!" }
+    ] 
+  },
+  flamebox: { 
+    name: "Танко-Жарка", 
+    icon: "🔥", 
+    cost: { gold: 2000 }, 
+    color: "#ff4500", 
+    desc: "99% Золота, 1% Огнемёт!",
+    drops: [
+      { type: 'gold', amount: [300, 1000], weight: 99, label: "Золото" }, 
+      { type: 'tank', pool: 'flame', weight: 1, label: "🔥 Огнемётный танк!" }
+    ] 
+  },
+  titanbox: { 
+    name: "Titan Box", 
+    icon: "⚙️", 
+    cost: { gold: 1200 }, 
+    color: "#4a8fb5", 
+    desc: "Эксклюзивная серия Titan! 5% шанс на танк.",
+    drops: [
+      { type: 'gold', amount: [200, 800], weight: 50, label: "Золото" }, 
+      { type: 'silver', amount: [20000, 60000], weight: 25, label: "Серебро" }, 
+      { type: 'xp', amount: [5000, 20000], weight: 20, label: "Опыт" }, 
+      { type: 'tank', pool: 'titan', weight: 5, label: "⚙️ Titan танк!" }
+    ] 
+  }
 };
 
-const DROP_POOLS = { common: [], rare: [], legendary: [], flame: [], missile: ['SHERIDAN'], titan: [] };
+const DROP_POOLS = { 
+  common: [], 
+  rare: [], 
+  legendary: [], 
+  flame: [], 
+  missile: ['SHERIDAN'], 
+  titan: [],
+  mauskonig: ['MAUSKONIG']
+};
 
 function initContainers() {
   for (let id in COLLECTION_DB) DB[id] = COLLECTION_DB[id];
   for (let id in COLLECTION_DB) {
-    if (id === 'KV220BT' || id === 'T3485VIC') continue;
+    // Исключаем эксклюзивные танки
+    if (id === 'KV220BT' || id === 'T3485VIC' || id === 'MAUSKONIG') continue;
+    
     const t = COLLECTION_DB[id];
     if (t.titan) DROP_POOLS.titan.push(id);
     else if (t.flame) DROP_POOLS.flame.push(id);
@@ -70,6 +151,7 @@ function initContainers() {
     else DROP_POOLS.legendary.push(id);
   }
   console.log('📦 COLLECTION_DB инициализирован:', Object.keys(COLLECTION_DB).length, 'танков');
+  console.log('👑 MAUSEKÖNIG - эксклюзив премиум контейнера (0.1% шанс)');
 }
 
 function getRarityColor(tier) {
@@ -110,7 +192,7 @@ function openContainerDirect(cid) {
     const pool = DROP_POOLS[sel.pool] || [];
     const avail = pool.filter(id => !GameState.owned.includes(id));
     if (!avail.length) {
-      const comp = sel.pool === 'legendary' ? 1000 : sel.pool === 'flame' ? 1500 : sel.pool === 'missile' ? 2000 : sel.pool === 'titan' ? 1500 : sel.pool === 'rare' ? 500 : 200;
+      const comp = sel.pool === 'legendary' ? 1000 : sel.pool === 'flame' ? 1500 : sel.pool === 'missile' ? 2000 : sel.pool === 'mauskonig' ? 5000 : sel.pool === 'titan' ? 1500 : sel.pool === 'rare' ? 500 : 200;
       GameState.GOLD += comp;
       rwd.type = 'compensation'; rwd.display = comp + " G (компенсация)"; rwd.icon = "🔄"; rwd.color = "#f39c12"; rwd.desc = "Все танки из пула уже есть!";
     } else {
@@ -118,10 +200,18 @@ function openContainerDirect(cid) {
       GameState.owned.push(tid);
       rwd.tankId = tid;
       rwd.display = td.n + " [" + (CONFIG.TIER_ROMAN[td.tier] || "XI") + "]";
-      rwd.icon = td.flame ? "🔥" : (td.missile ? "🚀" : (td.titan ? "⚙️" : "🎖️"));
-      rwd.color = td.flame ? "#ff4500" : (td.missile ? "#00ccff" : (td.titan ? "#4a8fb5" : getRarityColor(td.tier)));
+      rwd.icon = td.flame ? "🔥" : (td.missile ? "🚀" : (td.titan ? "⚙️" : (td.dualGun ? "👑" : "🎖️")));
+      rwd.color = td.flame ? "#ff4500" : (td.missile ? "#00ccff" : (td.titan ? "#4a8fb5" : (td.dualGun ? "#ff00ff" : getRarityColor(td.tier))));
       rwd.desc = td.desc || "";
-      rwd.rarity = td.flame ? "ОГНЕМЁТНЫЙ" : (td.missile ? "ПТУР" : (td.titan ? "TITAN" : getRarityName(td.tier)));
+      
+      // Специальная обработка для Mausekönig
+      if (tid === 'MAUSKONIG') {
+        rwd.rarity = "👑 ЭКСКЛЮЗИВ XI УРОВНЯ 👑";
+        rwd.isMauskonig = true;
+      } else {
+        rwd.rarity = td.flame ? "ОГНЕМЁТНЫЙ" : (td.missile ? "ПТУР" : (td.titan ? "TITAN" : (td.dualGun ? "ДВУСТВОЛ" : getRarityName(td.tier))));
+      }
+      
       rwd.isFlame = td.flame || false;
       rwd.isTitan = td.titan || false;
     }
@@ -231,6 +321,7 @@ function showBulkOpenResults(results, container) {
   ov.classList.add('show');
   ov.classList.remove('flame-opening');
   ov.classList.remove('titan-opening');
+  ov.classList.remove('maus-opening');
   const ac = document.getElementById('anim-container');
   const rd = document.getElementById('reward-display');
   ac.style.display = 'none';
@@ -318,14 +409,17 @@ function showOpenAnim(cid, rwd) {
   containerAnimating = true; const c = CONTAINERS[cid];
   const isF = cid === 'flamebox' || rwd.isFlame;
   const isT = cid === 'titanbox' || rwd.isTitan;
+  const isM = rwd.isMauskonig;
   const ov = document.getElementById('container-opening'); ov.classList.add('show');
   ov.classList.remove('flame-opening');
   ov.classList.remove('titan-opening');
+  ov.classList.remove('maus-opening');
   if (isF) ov.classList.add('flame-opening');
   if (isT) ov.classList.add('titan-opening');
+  if (isM) ov.classList.add('maus-opening');
   const ac = document.getElementById('anim-container'), rd = document.getElementById('reward-display');
   rd.style.display = 'none'; ac.style.display = 'flex';
-  ac.innerHTML = '<div class="op-box ' + (isF ? 'flame-box' : '') + (isT ? ' titan-box' : '') + '" style="border-color:' + c.color + ';box-shadow:0 0 25px ' + c.color + '"><span class="op-icon">' + c.icon + '</span></div>';
+  ac.innerHTML = '<div class="op-box ' + (isF ? 'flame-box' : '') + (isT ? ' titan-box' : '') + (isM ? ' maus-box' : '') + '" style="border-color:' + c.color + ';box-shadow:0 0 25px ' + c.color + '"><span class="op-icon">' + c.icon + '</span></div>';
   const box = ac.querySelector('.op-box');
   setTimeout(() => box.classList.add('shake'), 200);
   setTimeout(() => {
@@ -333,6 +427,7 @@ function showOpenAnim(cid, rwd) {
     box.style.boxShadow = '0 0 50px ' + rwd.color + ',0 0 100px ' + rwd.color;
     if (isF) box.classList.add('flame-glow');
     if (isT) box.classList.add('titan-glow');
+    if (isM) box.classList.add('maus-glow');
   }, 1500);
   setTimeout(() => { box.classList.add('explode'); setTimeout(() => {
     ac.style.display = 'none'; rd.style.display = 'flex';
@@ -340,8 +435,9 @@ function showOpenAnim(cid, rwd) {
     const tc = rwd.tankId ? '<canvas id="rwd-tank-cvs" width="180" height="100"></canvas>' : '';
     const ff = rwd.isFlame ? '<div class="flame-reward-fx">🔥🔥🔥</div>' : '';
     const tf = rwd.isTitan ? '<div class="titan-reward-fx">⚙️⚙️⚙️</div>' : '';
-    const glowClass = rwd.isFlame ? 'flame-reward' : (rwd.isTitan ? 'titan-reward' : '');
-    rd.innerHTML = '<div class="rwd-glow ' + glowClass + '" style="color:' + rwd.color + '">' + rb + ff + tf + '<div class="rwd-icon">' + rwd.icon + '</div>' + tc + '<div class="rwd-text" style="color:' + rwd.color + '">' + rwd.display + '</div>' + (rwd.desc ? '<div class="rwd-desc">' + rwd.desc + '</div>' : '') + '</div><button class="btn rwd-collect" onclick="collectReward()">ЗАБРАТЬ</button>';
+    const mf = rwd.isMauskonig ? '<div class="mauskonig-fx">👑🐭👑</div>' : '';
+    const glowClass = rwd.isMauskonig ? 'mauskonig-reward' : (rwd.isFlame ? 'flame-reward' : (rwd.isTitan ? 'titan-reward' : ''));
+    rd.innerHTML = '<div class="rwd-glow ' + glowClass + '" style="color:' + rwd.color + '">' + rb + ff + tf + mf + '<div class="rwd-icon">' + rwd.icon + '</div>' + tc + '<div class="rwd-text" style="color:' + rwd.color + '">' + rwd.display + '</div>' + (rwd.desc ? '<div class="rwd-desc">' + rwd.desc + '</div>' : '') + '</div><button class="btn rwd-collect" onclick="collectReward()">ЗАБРАТЬ</button>';
     if (rwd.tankId) setTimeout(() => { const cv = document.getElementById('rwd-tank-cvs'); if (cv) drawTankIcon(cv, rwd.tankId); }, 50);
   }, 400); }, 2500);
 }
@@ -351,6 +447,7 @@ function collectReward() {
   document.getElementById('container-opening').classList.remove('show');
   document.getElementById('container-opening').classList.remove('flame-opening');
   document.getElementById('container-opening').classList.remove('titan-opening');
+  document.getElementById('container-opening').classList.remove('maus-opening');
   renderContainerGrid();
   renderInventoryGrid();
   renderCarousel();
@@ -367,7 +464,7 @@ function renderCollectionGrid() {
   st.innerHTML = '<div class="coll-bar"><div class="coll-fill" style="width:' + (total > 0 ? oc / total * 100 : 0) + '%"></div></div><div class="coll-text">Собрано: ' + oc + '/' + total + ' (' + (total > 0 ? Math.round(oc / total * 100) : 0) + '%)</div>';
   g.appendChild(st);
 
-  const ft = Object.keys(COLLECTION_DB).filter(id => COLLECTION_DB[id].flame || COLLECTION_DB[id].missile || COLLECTION_DB[id].tier > 10 || id === 'T3485VIC');
+  const ft = Object.keys(COLLECTION_DB).filter(id => COLLECTION_DB[id].flame || COLLECTION_DB[id].missile || COLLECTION_DB[id].tier > 10 || COLLECTION_DB[id].dualGun || id === 'T3485VIC');
   if (ft.length) {
     const h = document.createElement('div'); h.className = 'coll-nat-hdr flame-hdr'; h.innerHTML = '⭐ СПЕЦИАЛЬНЫЕ ТАНКИ ⭐'; g.appendChild(h);
     const gr = document.createElement('div'); gr.className = 'coll-nat-grid';
@@ -389,6 +486,7 @@ function renderCollectionGrid() {
       !COLLECTION_DB[id].flame &&
       !COLLECTION_DB[id].missile &&
       !COLLECTION_DB[id].titan &&
+      !COLLECTION_DB[id].dualGun &&
       COLLECTION_DB[id].tier <= 10 &&
       id !== 'T3485VIC'
     );
@@ -403,20 +501,20 @@ function renderCollectionGrid() {
 function mkCollCard(id) {
   const t = COLLECTION_DB[id]; const has = GameState.owned.includes(id);
   const card = document.createElement('div');
-  card.className = 'coll-card ' + (has ? 'owned' : 'locked') + (t.flame ? ' flame-coll' : '') + (t.titan ? ' titan-coll' : '');
-  const border = t.flame ? '#ff4500' : (t.missile ? '#00ccff' : (t.titan ? '#4a8fb5' : getRarityColor(t.tier)));
+  card.className = 'coll-card ' + (has ? 'owned' : 'locked') + (t.flame ? ' flame-coll' : '') + (t.titan ? ' titan-coll' : '') + (t.dualGun ? ' dualgun-coll' : '');
+  const border = t.flame ? '#ff4500' : (t.missile ? '#00ccff' : (t.titan ? '#4a8fb5' : (t.dualGun ? '#ff00ff' : getRarityColor(t.tier))));
   card.style.borderColor = has ? border : '#333';
-  const typeLabel = t.flame ? 'ОГНЕМЁТ' : (t.missile ? 'ПТУР' : (t.titan ? 'TITAN' : getRarityName(t.tier)));
-  const clsLabel = t.flame ? '🔥 ОТ' : (t.missile ? '🚀 ЛТ' : (t.titan ? '⚙️ ' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : CONFIG.TANK_CLASSES[t.cls || 'mt']));
-  card.innerHTML = '<div class="cc-hdr"><span class="cc-tier" style="color:' + border + '">' + (CONFIG.TIER_ROMAN[t.tier] || "XI") + '</span><span class="cc-rar" style="color:' + border + '">' + typeLabel + '</span></div><div class="cc-body"><canvas class="cc-cvs" width="110" height="60"></canvas></div><div class="cc-name ' + (has ? '' : 'lk') + '">' + (has ? t.n : '???') + '</div><div class="cc-cls">' + clsLabel + '</div>' + (has && t.desc ? '<div class="cc-desc">' + t.desc + '</div>' : '') + (!has ? '<div class="cc-lock">' + (t.flame ? '🔥' : (t.missile ? '🚀' : (t.titan ? '⚙️' : '🔒'))) + '</div>' : '');
+  const typeLabel = t.flame ? 'ОГНЕМЁТ' : (t.missile ? 'ПТУР' : (t.titan ? 'TITAN' : (t.dualGun ? 'ДВУСТВОЛ' : getRarityName(t.tier))));
+  const clsLabel = t.flame ? '🔥 ОТ' : (t.missile ? '🚀 ЛТ' : (t.titan ? '🛡️ ' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : (t.dualGun ? '👑 ' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : CONFIG.TANK_CLASSES[t.cls || 'mt'])));
+  card.innerHTML = '<div class="cc-hdr"><span class="cc-tier" style="color:' + border + '">' + (CONFIG.TIER_ROMAN[t.tier] || "XI") + '</span><span class="cc-rar" style="color:' + border + '">' + typeLabel + '</span></div><div class="cc-body"><canvas class="cc-cvs" width="110" height="60"></canvas></div><div class="cc-name ' + (has ? '' : 'lk') + '">' + (has ? t.n : '???') + '</div><div class="cc-cls">' + clsLabel + '</div>' + (has && t.desc ? '<div class="cc-desc">' + t.desc + '</div>' : '') + (!has ? '<div class="cc-lock">' + (t.flame ? '🔥' : (t.missile ? '🚀' : (t.titan ? '⚙️' : (t.dualGun ? '👑' : '🔒')))) + '</div>' : '');
   setTimeout(() => {
     const cv = card.querySelector('.cc-cvs');
     if (cv && has) drawTankIcon(cv, id);
     else if (cv) {
       const cx = cv.getContext('2d'); cx.fillStyle = '#222'; cx.fillRect(0, 0, cv.width, cv.height);
-      cx.fillStyle = t.flame ? '#ff4500' : (t.missile ? '#00ccff' : (t.titan ? '#4a8fb5' : '#444'));
+      cx.fillStyle = t.flame ? '#ff4500' : (t.missile ? '#00ccff' : (t.titan ? '#4a8fb5' : (t.dualGun ? '#ff00ff' : '#444')));
       cx.font = '30px Arial'; cx.textAlign = 'center';
-      cx.fillText(t.flame ? '🔥' : (t.missile ? '🚀' : (t.titan ? '⚙️' : '?')), cv.width / 2, cv.height / 2 + 10);
+      cx.fillText(t.flame ? '🔥' : (t.missile ? '🚀' : (t.titan ? '⚙️' : (t.dualGun ? '👑' : '?'))), cv.width / 2, cv.height / 2 + 10);
     }
   }, 30);
   return card;

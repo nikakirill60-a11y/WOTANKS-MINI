@@ -15,7 +15,6 @@ function saveUsers(users) {
 
 // ========== ВАЛИДАЦИЯ НИКНЕЙМА ==========
 function validateUsername(username) {
-  // Проверка длины
   if (username.length < 3 || username.length > 20) {
     return {
       valid: false,
@@ -23,7 +22,6 @@ function validateUsername(username) {
     };
   }
 
-  // Проверка: только буквы, цифры, _ и -
   const validNickname = /^[a-zA-Z0-9_-]+$/;
   if (!validNickname.test(username)) {
     return {
@@ -32,7 +30,6 @@ function validateUsername(username) {
     };
   }
 
-  // Проверка запрещённых символов
   const forbiddenChars = /[{}[\]<>"'`;,\\|]/g;
   if (forbiddenChars.test(username)) {
     return {
@@ -41,7 +38,6 @@ function validateUsername(username) {
     };
   }
 
-  // Проверка на SQL injection паттерны
   const sqlInjectionPatterns = [
     /union/i,
     /select/i,
@@ -89,15 +85,13 @@ async function saveProgress() {
     upgradesBought: GameState.upgradesBought
   };
 
-  // Сохраняем локально
   const users = getUsers();
   if (users[currentUser]) {
     users[currentUser].data = progressData;
     saveUsers(users);
   }
 
-  // Сохраняем в облако
-  if (supabaseClient) {
+  if (window.supabaseClient) {
     await saveUserProgress(currentUser, progressData);
   }
 }
@@ -106,8 +100,7 @@ async function saveProgress() {
 async function loadProgress(username) {
   let data = null;
 
-  // Пытаемся загрузить из облака
-  if (supabaseClient) {
+  if (window.supabaseClient) {
     const result = await loadUserProgress(username);
     if (result.success) {
       data = result.data;
@@ -115,7 +108,6 @@ async function loadProgress(username) {
     }
   }
 
-  // Если не удалось из облака, загружаем локально
   if (!data) {
     const users = getUsers();
     if (users[username] && users[username].data) {
@@ -124,7 +116,6 @@ async function loadProgress(username) {
     }
   }
 
-  // Применяем данные
   if (data) {
     GameState.XP = data.XP;
     GameState.GOLD = data.GOLD;
@@ -144,7 +135,6 @@ async function loadProgress(username) {
       GameState.selected = GameState.owned[0];
     }
   } else {
-    // Дефолтные значения
     GameState.XP = 500;
     GameState.GOLD = 0;
     GameState.SILVER = 5000;
@@ -161,7 +151,12 @@ async function loadProgress(username) {
   }
 
   if (typeof updateQuestUI === 'function') updateQuestUI();
-  if (typeof updateInvCount === 'function') updateInvCount();
+  
+  // Безопасное обновление счетчика инвентаря
+  if (typeof window.updateInvCount === 'function') {
+    window.updateInvCount();
+  }
+  
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
 }
 
@@ -171,21 +166,18 @@ async function register() {
   const p = document.getElementById('password-input').value.trim();
   const msg = document.getElementById('login-msg');
 
-  // Проверка пустых полей
   if (!u || !p) {
     msg.innerText = "❌ Введите имя и пароль!";
     msg.style.color = "#e74c3c";
     return;
   }
 
-  // Проверка пароля
   if (p.length < 4) {
     msg.innerText = "❌ Пароль должен быть минимум 4 символа!";
     msg.style.color = "#e74c3c";
     return;
   }
 
-  // ✅ ВАЛИДАЦИЯ НИКНЕЙМА
   const validation = validateUsername(u);
   if (!validation.valid) {
     msg.innerText = validation.error;
@@ -193,8 +185,7 @@ async function register() {
     return;
   }
 
-  // Регистрация в облаке
-  if (supabaseClient) {
+  if (window.supabaseClient) {
     const result = await registerUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -203,7 +194,6 @@ async function register() {
     }
   }
 
-  // Локальная регистрация
   const users = getUsers();
   if (users[u]) {
     msg.innerText = "❌ Пользователь уже существует!";
@@ -234,7 +224,6 @@ async function login() {
     return;
   }
 
-  // ✅ ВАЛИДАЦИЯ НИКНЕЙМА
   const validation = validateUsername(u);
   if (!validation.valid) {
     msg.innerText = validation.error;
@@ -242,8 +231,7 @@ async function login() {
     return;
   }
 
-  // Проверка в облаке
-  if (supabaseClient) {
+  if (window.supabaseClient) {
     const result = await loginUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -251,7 +239,6 @@ async function login() {
       return;
     }
   } else {
-    // Локальная проверка
     const users = getUsers();
     if (!users[u] || users[u].pass !== p) {
       msg.innerText = "❌ Неверное имя или пароль!";
@@ -280,22 +267,23 @@ async function performLogin(username) {
   updateResources();
   renderTree();
   renderCarousel();
-  updateInvCount();
-  updateBoosterUI();
 
-  // Обновляем онлайн статус
-  if (supabaseClient) {
-    await updateOnlineStatus(username, true);
-    
-    // Периодическое обновление статуса
-    onlineStatusInterval = setInterval(async () => {
-      await updateOnlineStatus(username, true);
-    }, 60000); // Каждую минуту
+  // ИСПРАВЛЕНО: Безопасный вызов обновления инвентаря
+  if (typeof window.updateInvCount === 'function') {
+    window.updateInvCount();
   }
 
-  // Автосохранение каждые 5 секунд
-  setInterval(saveProgress, 5000);
+  updateBoosterUI();
 
+  if (window.supabaseClient) {
+    await updateOnlineStatus(username, true);
+    
+    onlineStatusInterval = setInterval(async () => {
+      await updateOnlineStatus(username, true);
+    }, 60000);
+  }
+
+  setInterval(saveProgress, 5000);
   console.log('✅ Игрок вошёл:', username);
 }
 
@@ -303,7 +291,7 @@ async function performLogin(username) {
 async function logout() {
   await saveProgress();
   
-  if (supabaseClient && currentUser) {
+  if (window.supabaseClient && currentUser) {
     await updateOnlineStatus(currentUser, false);
   }
 
@@ -318,22 +306,18 @@ async function logout() {
   location.reload();
 }
 
-// ========== ОБРАБОТКА ЗАКРЫТИЯ ВКЛАДКИ ==========
 window.addEventListener('beforeunload', async () => {
   if (currentUser) {
     await saveProgress();
-    if (supabaseClient) {
+    if (window.supabaseClient) {
       await updateOnlineStatus(currentUser, false);
     }
   }
 });
 
-// ========== ОЧИСТКА КОНСОЛИ ПРИ ВХОДЕ ==========
+// Отключение автоматической очистки консоли для сохранения логов загрузки скриптов
 window.addEventListener('load', () => {
-  console.clear();
   console.log('%c🎮 CITY TANKS', 'color: #f1c40f; font-size: 20px; font-weight: bold');
   console.log('%c⚠️ Это окно разработчика. Будьте осторожны!', 'color: #e74c3c; font-size: 14px');
   console.log('%c✅ Все действия защищены серверной валидацией', 'color: #2ecc71; font-size: 12px');
 });
-
-console.log('✅ auth.js полностью загружен');

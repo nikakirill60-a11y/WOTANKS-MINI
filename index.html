@@ -50,25 +50,40 @@
 <div id="container-modal">
   <div class="modal-header">
     <h2>📦 КОНТЕЙНЕРЫ</h2>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchTab('shop',this)">МАГАЗИН</button>
-      <button class="modal-tab" onclick="switchTab('inventory',this)">🎒 ИНВЕНТАРЬ (<span id="inv-count">0</span>)</button>
-      <button class="modal-tab" onclick="switchTab('collection',this)">КОЛЛЕКЦИЯ</button>
+<div class="modal-tabs">
+    <button class="modal-tab active" onclick="switchTab('shop', this)">📦 Магазин</button>
+    <button class="modal-tab" onclick="switchTab('inventory', this)">🎒 Инвентарь</button>
+    <button class="modal-tab" onclick="switchTab('collection', this)">🎖️ Коллекция</button>
+    <button class="modal-tab" onclick="switchTab('bp', this); BattlePassSystem.render()">🎫 Пропуск Сезона</button>
+    <button class="modal-tab" onclick="switchTab('market', this); SocialSystem.loadOffers()">⚖️ Рынок</button>
+</div>
+
+<!-- Содержимое вкладки Боевого Пропуска -->
+<div id="tab-bp" class="tab-content">
+    <!-- Генерируется динамически через bp.js -->
+</div>
+
+<!-- Содержимое вкладки Рынка -->
+<div id="tab-market" class="tab-content">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+            <h3>⚖️ Предложения рынка</h3>
+            <div id="market-offers-list" style="max-height: 400px; overflow-y: auto;">
+                Загрузка лотов...
+            </div>
+        </div>
+        <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px;">
+            <h3>📤 Продать коллекционный танк</h3>
+            <p style="font-size:12px; color:#aaa;">Требуется: не менее 100 сыгранных боев.</p>
+            <label>Выберите танк:</label><br>
+            <select id="market-sell-select" style="width:100%; margin-bottom:10px;"></select>
+            
+            <label>Цена в золоте (G):</label><br>
+            <input type="number" id="market-sell-gold" value="0" style="width:100%; margin-bottom:10px;">
+            
+            <button class="btn" style="width:100%;" onclick="SocialSystem.sellTank(document.getElementById('market-sell-select').value, parseInt(document.getElementById('market-sell-gold').value), 0)">Выставить на рынок</button>
+        </div>
     </div>
-    <button class="modal-close" onclick="hideContainerShop()">✕</button>
-  </div>
-  <div id="tab-shop" class="tab-content active-tab">
-    <div id="container-grid"></div>
-  </div>
-  <div id="tab-inventory" class="tab-content">
-    <div id="inventory-grid"></div>
-    <div id="inventory-empty" style="text-align:center;padding:40px;color:#666;font-size:16px;display:none;">
-      🎒 Инвентарь пуст<br><span style="font-size:12px;color:#555">Купите контейнеры в магазине</span>
-    </div>
-  </div>
-  <div id="tab-collection" class="tab-content">
-    <div id="collection-grid"></div>
-  </div>
 </div>
 
 <!-- ========== ПРОМОКОД ========== -->
@@ -315,6 +330,7 @@
 <button id="chat-toggle-btn" onclick="toggleChat()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#3498db;border:2px solid #fff;border-radius:50%;font-size:24px;cursor:pointer;z-index:999;box-shadow:0 0 10px rgba(52,152,219,0.5);">💬</button>
 
 <!-- ========== СКРИПТЫ (ПРАВИЛЬНЫЙ ПОРЯДОК!) ========== -->
+<!-- Порядок подключения JS файлов -->
 <script src="js/config.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/tanks.js"></script>
@@ -324,6 +340,11 @@
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/ui.js"></script>
+
+<!-- Сюда вставляем новые модули -->
+<script src="js/bp.js"></script>
+<script src="js/social.js"></script>
+
 <script src="js/controls.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/multiplayer.js"></script>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CITY TANKS: DATABASE MANAGER</title>
+    <!-- Подключение Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background: #121212;
+            color: #eee;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #f1c40f;
+            border-bottom: 2px solid #f1c40f;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .connection-panel {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        input, select, button {
+            background: #222;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 8px 12px;
+            font-family: inherit;
+            border-radius: 3px;
+        }
+        input {
+            flex: 1;
+            min-width: 250px;
+        }
+        button {
+            cursor: pointer;
+            background: #d35400;
+            border-color: #d35400;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #e67e22;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
+        .sidebar {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 5px;
+            height: fit-content;
+        }
+        .sidebar h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        .table-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .table-list li {
+            padding: 10px;
+            background: #222;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: 0.2s;
+        }
+        .table-list li:hover, .table-list li.active {
+            background: #34495e;
+            border-left: 4px solid #f1c40f;
+        }
+        .main-content {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+            font-size: 13px;
+        }
+        th {
+            background: #222;
+            color: #f1c40f;
+        }
+        tr:nth-child(even) {
+            background: #151515;
+        }
+        .status {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status.online { background: #2e7d32; color: #fff; }
+        .status.offline { background: #c62828; color: #fff; }
+        .editor-box {
+            background: #0f0f1f;
+            border: 1px solid #f1c40f;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #000;
+            color: #2ecc71;
+            border: 1px solid #333;
+            font-family: monospace;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        .success-msg { color: #2ecc71; }
+        .error-msg { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🤖 CITY TANKS: SUPABASE DB MANAGER & DIAGNOSTICS</h1>
+
+    <!-- Панель подключения -->
+    <div class="connection-panel">
+        <div>
+            <label>Supabase URL:</label><br>
+            <input type="text" id="sb-url" value="https://tkkpdtfhcwwondonfjsi.supabase.co">
+        </div>
+        <div>
+            <label>Anon/Public Key:</label><br>
+            <input type="password" id="sb-key" value="sb_publishable_r2tEe8p_WJPrEzsN7aIpSw_OKQzzKTw">
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+            <button onclick="connectDB()">Подключиться</button>
+        </div>
+        <div style="display: flex; align-items: flex-end; margin-left: auto;">
+            <span id="conn-status" class="error-msg">Нет подключения</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Меню выбора таблиц -->
+        <div class="sidebar">
+            <h3>Таблицы БД</h3>
+            <ul class="table-list">
+                <li onclick="loadTable('users', this)" class="active">👥 Пользователи (users)</li>
+                <li onclick="loadTable('battle_rooms', this)">🎮 Комнаты (battle_rooms)</li>
+                <li onclick="loadTable('battle_players', this)">⚙️ Состояния (battle_players)</li>
+                <li onclick="loadTable('player_shots', this)">🚀 Выстрелы (player_shots)</li>
+                <li onclick="loadTable('chat_messages', this)">💬 Чат (chat_messages)</li>
+                <li onclick="loadTable('battle_history', this)">📜 История (battle_history)</li>
+            </ul>
+        </div>
+
+        <!-- Основная область вывода данных -->
+        <div>
+            <!-- Консоль быстрой очистки/настройки данных для отладки -->
+            <div class="editor-box">
+                <h3 style="margin-top:0; color: #f1c40f;">🛠️ Консоль быстрого сброса (Отладка)</h3>
+                <p style="font-size: 12px; margin: 5px 0 15px; color: #aaa;">
+                    Используйте кнопки ниже для быстрой очистки мусорных комнат или выдачи опыта/валюты при тестировании.
+                </p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="giveAllGold()" style="background: #27ae60; border-color: #27ae60;">💰 Выдать всем по 10,000 Gold</button>
+                    <button onclick="clearEmptyRooms()" style="background: #2980b9; border-color: #2980b9;">🗑️ Очистить зависшие комнаты</button>
+                    <button onclick="clearChat()" style="background: #c0392b; border-color: #c0392b;">💬 Очистить весь чат</button>
+                </div>
+                <div id="action-result" style="margin-top: 10px; font-size: 13px;"></div>
+            </div>
+
+            <div class="main-content">
+                <h3 id="table-title">👥 Таблица: users</h3>
+                <div id="table-container">Подключитесь к базе данных для загрузки информации...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let supabase = null;
+    let currentTable = 'users';
+
+    async function connectDB() {
+        const url = document.getElementById('sb-url').value.trim();
+        const key = document.getElementById('sb-key').value.trim();
+        const statusEl = document.getElementById('conn-status');
+
+        try {
+            supabase = supabase.createClient(url, key);
+            statusEl.innerText = "🔌 Подключено успешно";
+            statusEl.className = "success-msg";
+            loadTable(currentTable, document.querySelector('.table-list li.active'));
+        } catch (e) {
+            statusEl.innerText = "❌ Ошибка подключения: " + e.message;
+            statusEl.className = "error-msg";
+        }
+    }
+
+    async function loadTable(tableName, element) {
+        currentTable = tableName;
+        if (!supabase) return;
+
+        // Визуальное переключение активной вкладки
+        document.querySelectorAll('.table-list li').forEach(li => li.classList.remove('active'));
+        if (element) element.classList.add('active');
+
+        document.getElementById('table-title').innerText = `📊 Таблица: ${tableName}`;
+        const container = document.getElementById('table-container');
+        container.innerHTML = "Загрузка данных...";
+
+        try {
+            const { data, error } = await supabase
+                .from(tableName)
+                .select('*')
+                .order('created_at', { ascending: false, nullsFirst: false })
+                .limit(100);
+
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                container.innerHTML = "<em>Таблица пуста или содержит 0 записей.</em>";
+                return;
+            }
+
+            // Рендеринг HTML-таблицы
+            let html = '<table><thead><tr>';
+            const columns = Object.keys(data[0]);
+            
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            data.forEach(row => {
+                html += 'tr';
+                columns.forEach(col => {
+                    let val = row[col];
+                    if (typeof val === 'object' && val !== null) {
+                        val = `<pre style="margin:0; font-size:10px;">${JSON.stringify(val)}</pre>`;
+                    } else if (typeof val === 'boolean') {
+                        if (col === 'is_online') {
+                            val = val ? '<span class="status online">ONLINE</span>' : '<span class="status offline">OFFLINE</span>';
+                        } else {
+                            val = val ? 'True' : 'False';
+                        }
+                    } else if (val === null) {
+                        val = '<span style="color:#555">null</span>';
+                    }
+                    html += `<td>${val}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+        } catch (e) {
+            container.innerHTML = `<span class="error-msg">Ошибка загрузки: ${e.message}</span>`;
+        }
+    }
+
+    // --- Функции быстрого администрирования ---
+
+    async function giveAllGold() {
+        if (!supabase) { alert('Подключите бэкенд!'); return; }
+        const resEl = document.getElementById('action-result');
+        resEl.innerHTML = "Выполняется...";
+        
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('id, gold');
+            
+            if (error) throw error;
+            
+            for(let u of data) {
+                await supabase.from('users').update({ gold: (u.gold || 0) + 10000 }).eq('id', u.id);
+            }
+            
+            resEl.innerHTML = `<span class="success-msg">🎉 Успешно начислено 10,000 золота всем зарегистрированным аккаунтам!</span>`;
+            loadTable(currentTable);
+        } catch(e) {
+            resEl.innerHTML = `<span class="error-msg">Ошибка: ${e.message}</span>`;
+        }
+    }
+
+    async function clearEmptyRooms() {
+        if (!supabase) { alert('Подключите бэкенд!'); return; }
+        const resEl = document.getElementById('action-result');
+        resEl.innerHTML = "Выполняется...";
+        
+        try {
+            const { error } = await supabase
+                .from('battle_rooms')
+                .delete()
+                .neq('status', 'playing'); // Удалит все комнаты в статусе ожидания или завершенные
+                
+            if (error) throw error;
+            resEl.innerHTML = `<span class="success-msg">🗑️ Зависшие и пустые комнаты удалены из лобби!</span>`;
+            loadTable(currentTable);
+        } catch(e) {
+            resEl.innerHTML = `<span class="error-msg">Ошибка: ${e.message}</span>`;
+        }
+    }
+
+    async function clearChat() {
+        if (!supabase) { alert('Подключите бэкенд!'); return; }
+        if (!confirm('Вы действительно хотите удалить ВСЕ сообщения в чате?')) return;
+        const resEl = document.getElementById('action-result');
+        resEl.innerHTML = "Выполняется...";
+        
+        try {
+            const { error } = await supabase
+                .from('chat_messages')
+                .delete()
+                .neq('id', 0); // Удаление всех строк
+                
+            if (error) throw error;
+            resEl.innerHTML = `<span class="success-msg">🧹 База сообщений чата успешно очищена!</span>`;
+            loadTable(currentTable);
+        } catch(e) {
+            resEl.innerHTML = `<span class="error-msg">Ошибка: ${e.message}</span>`;
+        }
+    }
+
+    // Автоматическая попытка подключения при загрузке страницы
+    window.onload = () => {
+        connectDB();
+    }
+</script>
+</body>
+</html>

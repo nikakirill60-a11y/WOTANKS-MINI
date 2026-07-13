@@ -161,4 +161,48 @@ function updateScale() {
 
 window.addEventListener('resize', updateScale);
 
+// Расширение CONFIG для поддержки Боевого Пропуска и Ежедневных наград
+CONFIG.BATTLE_PASS = {
+  XP_PER_LEVEL: 1000,
+  PREMIUM_COST: 1500, // Стоимость в золоте
+  REWARDS: {
+    // Бесплатная ветка (Обычный тип)
+    free: {
+      1: { type: 'silver', amount: 5000, label: "5 000 ₽" },
+      5: { type: 'container', cid: 'basic', label: "Базовый контейнер" },
+      10: { type: 'booster', kind: 'xp', amount: 2, label: "2x Бустер опыта" },
+      15: { type: 'container', cid: 'lowlevels', label: "Контейнер малых уровней" },
+      20: { type: 'gold', amount: 150, label: "150 G" },
+      25: { type: 'container', cid: 'premium', label: "Премиум контейнер" },
+      30: { type: 'container', cid: 'legendary', label: "Легендарный контейнер" }
+    },
+    // Премиум ветка
+    premium: {
+      1: { type: 'tank', tid: 'PZ2D', label: "Pz.Kpfw. II Ausf. D (II ур.)" },
+      5: { type: 'gold', amount: 500, label: "500 G" },
+      10: { type: 'container', cid: 'titanbox', label: "Titan Box" },
+      15: { type: 'tank', tid: 'T34E', label: "Т-34 экранированный (V ур.)" },
+      20: { type: 'container', cid: 'flamebox', label: "Танко-Жарка" },
+      25: { type: 'gold', amount: 1000, label: "1000 G" },
+      30: { type: 'tank', tid: 'E75TS', label: "E 75 TS (VIII ур.)" }
+    }
+  }
+};
+
+CONFIG.DAILY_REWARDS = {
+  1: { silver: 2000, label: "2 000 ₽" },
+  2: { gold: 50, label: "50 G" },
+  3: { container: 'basic', label: "Базовый контейнер" },
+  4: { silver: 5000, label: "5 000 ₽" },
+  5: { gold: 150, label: "150 G" },
+  6: { container: 'lowlevels', label: "Ящик малых уровней" },
+  7: { container: 'premium', label: "Премиум контейнер" }
+};
+
+CONFIG.CREW_PERKS = {
+  sixth_sense: { name: "Шестое чувство", desc: "Командир мгновенно видит индикатор обнаружения.", icon: "👁️" },
+  offroad: { name: "Король бездорожья", desc: "Снижает штраф проходимости по грязи на 15%.", icon: "🚜" },
+  smooth_ride: { name: "Плавный ход", desc: "Уменьшает разброс при стрельбе на ходу на 10%.", icon: "🎯" }
+};
+
 console.log('✅ config.js загружен');

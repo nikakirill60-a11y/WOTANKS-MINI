@@ -2,104 +2,50 @@ var canvas=document.getElementById('game');
 var ctx=canvas.getContext('2d');
 var mCtx=document.getElementById('minimap').getContext('2d');
 
-function update(){
-  if(!GameState.gameActive||!GameState.player)return;
-  if(GameState.player.dead){endBattle(false);return;}
-  if(GameState.adrenalineActive&&Date.now()>GameState.adrenalineTimer){GameState.adrenalineActive=false;crewMsg("Адреналин кончился","#aaa");}
-  if(GameState.fuelBoostActive&&Date.now()>GameState.fuelBoostTimer){GameState.fuelBoostActive=false;crewMsg("Топливо кончилось","#aaa");}
+function update() {
+    if (!GameState.gameActive || !GameState.player) return;
+    var p = GameState.player;
 
-  var p=GameState.player;
-  var baseSpd=p.trackBroken?p.baseSpeed*0.3:p.baseSpeed;
-  var spd=GameState.fuelBoostActive?baseSpd*1.15:baseSpd;
-  var sz=25*p.s;
-  p.isMoving=false;
-
-  if(GameState.controlMode==='pc'){
-    var nx=p.x,ny=p.y;
-    if(GameState.keys['KeyW']){nx+=Math.cos(p.angle)*spd;ny+=Math.sin(p.angle)*spd;p.isMoving=true;}
-    if(GameState.keys['KeyS']){nx-=Math.cos(p.angle)*spd*0.6;ny-=Math.sin(p.angle)*spd*0.6;p.isMoving=true;}
-    if(GameState.keys['KeyA'])p.angle-=0.04;
-    if(GameState.keys['KeyD'])p.angle+=0.04;
-    if(!tankCollides(nx,ny,p.angle,sz)){p.x=nx;p.y=ny;}else p.isMoving=false;
-    if(!p.isPT)p.tAngle=Math.atan2(GameState.mouse.y-canvas.height/2,GameState.mouse.x-canvas.width/2);
-    if(GameState.mouseDown)p.fire(GameState.curShell);else if(p.flame)p.flameActive=false;
-  }else{
-    if(GameState.joystickData.mag>0.15){
-      var ta=GameState.joystickData.angle;var ad=ta-p.angle;
-      while(ad>Math.PI)ad-=Math.PI*2;while(ad<-Math.PI)ad+=Math.PI*2;
-      p.angle+=Math.sign(ad)*Math.min(Math.abs(ad),0.08);
-      var nx2=p.x+Math.cos(p.angle)*spd*GameState.joystickData.mag;
-      var ny2=p.y+Math.sin(p.angle)*spd*GameState.joystickData.mag;
-      if(!tankCollides(nx2,ny2,p.angle,sz)){p.x=nx2;p.y=ny2;p.isMoving=true;}
-      p.tAngle=p.angle;
+    // Определение типа грунта под танком
+    let terrainSpeedMultiplier = 1.0;
+    let isOnIce = false;
+    
+    for (let w of GameState.walls) {
+        if (w.type === 'bush' && Math.hypot(p.x - w.x, p.y - w.y) < w.w) {
+            terrainSpeedMultiplier = 0.65; // Грязь/болото замедляет
+        }
+        if (w.type === 'dune' && Math.hypot(p.x - w.x, p.y - w.y) < w.w) {
+            isOnIce = true; // Лёд/скольжение
+        }
     }
-    if(GameState.mobileFireActive)p.fire(GameState.curShell);else if(p.flame)p.flameActive=false;
-  }
 
-  if(p.isPT)p.tAngle=p.angle;
-  if(p.justFired&&Date.now()>p.fireTimer)p.justFired=false;
-  if(p.flame&&p.flameActive&&Date.now()-p.lastShot>200)p.flameActive=false;
-
-  if(p.isMoving){
-    p.engineTick++;
-    if(p.engineTick%5===0){smoke(p.x-Math.cos(p.angle)*22*p.s,p.y-Math.sin(p.angle)*22*p.s);snd('eng');}
-    if(p.engineTick%3===0)GameState.tracks.push({x:p.x,y:p.y,a:p.angle,life:200,s:p.s});
-  }
-
-  GameState.cam.x=p.x-canvas.width/2;
-  GameState.cam.y=p.y-canvas.height/2;
-  if(GameState.shakeTimer>0){
-    GameState.shakeTimer--;
-    GameState.cam.x+=(Math.random()-0.5)*GameState.shakeIntensity;
-    GameState.cam.y+=(Math.random()-0.5)*GameState.shakeIntensity;
-  }
-
-  updateAI();
-  updateBullets();
-
-  // Горение игрока
-  if(p&&!p.dead&&p.onFire){
-    if(!p.fireDmgTimer||Date.now()-p.fireDmgTimer>1000){
-      var fireDmg=Math.floor(p.maxHp*0.02);
-      p.hp-=fireDmg;
-      p.fireDmgTimer=Date.now();
-      dmgLog('🔥-'+fireDmg,'#ff4500');
-      spawnParticles(p.x,p.y,'#ff4500',3,2,10);
-      if(p.hp<=0){p.dead=true;boom(p.x,p.y);snd('boom');}
+    var baseSpd = p.trackBroken ? p.baseSpeed * 0.3 : p.baseSpeed;
+    // Применение перка Король Бездорожья
+    if (p.hasOffroadPerk && terrainSpeedMultiplier < 1.0) {
+        terrainSpeedMultiplier += 0.15;
     }
-  }
 
-  // Горение ботов
-  for(var gi=0;gi<GameState.units.length;gi++){
-    var gu=GameState.units[gi];
-    if(gu.dead||gu===p||!gu.onFire)continue;
-    if(!gu.fireDmgTimer||Date.now()-gu.fireDmgTimer>1000){
-      var fd=Math.floor(gu.maxHp*0.02);
-      gu.hp-=fd;gu.fireDmgTimer=Date.now();
-      spawnParticles(gu.x,gu.y,'#ff4500',2,2,8);
-      if(gu.hp<=0){gu.dead=true;boom(gu.x,gu.y);snd('boom');updateScoreboard();}
+    var spd = baseSpd * terrainSpeedMultiplier;
+
+    // Логика движения с заносом на льду
+    if (isOnIce) {
+        p.driftFactor = 0.95; // Скольжение
+    } else {
+        p.driftFactor = 1.0;
     }
-  }
 
-  for(var pi2=GameState.particles.length-1;pi2>=0;pi2--){
-    var pp=GameState.particles[pi2];pp.x+=pp.vx;pp.y+=pp.vy;pp.life--;
-    if(pp.life<=0)GameState.particles.splice(pi2,1);
-  }
-  for(var ti=GameState.tracks.length-1;ti>=0;ti--){
-    GameState.tracks[ti].life--;
-    if(GameState.tracks[ti].life<=0)GameState.tracks.splice(ti,1);
-  }
-
-  updateHUD();
-
-  var ea=0,aa=0;
-  for(var ci=0;ci<GameState.units.length;ci++){
-    if(GameState.units[ci].team==='enemy'&&!GameState.units[ci].dead)ea++;
-    if(GameState.units[ci].team!=='enemy'&&!GameState.units[ci].dead)aa++;
-  }
-  if(ea===0&&GameState.units.length>1)endBattle(true);
-  if(aa===0&&GameState.units.length>1)endBattle(false);
-}
+    // Проверка тарана разрушаемых стен тяжелыми танками (уровень >= 6)
+    for (let i = GameState.walls.length - 1; i >= 0; i--) {
+        let w = GameState.walls[i];
+        if (w.type === 'building' && Math.hypot(p.x - w.x, p.y - w.y) < 60) {
+            if (p.tier >= 6) { // Только тяжелая техника таранит стены
+                GameState.walls.splice(i, 1);
+                boom(w.x + w.w/2, w.y + w.h/2);
+                snd('boom');
+                dmgLog("🛡️ Стена разрушена тараном!", "#f1c40f");
+            }
+        }
+    }
 
 // ========== УМНЫЙ ИИ ==========
 function updateAI(){

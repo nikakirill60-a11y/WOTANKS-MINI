@@ -69,6 +69,10 @@ const COLLECTION_DB = {
   // === ФРАНЦИЯ - Малые уровни ===
   D1: { n: "D1", nat: "france", tier: 2, hp: 280, dmg: 42, s: 0.75, off: 5, vr: 290, camo: 0.28, cls: 'lt', armor: 45, nc: '#2c3e80', premium: true, collection: true, desc: "Французский лёгкий танк." },
   FTAC: { n: "FT AC", nat: "france", tier: 2, hp: 230, dmg: 80, s: 0.7, isPT: true, off: 12, vr: 280, camo: 0.4, cls: 'td', nc: '#2c3e80', premium: true, collection: true, desc: "ПТ-САУ 2 уровня." }
+  
+  PZ2D: { n: "Pz.Kpfw. II Ausf. D", nat: "germany", tier: 2, hp: 280, dmg: 40, s: .75, off: 5, vr: 300, camo: .35, cls: 'lt', nc: '#ffd700', premium: true, collection: true, desc: "Награда 1-го уровня премиум ветки боевого пропуска." },
+  T34E: { n: "Т-34 экранированный", nat: "ussr", tier: 5, hp: 700, dmg: 90, s: .95, off: 5, vr: 340, camo: .25, cls: 'mt', armor: 75, nc: '#ffd700', premium: true, collection: true, desc: "Награда 15-го уровня премиум ветки боевого пропуска." },
+  E75TS: { n: "E 75 TS", nat: "germany", tier: 8, hp: 1600, dmg: 360, s: 1.25, off: 5, vr: 380, camo: .08, cls: 'ht', armor: 155, nc: '#ffd700', premium: true, collection: true, desc: "Главная награда 30-го уровня премиум ветки боевого пропуска." }
 };
 
 const CONTAINERS = {

@@ -1,5 +1,39 @@
 // js/tank.js
-// ========== КЛАСС ТАНКА ==========
+// ========== КЛАСС ТАНКА И МЕХАНИКА УРОНА ==========
+
+// Векторная функция расчета дифференцированного бронирования и углов встречи (Вне класса Tank!)
+function calculateDamage(shooter, target, baseDmg, bulletAngle) {
+    let hitAngle = Math.abs(bulletAngle - target.angle) % (Math.PI * 2);
+    if (hitAngle > Math.PI) hitAngle = Math.PI * 2 - hitAngle;
+
+    let zone = "side";
+    let effectiveArmor = target.armor || 0;
+
+    // Распределяем броню по зонам (лоб, борта, корма)
+    if (hitAngle < Math.PI / 4 || hitAngle > Math.PI * 1.75) {
+        zone = "front";
+        effectiveArmor = (target.armor || 0) * 1.3; // Лоб на 30% прочнее
+    } else if (hitAngle > Math.PI * 0.75 && hitAngle < Math.PI * 1.25) {
+        zone = "rear";
+        effectiveArmor = (target.armor || 0) * 0.5; // Корма в 2 раза слабее
+    } else {
+        zone = "side";
+        effectiveArmor = (target.armor || 0) * 0.85;
+    }
+
+    // Приведение брони на основе угла попадания (наклон увеличивает приведенную толщину)
+    let impactCos = Math.abs(Math.cos(bulletAngle - target.angle));
+    let angleMultiplier = 1 / (impactCos + 0.1);
+
+    let realArmor = effectiveArmor * angleMultiplier;
+    let finalDmg = baseDmg - (realArmor * 0.15);
+    
+    return {
+        dmg: Math.max(10, Math.floor(finalDmg)),
+        zone: zone,
+        armorPenetrated: baseDmg > (realArmor * 0.7)
+    };
+}
 
 class Tank {
   constructor(id, x, y, team, allBonuses) {
@@ -69,13 +103,6 @@ class Tank {
     this.wanderTimer = 0;
     this.onFire = false;
     this.fireDmgTimer = 0;
-	
-	this.modulesHP = {
-    engine: 100,
-    ammoRack: 100,
-    crew: 100
-	};
-	this.driftFactor = 1.0; // Влияние скольжения на льду
     
     // Двухстволка
     this.dualGun = d.dualGun || false;
@@ -84,34 +111,38 @@ class Tank {
     this.dualNext = 0;
     this.dualCooldowns = [0, 0];
     this.dualBothMode = true;
+
+    // Здоровье модулей танка
+    this.modulesHP = {
+        engine: 100,
+        ammoRack: 100,
+        crew: 100
+    };
+    this.driftFactor = 1.0;
   }
 
   draw(ctx) {
     var cam = GameState.cam;
     
-    // 1. Проверка видимости врага
     if (this.team === 'enemy' && !this.dead) {
       this.visible = teamSees(this, 'player');
       if (!this.visible) return;
     }
     
     ctx.save();
-    // Перенос сетки координат на позицию танка
     ctx.translate(this.x - cam.x, this.y - cam.y);
     
-    // 2. ОТРИСОВКА ПСЕВДО-3D ТЕНИ (вставляется строго здесь, под танком)
+    // ПСЕВДО-3D ТЕНЬ ТАНКА (Отрисовывается под гусеницами)
     if (!this.dead) {
         ctx.save();
         ctx.rotate(this.angle);
-        ctx.fillStyle = "rgba(0, 0, 0, 0.3)"; // Полупрозрачный черный цвет
-        let shadowOffset = 4 * this.s;       // Смещение тени зависит от масштаба танка
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        let shadowOffset = 4 * this.s;
         let bWShadow = this.isLong ? 80 : (this.dualGun ? 70 : 44);
-        // Рисуем сдвинутый прямоугольник тени корпуса
         ctx.fillRect((-bWShadow / 2 * this.s) + shadowOffset, (-14 * this.s) + shadowOffset, bWShadow * this.s, 28 * this.s);
         ctx.restore();
     }
 
-    // 3. Отрисовка полоски здоровья и никнейма над танком
     if (!this.dead) {
       ctx.fillStyle = "#441111";
       ctx.fillRect(-30, -45, 60, 6);
@@ -136,13 +167,21 @@ class Tank {
         ctx.fillStyle = "#ff4500";
         ctx.fillText("🔥", 15, -60);
       }
+      
+      if (this.dualGun && this === GameState.player) {
+        var g1 = this.dualReady[0] ? '#2ecc71' : '#e74c3c';
+        var g2 = this.dualReady[1] ? '#2ecc71' : '#e74c3c';
+        ctx.fillStyle = g1;
+        ctx.fillRect(-12, -38, 10, 4);
+        ctx.fillStyle = g2;
+        ctx.fillRect(2, -38, 10, 4);
+      }
     }
     
-    // 4. ОТРИСОВКА КОРПУСА С ЭФФЕКТОМ НАКЛОНА (TILT) ПРИ ДВИЖЕНИИ
+    // ОТРИСОВКА КОРПУСА С НАКЛОНОМ
     ctx.save();
     ctx.rotate(this.angle);
-    
-    // Небольшое покачивание корпуса, если танк движется
+
     if (this.isMoving && !this.dead) {
         let tilt = Math.sin(Date.now() * 0.015) * 0.03 * this.s;
         ctx.rotate(tilt);
@@ -161,7 +200,6 @@ class Tank {
     ctx.fillRect(-bW / 2 * this.s - 2, 10 * this.s, (bW + 4) * this.s, 6 * this.s);
     ctx.restore();
     
-    // 5. Отрисовка башни
     if (!this.dead) {
       ctx.save();
       ctx.translate(Math.cos(this.angle) * this.off * this.s, Math.sin(this.angle) * this.off * this.s);
@@ -176,9 +214,9 @@ class Tank {
       
       if (this.flame) {
         ctx.fillStyle = "#333";
-        ctx.fillRect(5 * s, -5 * s, 25 * s, 10 * s);
+        ctx.fillRect(5 * this.s, -5 * this.s, 25 * this.s, 10 * this.s);
         ctx.fillStyle = "#ff4500";
-        ctx.fillRect(28 * s, -4 * s, 6 * s, 8 * s);
+        ctx.fillRect(28 * this.s, -4 * this.s, 6 * this.s, 8 * this.s);
       } else if (this.dualGun) {
         var gunLen = 40 * this.s;
         var gunW = 3 * this.s;
@@ -202,41 +240,45 @@ class Tank {
     }
     ctx.restore();
   }
-  // 2. Добавьте метод расчета дифференцированного бронирования и угла встречи снаряда:
-function calculateDamage(shooter, target, baseDmg, bulletAngle) {
-    // Вектор направления удара относительно корпуса танка
-    let hitAngle = Math.abs(bulletAngle - target.angle) % (Math.PI * 2);
-    if (hitAngle > Math.PI) hitAngle = Math.PI * 2 - hitAngle;
 
-    let zone = "side";
-    let effectiveArmor = target.armor;
-
-    if (hitAngle < Math.PI / 4 || hitAngle > Math.PI * 1.75) {
-        zone = "front";
-        effectiveArmor = target.armor * 1.3; // Лоб прочнее
-    } else if (hitAngle > Math.PI * 0.75 && hitAngle < Math.PI * 1.25) {
-        zone = "rear";
-        effectiveArmor = target.armor * 0.5; // Корма уязвима
-    } else {
-        zone = "side";
-        effectiveArmor = target.armor * 0.85;
-    }
-
-    // Угол соударения (нормаль)
-    let impactCos = Math.abs(Math.cos(bulletAngle - target.angle));
-    let angleMultiplier = 1 / (impactCos + 0.1); // Рикошетный угол увеличивает приведенную броню
-
-    let realArmor = effectiveArmor * angleMultiplier;
-    let finalDmg = baseDmg - (realArmor * 0.15);
+  drawFlame(ctx) {
+    var rng = this.flameRange, cone = this.flameCone, time = Date.now() * 0.01;
     
-    return {
-        dmg: Math.max(10, Math.floor(finalDmg)),
-        zone: zone,
-        armorPenetrated: baseDmg > (realArmor * 0.7)
-    };
-}
+    for (var i = 0; i < 12; i++) {
+      var dist = 30 + Math.random() * rng * 0.9;
+      var spread = (Math.random() - 0.5) * cone * dist * 0.8;
+      var sz = 4 + Math.random() * 8 * (1 - dist / rng * 0.5);
+      var alpha = 0.6 * (1 - dist / rng);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgb(255,' + Math.floor(200 * (1 - dist / rng)) + ',0)';
+      ctx.beginPath();
+      ctx.arc(dist, spread + Math.sin(time + i) * 3, sz, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    for (var i = 0; i < 4; i++) {
+      var dist = rng * 0.5 + Math.random() * rng * 0.6;
+      var spread = (Math.random() - 0.5) * cone * dist;
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.arc(dist, spread + Math.sin(time * 0.5 + i * 2) * 5, 6 + Math.random() * 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    for (var i = 0; i < 5; i++) {
+      var dist = 20 + Math.random() * rng;
+      var spread = (Math.random() - 0.5) * cone * dist;
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = '#ffff00';
+      ctx.beginPath();
+      ctx.arc(dist, spread, 1 + Math.random() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    ctx.globalAlpha = 1;
+  }
 
-  // ========== СТРЕЛЬБА ==========
   fire(shellType) {
     if (this.dead) return false;
     if (this.flame) return this.fireFlame();
@@ -304,7 +346,6 @@ function calculateDamage(shooter, target, baseDmg, bulletAngle) {
       }, this.reloadTime * mul);
     }
     
-    // ✅ ИСПРАВЛЕНО: GameState.multiplayerMode и GameState.currentRoomId
     if (this === GameState.player && GameState.multiplayerMode && GameState.currentRoomId) {
       sendShot(tx, ty, fa, shellType);
     }
@@ -312,7 +353,6 @@ function calculateDamage(shooter, target, baseDmg, bulletAngle) {
     return true;
   }
 
-  // ========== ДВУХСТВОЛЬНАЯ СТРЕЛЬБА ==========
   fireDual(shellType) {
     var now = Date.now();
     
@@ -383,7 +423,6 @@ function calculateDamage(shooter, target, baseDmg, bulletAngle) {
     this.justFired = true;
     this.fireTimer = now + 3000;
     
-    // ✅ ИСПРАВЛЕНО: GameState.multiplayerMode и GameState.currentRoomId
     if (this === GameState.player && GameState.multiplayerMode && GameState.currentRoomId) {
       sendShot(tx, ty, fa, shellType);
     }
@@ -391,7 +430,6 @@ function calculateDamage(shooter, target, baseDmg, bulletAngle) {
     return true;
   }
 
-  // ========== ОГНЕМЁТ ==========
   fireFlame() {
     if (this.curMag <= 0) return false;
     
@@ -485,7 +523,6 @@ function calculateDamage(shooter, target, baseDmg, bulletAngle) {
   }
 }
 
-// ========== ПРОВЕРКА ВИДИМОСТИ ==========
 function canSee(obs, tgt) {
   if (obs === tgt || tgt.dead) return true;
   var d = Math.hypot(obs.x - tgt.x, obs.y - tgt.y);
@@ -505,7 +542,6 @@ function teamSees(tgt, team) {
   return false;
 }
 
-// ========== ПРОВЕРКА РИКОШЕТА ==========
 function checkRicochet(shooter, target, st) {
   if (!CONFIG.SHELLS[st].rico) return false;
   var arm = target.armor || 0;
@@ -516,7 +552,6 @@ function checkRicochet(shooter, target, st) {
   return Math.random() < Math.abs(Math.cos(ad)) * (arm / 400) * (st === 2 ? 0.5 : 1);
 }
 
-// ========== ПРОВЕРКА СТОЛКНОВЕНИЙ ==========
 function tankCollides(x, y, angle, size) {
   var pts = [
     { dx: 0, dy: 0 },

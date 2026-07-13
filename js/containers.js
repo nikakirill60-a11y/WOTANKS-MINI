@@ -190,6 +190,15 @@ const DROP_POOLS = {
 };
 
 function initContainers() {
+  const activeDB = window.DB || (typeof DB !== 'undefined' ? DB : null);
+  if (!activeDB) {
+    console.warn("⚠️ База данных техники DB еще не готова. Инициализация контейнеров отложена.");
+    return;
+  }
+
+  for (let id in COLLECTION_DB) {
+    activeDB[id] = COLLECTION_DB[id];
+  }
   for (let id in COLLECTION_DB) DB[id] = COLLECTION_DB[id];
   
   for (let id in COLLECTION_DB) {

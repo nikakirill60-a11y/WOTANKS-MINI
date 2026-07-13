@@ -223,7 +223,8 @@ const DB={
     TYPE5:{n:"Type 5 Heavy",x:100,y:100,nat:"japan",tier:10,gold:5000,hp:3500,dmg:900,s:1.8,reload:8000,off:0,vr:350,camo:.02,cls:'ht',armor:300,nc:'#d4a574',premium:true}
 	
 	// Новые эксклюзивные танки Сезонного пропуска
-	DB.PZ2D = { n: "Pz.Kpfw. II Ausf. D", nat: "germany", tier: 2, hp: 280, dmg: 40, s: .75, off: 5, vr: 300, camo: .35, cls: 'lt', nc: '#ffd700', premium: true, collection: true, desc: "Награда 1-го уровня премиум ветки боевого пропуска." };
-	DB.T34E = { n: "Т-34 экранированный", nat: "ussr", tier: 5, hp: 700, dmg: 90, s: .95, off: 5, vr: 340, camo: .25, cls: 'mt', armor: 75, nc: '#ffd700', premium: true, collection: true, desc: "Награда 15-го уровня премиум ветки боевого пропуска." };
-	DB.E75TS = { n: "E 75 TS", nat: "germany", tier: 8, hp: 1600, dmg: 360, s: 1.25, off: 5, vr: 380, camo: .08, cls: 'ht', armor: 155, nc: '#ffd700', premium: true, collection: true, desc: "Главная награда 30-го уровня премиум ветки боевого пропуска." };
+    PZ2D: { n: "Pz.Kpfw. II Ausf. D", nat: "germany", tier: 2, hp: 280, dmg: 40, s: .75, off: 5, vr: 300, camo: .35, cls: 'lt', nc: '#ffd700', premium: true, collection: true, desc: "Награда 1-го уровня премиум ветки боевого пропуска." },
+    T34E: { n: "Т-34 экранированный", nat: "ussr", tier: 5, hp: 700, dmg: 90, s: .95, off: 5, vr: 340, camo: .25, cls: 'mt', armor: 75, nc: '#ffd700', premium: true, collection: true, desc: "Награда 15-го уровня премиум ветки боевого пропуска." },
+    E75TS: { n: "E 75 TS", nat: "germany", tier: 8, hp: 1600, dmg: 360, s: 1.25, off: 5, vr: 380, camo: .08, cls: 'ht', armor: 155, nc: '#ffd700', premium: true, collection: true, desc: "Главная награда 30-го уровня премиум ветки боевого пропуска." }
+};
 };

@@ -559,7 +559,7 @@ function renderTree() {
     if (GameState.selected === id) div.className += ' selected';
     if (t.premium) div.className += ' premium-glow';
     div.style.cssText = 'left:' + sx + 'px;top:' + sy + 'px;width:' + (120 * sc) + 'px;height:' + (48 * sc) + 'px;font-size:' + (9 * sc) + 'px';
-    var cost = t.gold ? t.gold + 'G' : (t.xp !== undefined ? t.xp + 'XP' : '');
+    var cost = t.gold ? t.gold + 'G' : (t.xp !== undefined ? getDiscountedXPCost(id, t.xp) + 'XP' : '');
     var clsStr = CONFIG.TANK_CLASSES[t.cls || 'mt'] || '';
     var mag = t.mag && t.mag > 1 ? '🔢' + t.mag : '';
     var dualTag = t.dualGun ? '🔫 ' : '';
@@ -569,10 +569,14 @@ function renderTree() {
         if (GameState.owned.indexOf(tankId) !== -1) { GameState.selected = tankId; }
         else if (tankData.gold) {
           if (GameState.GOLD >= tankData.gold) { GameState.GOLD -= tankData.gold; GameState.owned.push(tankId); GameState.selected = tankId; }
-        } else if (tankData.xp !== undefined && GameState.XP >= tankData.xp && (!tankData.p || GameState.owned.indexOf(tankData.p) !== -1)) {
-          GameState.XP -= tankData.xp;
-          GameState.owned.push(tankId);
-          GameState.selected = tankId;
+        } else if (tankData.xp !== undefined) {
+          var discXp = getDiscountedXPCost(tankId, tankData.xp);
+          if (GameState.XP >= discXp && (!tankData.p || GameState.owned.indexOf(tankData.p) !== -1)) {
+            GameState.XP -= discXp;
+            GameState.owned.push(tankId);
+            GameState.selected = tankId;
+            GameState.blueprints[tankId] = 0;
+          }
         }
         renderTree();
         renderCarousel();

@@ -497,7 +497,6 @@ async function syncPlayerPositions(roomId) {
   }
 }
 
-// Исправленная версия функции синхронизации других игроков
 function updateOtherPlayer(posData) {
   const isEnemy = GameState.multiplayerEnemies.includes(posData.username);
   const isAlly = GameState.multiplayerAllies.includes(posData.username);
@@ -507,9 +506,7 @@ function updateOtherPlayer(posData) {
   let tank = GameState.otherPlayers[posData.username];
   
   if (!tank) {
-    // ИСПРАВЛЕНО: Заменено pos.username на posData.username
-    console.log('➕ Новый игрок:', posData.username); 
-    
+    console.log('➕ Новый игрок:', pos.username);
     tank = new Tank(
       posData.tank_id || 'T26',
       posData.x,
@@ -521,7 +518,6 @@ function updateOtherPlayer(posData) {
     updateScoreboard();
   }
 
-  // Обновление параметров танка другого игрока
   tank.x = posData.x;
   tank.y = posData.y;
   tank.angle = posData.angle;

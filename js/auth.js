@@ -15,6 +15,7 @@ function saveUsers(users) {
 
 // ========== ВАЛИДАЦИЯ НИКНЕЙМА ==========
 function validateUsername(username) {
+  // Проверка длины
   if (username.length < 3 || username.length > 20) {
     return {
       valid: false,
@@ -22,6 +23,7 @@ function validateUsername(username) {
     };
   }
 
+  // Проверка: только буквы, цифры, _ и -
   const validNickname = /^[a-zA-Z0-9_-]+$/;
   if (!validNickname.test(username)) {
     return {
@@ -30,6 +32,7 @@ function validateUsername(username) {
     };
   }
 
+  // Проверка запрещённых символов
   const forbiddenChars = /[{}[\]<>"'`;,\\|]/g;
   if (forbiddenChars.test(username)) {
     return {
@@ -38,6 +41,7 @@ function validateUsername(username) {
     };
   }
 
+  // Проверка на SQL injection паттерны
   const sqlInjectionPatterns = [
     /union/i,
     /select/i,
@@ -82,16 +86,29 @@ async function saveProgress() {
     boosterStock: GameState.boosterStock,
     modules: GameState.modules,
     upgrades: GameState.upgrades,
-    upgradesBought: GameState.upgradesBought
+    upgradesBought: GameState.upgradesBought,
+    totalBattles: GameState.totalBattles,
+    camos: GameState.camos,
+    equippedCamo: GameState.equippedCamo,
+    crew: GameState.crew,
+    blueprints: GameState.blueprints,
+    collectionBonusesClaimed: GameState.collectionBonusesClaimed,
+    battlePass: GameState.battlePass,
+    referralCode: GameState.referralCode,
+    referredBy: GameState.referredBy,
+    newsLastSeenId: GameState.newsLastSeenId,
+    tutorialDone: GameState.tutorialDone
   };
 
+  // Сохраняем локально
   const users = getUsers();
   if (users[currentUser]) {
     users[currentUser].data = progressData;
     saveUsers(users);
   }
 
-  if (window.supabaseClient) {
+  // Сохраняем в облако
+  if (supabaseClient) {
     await saveUserProgress(currentUser, progressData);
   }
 }
@@ -100,7 +117,8 @@ async function saveProgress() {
 async function loadProgress(username) {
   let data = null;
 
-  if (window.supabaseClient) {
+  // Пытаемся загрузить из облака
+  if (supabaseClient) {
     const result = await loadUserProgress(username);
     if (result.success) {
       data = result.data;
@@ -108,6 +126,7 @@ async function loadProgress(username) {
     }
   }
 
+  // Если не удалось из облака, загружаем локально
   if (!data) {
     const users = getUsers();
     if (users[username] && users[username].data) {
@@ -116,6 +135,7 @@ async function loadProgress(username) {
     }
   }
 
+  // Применяем данные
   if (data) {
     GameState.XP = data.XP;
     GameState.GOLD = data.GOLD;
@@ -130,11 +150,23 @@ async function loadProgress(username) {
     GameState.modules = data.modules || {};
     GameState.upgrades = data.upgrades || {};
     GameState.upgradesBought = data.upgradesBought || {};
+    GameState.totalBattles = data.totalBattles || 0;
+    GameState.camos = data.camos || {};
+    GameState.equippedCamo = data.equippedCamo || {};
+    GameState.crew = data.crew || {};
+    GameState.blueprints = data.blueprints || {};
+    GameState.collectionBonusesClaimed = data.collectionBonusesClaimed || [];
+    GameState.battlePass = data.battlePass || { season: 1, level: 1, xp: 0, premium: false, claimedFree: [], claimedPremium: [] };
+    GameState.referralCode = data.referralCode || null;
+    GameState.referredBy = data.referredBy || null;
+    GameState.newsLastSeenId = data.newsLastSeenId || 0;
+    GameState.tutorialDone = data.tutorialDone || false;
 
     if (!GameState.owned.includes(GameState.selected)) {
       GameState.selected = GameState.owned[0];
     }
   } else {
+    // Дефолтные значения
     GameState.XP = 500;
     GameState.GOLD = 0;
     GameState.SILVER = 5000;
@@ -151,12 +183,7 @@ async function loadProgress(username) {
   }
 
   if (typeof updateQuestUI === 'function') updateQuestUI();
-  
-  // Безопасное обновление счетчика инвентаря
-  if (typeof window.updateInvCount === 'function') {
-    window.updateInvCount();
-  }
-  
+  if (typeof updateInvCount === 'function') updateInvCount();
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
 }
 
@@ -166,18 +193,21 @@ async function register() {
   const p = document.getElementById('password-input').value.trim();
   const msg = document.getElementById('login-msg');
 
+  // Проверка пустых полей
   if (!u || !p) {
     msg.innerText = "❌ Введите имя и пароль!";
     msg.style.color = "#e74c3c";
     return;
   }
 
+  // Проверка пароля
   if (p.length < 4) {
     msg.innerText = "❌ Пароль должен быть минимум 4 символа!";
     msg.style.color = "#e74c3c";
     return;
   }
 
+  // ✅ ВАЛИДАЦИЯ НИКНЕЙМА
   const validation = validateUsername(u);
   if (!validation.valid) {
     msg.innerText = validation.error;
@@ -185,7 +215,8 @@ async function register() {
     return;
   }
 
-  if (window.supabaseClient) {
+  // Регистрация в облаке
+  if (supabaseClient) {
     const result = await registerUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -194,6 +225,7 @@ async function register() {
     }
   }
 
+  // Локальная регистрация
   const users = getUsers();
   if (users[u]) {
     msg.innerText = "❌ Пользователь уже существует!";
@@ -203,7 +235,9 @@ async function register() {
 
   users[u] = { pass: p, data: null };
   saveUsers(users);
-  
+
+  SocialSystem.applyReferralFromURL(u);
+
   msg.innerText = "✅ Регистрация успешна! Входим...";
   msg.style.color = "#2ecc71";
   
@@ -224,6 +258,7 @@ async function login() {
     return;
   }
 
+  // ✅ ВАЛИДАЦИЯ НИКНЕЙМА
   const validation = validateUsername(u);
   if (!validation.valid) {
     msg.innerText = validation.error;
@@ -231,7 +266,8 @@ async function login() {
     return;
   }
 
-  if (window.supabaseClient) {
+  // Проверка в облаке
+  if (supabaseClient) {
     const result = await loginUser(u, p);
     if (!result.success) {
       msg.innerText = result.error;
@@ -239,6 +275,7 @@ async function login() {
       return;
     }
   } else {
+    // Локальная проверка
     const users = getUsers();
     if (!users[u] || users[u].pass !== p) {
       msg.innerText = "❌ Неверное имя или пароль!";
@@ -267,23 +304,31 @@ async function performLogin(username) {
   updateResources();
   renderTree();
   renderCarousel();
-
-  // ИСПРАВЛЕНО: Безопасный вызов обновления инвентаря
-  if (typeof window.updateInvCount === 'function') {
-    window.updateInvCount();
+  updateInvCount();
+  updateBoosterUI();
+  if (typeof checkUnreadNews === 'function') checkUnreadNews();
+  if (typeof BattlePassSystem !== 'undefined') BattlePassSystem.render();
+  if (typeof renderCollectionBadges === 'function') renderCollectionBadges();
+  if (!GameState.tutorialDone && typeof startTutorial === 'function') {
+    setTimeout(function () {
+      if (confirm('👋 Похоже, вы здесь впервые. Пройти короткое обучение?')) startTutorial();
+      else GameState.tutorialDone = true;
+    }, 500);
   }
 
-  updateBoosterUI();
-
-  if (window.supabaseClient) {
+  // Обновляем онлайн статус
+  if (supabaseClient) {
     await updateOnlineStatus(username, true);
     
+    // Периодическое обновление статуса
     onlineStatusInterval = setInterval(async () => {
       await updateOnlineStatus(username, true);
-    }, 60000);
+    }, 60000); // Каждую минуту
   }
 
+  // Автосохранение каждые 5 секунд
   setInterval(saveProgress, 5000);
+
   console.log('✅ Игрок вошёл:', username);
 }
 
@@ -291,7 +336,7 @@ async function performLogin(username) {
 async function logout() {
   await saveProgress();
   
-  if (window.supabaseClient && currentUser) {
+  if (supabaseClient && currentUser) {
     await updateOnlineStatus(currentUser, false);
   }
 
@@ -306,18 +351,22 @@ async function logout() {
   location.reload();
 }
 
+// ========== ОБРАБОТКА ЗАКРЫТИЯ ВКЛАДКИ ==========
 window.addEventListener('beforeunload', async () => {
   if (currentUser) {
     await saveProgress();
-    if (window.supabaseClient) {
+    if (supabaseClient) {
       await updateOnlineStatus(currentUser, false);
     }
   }
 });
 
-// Отключение автоматической очистки консоли для сохранения логов загрузки скриптов
+// ========== ОЧИСТКА КОНСОЛИ ПРИ ВХОДЕ ==========
 window.addEventListener('load', () => {
+  console.clear();
   console.log('%c🎮 CITY TANKS', 'color: #f1c40f; font-size: 20px; font-weight: bold');
   console.log('%c⚠️ Это окно разработчика. Будьте осторожны!', 'color: #e74c3c; font-size: 14px');
   console.log('%c✅ Все действия защищены серверной валидацией', 'color: #2ecc71; font-size: 12px');
 });
+
+console.log('✅ auth.js полностью загружен');

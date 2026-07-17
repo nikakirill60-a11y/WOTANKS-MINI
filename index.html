@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/styles1.css">
   <link rel="stylesheet" href="css/leaderboard.css">
-  
+  <link rel="stylesheet" href="css/features.css">
+
   <!-- SUPABASE БИБЛИОТЕКА -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0"></script>
 </head>
@@ -50,12 +51,19 @@
 <div id="container-modal">
   <div class="modal-header">
     <h2>📦 КОНТЕЙНЕРЫ</h2>
+  </div>
 <div class="modal-tabs">
     <button class="modal-tab active" onclick="switchTab('shop', this)">📦 Магазин</button>
     <button class="modal-tab" onclick="switchTab('inventory', this)">🎒 Инвентарь</button>
     <button class="modal-tab" onclick="switchTab('collection', this)">🎖️ Коллекция</button>
     <button class="modal-tab" onclick="switchTab('bp', this); BattlePassSystem.render()">🎫 Пропуск Сезона</button>
-    <button class="modal-tab" onclick="switchTab('market', this); SocialSystem.loadOffers()">⚖️ Рынок</button>
+    <button class="modal-tab" onclick="switchTab('market', this); SocialSystem.loadOffers(); SocialSystem.populateSellSelect();">⚖️ Рынок</button>
+    <!-- NEW: новые вкладки — камуфляжи, экипаж, чертежи, рефералка, новости -->
+    <button class="modal-tab" onclick="switchTab('camo', this); renderCamoShop();">🎨 Камуфляжи</button>
+    <button class="modal-tab" onclick="switchTab('crew', this); renderCrewPanel(GameState.selected);">👨‍✈️ Экипаж</button>
+    <button class="modal-tab" onclick="switchTab('blueprints', this); renderBlueprintsGrid();">📐 Чертежи</button>
+    <button class="modal-tab" onclick="switchTab('referral', this); SocialSystem.renderReferral();">🔗 Друзья</button>
+    <button class="modal-tab" onclick="switchTab('news', this); renderNewsFeed();">📰 Новости <span id="news-badge"></span></button>
 </div>
 
 <!-- Содержимое вкладки Боевого Пропуска -->
@@ -85,6 +93,33 @@
         </div>
     </div>
 </div>
+
+<!-- NEW: Содержимое вкладки Камуфляжей -->
+<div id="tab-camo" class="tab-content">
+    <div id="camo-grid"><!-- заполняется camouflage.js --></div>
+</div>
+
+<!-- NEW: Содержимое вкладки Экипажа -->
+<div id="tab-crew" class="tab-content">
+    <div id="crew-panel-content" style="padding:14px"><!-- заполняется crew.js --></div>
+</div>
+
+<!-- NEW: Содержимое вкладки Чертежей -->
+<div id="tab-blueprints" class="tab-content">
+    <div id="blueprints-grid"><!-- заполняется blueprints.js --></div>
+</div>
+
+<!-- NEW: Содержимое вкладки Друзья (реферальная программа) -->
+<div id="tab-referral" class="tab-content">
+    <!-- заполняется social.js: SocialSystem.renderReferral() -->
+</div>
+
+<!-- NEW: Содержимое вкладки Новости -->
+<div id="tab-news" class="tab-content">
+    <div id="news-feed"><!-- заполняется news.js --></div>
+</div>
+
+</div><!-- /container-modal -->
 
 <!-- ========== ПРОМОКОД ========== -->
 <div id="promo-modal">
@@ -167,6 +202,8 @@
       <button class="btn btn-inventory" onclick="openInventoryTab()">🎒<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
       <button class="btn btn-modules" onclick="showModules()">⚙️ МОДУЛИ</button>
       <button class="btn btn-upgrade" onclick="showUpgrades()">🔩 ПРОКАЧКА</button>
+      <!-- NEW: обучение -->
+      <button class="btn" style="background:#8e44ad" onclick="startTutorial()">🎓 ОБУЧЕНИЕ</button>
     </div>
   </div>
 
@@ -185,6 +222,9 @@
       <div id="quest-text" class="quest-text">0 / 15</div>
       <button id="quest-claim-btn" class="btn quest-btn" onclick="claimQuestReward()" style="display:none;">ЗАБРАТЬ T-34-85 ПОБЕДНЫЙ</button>
     </div>
+
+    <!-- NEW: коллекционные значки -->
+    <div id="collection-badges"></div>
 
     <!-- ВЫБОР НАЦИИ -->
     <div id="nat-buttons">
@@ -246,6 +286,10 @@
 <div id="hud">
   <div id="allies-list" class="team-list"></div>
   <div id="enemies-list" class="team-list"></div>
+
+  <!-- NEW: лампочка "Шестое чувство" и индикатор пинга/FPS -->
+  <div id="sixth-sense-lamp" title="Вас обнаружили"></div>
+  <div id="perf-hud"></div>
   
   <!-- НИЖНЯЯ ПАНЕЛЬ -->
   <div id="bottom-bar">
@@ -329,24 +373,42 @@
 <!-- Кнопка открытия чата -->
 <button id="chat-toggle-btn" onclick="toggleChat()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#3498db;border:2px solid #fff;border-radius:50%;font-size:24px;cursor:pointer;z-index:999;box-shadow:0 0 10px rgba(52,152,219,0.5);">💬</button>
 
+<!-- NEW: обучение — оверлей поверх всего интерфейса -->
+<div id="tutorial-overlay">
+  <div id="tutorial-text">...</div>
+  <button id="tutorial-skip" onclick="skipTutorial()">Пропустить</button>
+</div>
+
 <!-- ========== СКРИПТЫ (ПРАВИЛЬНЫЙ ПОРЯДОК!) ========== -->
-<!-- Порядок подключения JS файлов -->
+<!-- Порядок подключения JS файлов: исходный порядок сохранён,
+     новые файлы отмечены NEW и вставлены в рабочих точках зависимостей -->
     <script src="js/config.js"></script>
     <script src="js/supabase.js"></script>
     <script src="js/tanks.js"></script>
     <script src="js/containers.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/tank.js"></script>
+    <script src="js/armor-system.js"></script>       <!-- NEW: бронезоны + крит.повреждения -->
+    <script src="js/terrain.js"></script>              <!-- NEW: физика ландшафта -->
+    <script src="js/destructible.js"></script>         <!-- NEW: разрушаемые здания -->
+    <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
+    <script src="js/crew.js"></script>                  <!-- NEW: экипаж и перки -->
+    <script src="js/camouflage.js"></script>            <!-- NEW: камуфляжи -->
+    <script src="js/blueprints.js"></script>            <!-- NEW: чертежи -->
+    <script src="js/collections-bonus.js"></script>     <!-- NEW: коллекционный бонус -->
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/bp.js"></script>
-    <script src="js/social.js"></script>
+    <script src="js/bp.js"></script>                    <!-- ПЕРЕПИСАН: BattlePassSystem -->
+    <script src="js/social.js"></script>                <!-- ПЕРЕПИСАН: SocialSystem (рынок + рефералка) -->
     <script src="js/controls.js"></script>
     <script src="js/battle.js"></script>
     <script src="js/multiplayer.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/news.js"></script>                  <!-- NEW: новости ангара -->
+    <script src="js/tutorial.js"></script>              <!-- NEW: интерактивное обучение -->
+    <script src="js/perf-hud.js"></script>              <!-- NEW: индикатор пинга/FPS -->
 
 <script>
   // Инициализация при загрузке

@@ -64,6 +64,85 @@ const CONFIG = {
   UPGRADE_COSTS: {
     1: [500, 1000], 2: [800, 1500], 3: [1500, 3000], 4: [3000, 6000], 5: [5000, 10000],
     6: [8000, 16000], 7: [12000, 25000], 8: [18000, 35000], 9: [25000, 50000], 10: [40000, 80000]
+  },
+
+  // ========== ФИЗИКА ЛАНДШАФТА ==========
+  TERRAIN: {
+    normal:  { name: "Грунт",   speedMul: 1,    turnMul: 1,    drift: 0,    color: null },
+    mud:     { name: "Грязь",   speedMul: 0.55, turnMul: 0.7,  drift: 0,    color: '#3a2e1a' },
+    ice:     { name: "Лёд",     speedMul: 1.05, turnMul: 1.35, drift: 0.35, color: '#bcdfe8' },
+    asphalt: { name: "Асфальт", speedMul: 1.25, turnMul: 1.1,  drift: 0,    color: '#444448' }
+  },
+
+  // ========== КРИТИЧЕСКИЕ ПОВРЕЖДЕНИЯ МОДУЛЕЙ ==========
+  CRITICALS: {
+    engine:  { name: "Двигатель повреждён", icon: "⚙️", chance: 0.12, duration: 12000, effect: 'speed', value: 0.5 },
+    ammo:    { name: "Боеукладка повреждена", icon: "💥", chance: 0.08, duration: 10000, effect: 'reload', value: 0.6 },
+    gunner:  { name: "Наводчик ранен", icon: "🎯", chance: 0.10, duration: 15000, effect: 'spread', value: 0.8 }
+  },
+
+  // ========== БРОНЕЗОНЫ ==========
+  ARMOR_ZONES: {
+    front: { mul: 1.0,  label: "лоб" },
+    side:  { mul: 0.55, label: "борт" },
+    rear:  { mul: 0.3,  label: "корма" }
+  },
+
+  // ========== КАМУФЛЯЖИ ==========
+  CAMOS: {
+    forest:  { name: "Лесной",     icon: "🌲", cost: 2000, currency: 'silver', camoBonus: 0.02, color: '#2d5a1e' },
+    desert_c:{ name: "Пустынный",  icon: "🏜️", cost: 2000, currency: 'silver', camoBonus: 0.02, color: '#c2a645' },
+    urban:   { name: "Городской",  icon: "🏙️", cost: 2500, currency: 'silver', camoBonus: 0.02, color: '#5a5a5a' },
+    winter:  { name: "Зимний",     icon: "❄️", cost: 2500, currency: 'silver', camoBonus: 0.02, color: '#dfeaf0' },
+    tiger:   { name: "Тигровый",   icon: "🐯", cost: 150,  currency: 'gold',   camoBonus: 0.02, color: '#e0a030' },
+    golden:  { name: "Золотой",    icon: "✨", cost: 500,  currency: 'gold',   camoBonus: 0.02, color: '#f1c40f' }
+  },
+
+  // ========== ЭКИПАЖ И ПЕРКИ ==========
+  CREW_ROLES: ['commander', 'driver', 'gunner'],
+  CREW_XP_PER_LEVEL: 500,
+  CREW_MAX_LEVEL: 10,
+  CREW_PERKS: {
+    sixth_sense:  { name: "Шестое чувство", desc: "Лампочка при обнаружении танка врагом", icon: "💡", role: 'commander', reqLevel: 3, cost: 1 },
+    eagle_eye:    { name: "Орлиный глаз",   desc: "Обзор +5%", icon: "🦅", role: 'commander', reqLevel: 6, cost: 1, stat: 'vr', value: 0.05 },
+    smooth_ride:  { name: "Плавный ход",    desc: "Устойчивость на разбитой местности +10%", icon: "🛞", role: 'driver', reqLevel: 3, cost: 1, stat: 'stability', value: 0.1 },
+    offroad:      { name: "Король бездорожья", desc: "Штраф грязи/льда снижен на 15%", icon: "🚜", role: 'driver', reqLevel: 6, cost: 1, stat: 'terrainRes', value: 0.15 },
+    steady_hand:  { name: "Твёрдая рука",   desc: "Разброс при движении -8%", icon: "✋", role: 'gunner', reqLevel: 3, cost: 1, stat: 'accuracyMoving', value: 0.08 },
+    deadeye:      { name: "Снайпер",        desc: "Шанс крит. повреждения модулей врага +5%", icon: "🎯", role: 'gunner', reqLevel: 6, cost: 1, stat: 'critChance', value: 0.05 }
+  },
+
+  // ========== ЧЕРТЕЖИ ==========
+  BLUEPRINTS_PER_TANK: 10,
+  BLUEPRINT_DISCOUNT_PER_FRAGMENT: 0.1,
+
+  // ========== БОЕВОЙ ПРОПУСК ==========
+  BATTLE_PASS: {
+    maxLevel: 30,
+    xpPerLevel: 1000,
+    premiumCostGold: 2500,
+    seasonName: "Сезонный",
+    premiumTankLevels: {
+      1:  { id: 'BP_PZ2D',  name: "Pz.Kpfw. II Ausf. D", tier: 2 },
+      15: { id: 'BP_T34E',  name: "Т-34 экранированный", tier: 5 },
+      30: { id: 'BP_E75TS', name: "E 75 TS",             tier: 8 }
+    }
+  },
+
+  // ========== РЕФЕРАЛЬНАЯ ПРОГРАММА ==========
+  REFERRAL: {
+    bonusForInviter: { silver: 5000, gold: 50 },
+    bonusForNewbie: { silver: 3000 },
+    milestoneRewards: {
+      5:  { gold: 100 },
+      10: { gold: 250 },
+      25: { gold: 750 }
+    }
+  },
+
+  // ========== РЫНОК ==========
+  MARKETPLACE: {
+    minBattlesToSellTank: 100,
+    feePercent: 0.1
   }
 };
 
@@ -133,7 +212,45 @@ const GameState = {
   currentRoomId: null,
   multiplayerEnemies: [],
   multiplayerAllies: [],
-  otherPlayers: {}
+  otherPlayers: {},
+
+  // Общая статистика (нужна рынку: 100 боёв для продажи коллекционных танков)
+  totalBattles: 0,
+
+  // Камуфляжи: { camoId: true } куплены, equippedCamo: { tankId: camoId }
+  camos: {},
+  equippedCamo: {},
+
+  // Экипаж: { tankId: { commander:{xp,level,perks:[]}, driver:{...}, gunner:{...} } }
+  crew: {},
+
+  // Чертежи: { tankId: fragmentsCount }
+  blueprints: {},
+
+  // Коллекционные бонусы, которые уже выданы (чтобы не дублировать)
+  collectionBonusesClaimed: [],
+
+  // Боевой пропуск
+  battlePass: {
+    season: 1,
+    level: 1,
+    xp: 0,
+    premium: false,
+    claimedFree: [],
+    claimedPremium: []
+  },
+
+  // Реферальная программа
+  referralCode: null,
+  referredBy: null,
+  referralCount: 0,
+  referralClaimedMilestones: [],
+
+  // Рынок
+  marketBattlesCache: 0,
+
+  // Новости
+  newsLastSeenId: 0
 };
 
 // ========== МАСШТАБ ==========
@@ -160,49 +277,5 @@ function updateScale() {
 }
 
 window.addEventListener('resize', updateScale);
-
-// Расширение CONFIG для поддержки Боевого Пропуска и Ежедневных наград
-CONFIG.BATTLE_PASS = {
-  XP_PER_LEVEL: 1000,
-  PREMIUM_COST: 1500, // Стоимость в золоте
-  REWARDS: {
-    // Бесплатная ветка (Обычный тип)
-    free: {
-      1: { type: 'silver', amount: 5000, label: "5 000 ₽" },
-      5: { type: 'container', cid: 'basic', label: "Базовый контейнер" },
-      10: { type: 'booster', kind: 'xp', amount: 2, label: "2x Бустер опыта" },
-      15: { type: 'container', cid: 'lowlevels', label: "Контейнер малых уровней" },
-      20: { type: 'gold', amount: 150, label: "150 G" },
-      25: { type: 'container', cid: 'premium', label: "Премиум контейнер" },
-      30: { type: 'container', cid: 'legendary', label: "Легендарный контейнер" }
-    },
-    // Премиум ветка
-    premium: {
-      1: { type: 'tank', tid: 'PZ2D', label: "Pz.Kpfw. II Ausf. D (II ур.)" },
-      5: { type: 'gold', amount: 500, label: "500 G" },
-      10: { type: 'container', cid: 'titanbox', label: "Titan Box" },
-      15: { type: 'tank', tid: 'T34E', label: "Т-34 экранированный (V ур.)" },
-      20: { type: 'container', cid: 'flamebox', label: "Танко-Жарка" },
-      25: { type: 'gold', amount: 1000, label: "1000 G" },
-      30: { type: 'tank', tid: 'E75TS', label: "E 75 TS (VIII ур.)" }
-    }
-  }
-};
-
-CONFIG.DAILY_REWARDS = {
-  1: { silver: 2000, label: "2 000 ₽" },
-  2: { gold: 50, label: "50 G" },
-  3: { container: 'basic', label: "Базовый контейнер" },
-  4: { silver: 5000, label: "5 000 ₽" },
-  5: { gold: 150, label: "150 G" },
-  6: { container: 'lowlevels', label: "Ящик малых уровней" },
-  7: { container: 'premium', label: "Премиум контейнер" }
-};
-
-CONFIG.CREW_PERKS = {
-  sixth_sense: { name: "Шестое чувство", desc: "Командир мгновенно видит индикатор обнаружения.", icon: "👁️" },
-  offroad: { name: "Король бездорожья", desc: "Снижает штраф проходимости по грязи на 15%.", icon: "🚜" },
-  smooth_ride: { name: "Плавный ход", desc: "Уменьшает разброс при стрельбе на ходу на 10%.", icon: "🎯" }
-};
 
 console.log('✅ config.js загружен');

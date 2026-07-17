@@ -5,7 +5,8 @@ function setupWalls(mt) {
   if (mt === 'city') {
     for (let r = 0; r < 5; r++) {
       for (let c = 0; c < 5; c++) {
-        GameState.walls.push({ x: -400 + c * 500, y: -1000 + r * 500, w: 100, h: 100, type: 'building', color: '#3a3a3a' });
+        const bhp = 400 + Math.floor(Math.random() * 300);
+        GameState.walls.push({ x: -400 + c * 500, y: -1000 + r * 500, w: 100, h: 100, type: 'building', color: '#3a3a3a', hp: bhp, maxHp: bhp });
       }
     }
   }
@@ -79,6 +80,7 @@ function startBattle(mode) {
   } else {
     document.getElementById('mobile-controls').classList.remove('show');
   }
+  startPerfMonitor();
 
   const bonuses = getAllBonuses(GameState.selected);
   GameState.player = new Tank(GameState.selected, -1500, 0, 'player', bonuses);
@@ -88,6 +90,7 @@ function startBattle(mode) {
   GameState.tracks = [];
   
   setupWalls(GameState.curMap);
+  setupTerrain(GameState.curMap);
 
   // ✅ ПРОВЕРКА МУЛЬТИПЛЕЕРА
   if (GameState.multiplayerMode) {
@@ -151,6 +154,7 @@ function startTraining() {
   document.getElementById('ui').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('result-screen').classList.remove('show');
+  startPerfMonitor();
   
   if (GameState.controlMode === 'mobile') {
     document.getElementById('mobile-controls').classList.add('show');
@@ -169,12 +173,14 @@ function startTraining() {
   GameState.tracks = [];
   
   setupWalls(GameState.curMap);
+  setupTerrain(GameState.curMap);
   updateScoreboard();
 }
 
 // ========== КОНЕЦ БОЯ ==========
 function endBattle(won) {
   GameState.gameActive = false;
+  GameState.totalBattles = (GameState.totalBattles || 0) + 1;
   
   let silver = Math.floor(GameState.battleDmg * 0.5 + GameState.battleKills * 200);
   let xpReward = Math.floor(GameState.battleKills * 500 + (won ? 300 : 100));
@@ -200,6 +206,9 @@ function endBattle(won) {
   if (GameState.multiplayerMode) {
     endMultiplayerBattle();
   }
+
+  addBattlePassXP(won ? 300 : 100);
+  checkCollectionBonuses();
   
   document.getElementById('result-screen').classList.add('show');
   document.getElementById('result-title').innerText = won ? "ПОБЕДА!" : "ПОРАЖЕНИЕ";
@@ -221,6 +230,7 @@ function endBattle(won) {
 }
 
 function backToGarage() {
+  stopPerfMonitor();
   document.getElementById('result-screen').classList.remove('show');
   document.getElementById('ui').style.display = 'flex';
   document.getElementById('hud').style.display = 'none';

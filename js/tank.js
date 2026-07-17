@@ -1,39 +1,5 @@
 // js/tank.js
-// ========== КЛАСС ТАНКА И МЕХАНИКА УРОНА ==========
-
-// Векторная функция расчета дифференцированного бронирования и углов встречи (Вне класса Tank!)
-function calculateDamage(shooter, target, baseDmg, bulletAngle) {
-    let hitAngle = Math.abs(bulletAngle - target.angle) % (Math.PI * 2);
-    if (hitAngle > Math.PI) hitAngle = Math.PI * 2 - hitAngle;
-
-    let zone = "side";
-    let effectiveArmor = target.armor || 0;
-
-    // Распределяем броню по зонам (лоб, борта, корма)
-    if (hitAngle < Math.PI / 4 || hitAngle > Math.PI * 1.75) {
-        zone = "front";
-        effectiveArmor = (target.armor || 0) * 1.3; // Лоб на 30% прочнее
-    } else if (hitAngle > Math.PI * 0.75 && hitAngle < Math.PI * 1.25) {
-        zone = "rear";
-        effectiveArmor = (target.armor || 0) * 0.5; // Корма в 2 раза слабее
-    } else {
-        zone = "side";
-        effectiveArmor = (target.armor || 0) * 0.85;
-    }
-
-    // Приведение брони на основе угла попадания (наклон увеличивает приведенную толщину)
-    let impactCos = Math.abs(Math.cos(bulletAngle - target.angle));
-    let angleMultiplier = 1 / (impactCos + 0.1);
-
-    let realArmor = effectiveArmor * angleMultiplier;
-    let finalDmg = baseDmg - (realArmor * 0.15);
-    
-    return {
-        dmg: Math.max(10, Math.floor(finalDmg)),
-        zone: zone,
-        armorPenetrated: baseDmg > (realArmor * 0.7)
-    };
-}
+// ========== КЛАСС ТАНКА ==========
 
 class Tank {
   constructor(id, x, y, team, allBonuses) {
@@ -63,9 +29,21 @@ class Tank {
     this.off = d.off || 0;
     this.cls = d.cls || 'mt';
     this.nc = d.nc || '#666';
-    this.vr = Math.floor((d.vr || 350) * vrMul * (1 + (mb.vr || 0)));
-    this.camo = (d.camo || .2) * (1 + (mb.camo || 0));
+    var eagleEyeBonus = (team === 'player' && typeof getCrewPerkValue === 'function') ? getCrewPerkValue(id, 'commander', 'vr') : 0;
+    this.vr = Math.floor((d.vr || 350) * vrMul * (1 + (mb.vr || 0) + eagleEyeBonus));
+    var camoSkinBonus = 0;
+    if (team === 'player' && typeof GameState !== 'undefined' && GameState.equippedCamo && GameState.equippedCamo[id]) {
+      var skinId = GameState.equippedCamo[id];
+      var skin = CONFIG.CAMOS && CONFIG.CAMOS[skinId];
+      if (skin) camoSkinBonus = skin.camoBonus;
+    }
+    this.camo = (d.camo || .2) * (1 + (mb.camo || 0)) + camoSkinBonus;
     this.armor = Math.floor((d.armor || 0) * (1 + (mb.armor || 0)));
+
+    // ✅ Критические повреждения модулей (см. armor-system.js)
+    this.critTimers = { engine: 0, ammo: 0, gunner: 0 };
+    // ✅ Экипаж (см. crew.js) — бонусы перков применяются точечно через getCrewBonus()
+    this.crewTankId = id;
     
     this.angle = 0;
     this.tAngle = 0;
@@ -111,16 +89,9 @@ class Tank {
     this.dualNext = 0;
     this.dualCooldowns = [0, 0];
     this.dualBothMode = true;
-
-    // Здоровье модулей танка
-    this.modulesHP = {
-        engine: 100,
-        ammoRack: 100,
-        crew: 100
-    };
-    this.driftFactor = 1.0;
   }
 
+  // ========== ОТРИСОВКА ==========
   draw(ctx) {
     var cam = GameState.cam;
     
@@ -132,17 +103,6 @@ class Tank {
     ctx.save();
     ctx.translate(this.x - cam.x, this.y - cam.y);
     
-    // ПСЕВДО-3D ТЕНЬ ТАНКА (Отрисовывается под гусеницами)
-    if (!this.dead) {
-        ctx.save();
-        ctx.rotate(this.angle);
-        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-        let shadowOffset = 4 * this.s;
-        let bWShadow = this.isLong ? 80 : (this.dualGun ? 70 : 44);
-        ctx.fillRect((-bWShadow / 2 * this.s) + shadowOffset, (-14 * this.s) + shadowOffset, bWShadow * this.s, 28 * this.s);
-        ctx.restore();
-    }
-
     if (!this.dead) {
       ctx.fillStyle = "#441111";
       ctx.fillRect(-30, -45, 60, 6);
@@ -178,15 +138,8 @@ class Tank {
       }
     }
     
-    // ОТРИСОВКА КОРПУСА С НАКЛОНОМ
     ctx.save();
     ctx.rotate(this.angle);
-
-    if (this.isMoving && !this.dead) {
-        let tilt = Math.sin(Date.now() * 0.015) * 0.03 * this.s;
-        ctx.rotate(tilt);
-    }
-
     var bc = this.dead ? '#333' : 
              this.team === 'player' ? (this.flame ? '#cc3300' : this.missile ? '#005580' : this.titan ? '#2a5a7a' : this.dualGun ? '#5a5a5a' : this.premium ? '#ff6600' : '#27ae60') : 
              this.team === 'ally' ? (this.nc || '#2980b9') : '#c0392b';
@@ -195,6 +148,17 @@ class Tank {
     var bW = this.isLong ? 80 : 44;
     if (this.dualGun) { bW = 70; }
     ctx.fillRect(-bW / 2 * this.s, -14 * this.s, bW * this.s, 28 * this.s);
+    if (this.team === 'player' && typeof GameState !== 'undefined' && GameState.equippedCamo && GameState.equippedCamo[this.id]) {
+      var skinId2 = GameState.equippedCamo[this.id];
+      var skinCfg = CONFIG.CAMOS && CONFIG.CAMOS[skinId2];
+      if (skinCfg) {
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = skinCfg.color;
+        ctx.fillRect(-bW / 2 * this.s, -14 * this.s, bW * this.s, 28 * this.s);
+        ctx.restore();
+      }
+    }
     ctx.fillStyle = "#111";
     ctx.fillRect(-bW / 2 * this.s - 2, -16 * this.s, (bW + 4) * this.s, 6 * this.s);
     ctx.fillRect(-bW / 2 * this.s - 2, 10 * this.s, (bW + 4) * this.s, 6 * this.s);
@@ -241,6 +205,7 @@ class Tank {
     ctx.restore();
   }
 
+  // ========== ОТРИСОВКА ПЛАМЕНИ ==========
   drawFlame(ctx) {
     var rng = this.flameRange, cone = this.flameCone, time = Date.now() * 0.01;
     
@@ -279,6 +244,7 @@ class Tank {
     ctx.globalAlpha = 1;
   }
 
+  // ========== СТРЕЛЬБА ==========
   fire(shellType) {
     if (this.dead) return false;
     if (this.flame) return this.fireFlame();
@@ -296,6 +262,7 @@ class Tank {
     if (this.team === 'player' && GameState.paiokActive) {
       finalDmg *= 1.05;
     }
+    finalDmg *= getCritMultiplier(this, 'dmg');
     
     var b = {
       x: tx,
@@ -340,12 +307,14 @@ class Tank {
       this.isReloading = true;
       var self = this;
       var mul = (this === GameState.player && GameState.adrenalineActive) ? 0.5 : 1;
+      mul *= getCritMultiplier(this, 'reload');
       setTimeout(function() {
         self.curMag = self.magSize;
         self.isReloading = false;
       }, this.reloadTime * mul);
     }
     
+    // ✅ ИСПРАВЛЕНО: GameState.multiplayerMode и GameState.currentRoomId
     if (this === GameState.player && GameState.multiplayerMode && GameState.currentRoomId) {
       sendShot(tx, ty, fa, shellType);
     }
@@ -353,6 +322,7 @@ class Tank {
     return true;
   }
 
+  // ========== ДВУХСТВОЛЬНАЯ СТРЕЛЬБА ==========
   fireDual(shellType) {
     var now = Date.now();
     
@@ -394,6 +364,7 @@ class Tank {
     if (this.team === 'player' && GameState.paiokActive) {
       finalDmg *= 1.05;
     }
+    finalDmg *= getCritMultiplier(this, 'dmg');
     
     var b = {
       x: tx,
@@ -418,11 +389,13 @@ class Tank {
     
     this.dualReady[gunIndex] = false;
     var mul = (this === GameState.player && GameState.adrenalineActive) ? 0.5 : 1;
+    mul *= getCritMultiplier(this, 'reload');
     this.dualCooldowns[gunIndex] = now + this.reloadTime * mul;
     this.lastShot = now;
     this.justFired = true;
     this.fireTimer = now + 3000;
     
+    // ✅ ИСПРАВЛЕНО: GameState.multiplayerMode и GameState.currentRoomId
     if (this === GameState.player && GameState.multiplayerMode && GameState.currentRoomId) {
       sendShot(tx, ty, fa, shellType);
     }
@@ -430,6 +403,7 @@ class Tank {
     return true;
   }
 
+  // ========== ОГНЕМЁТ ==========
   fireFlame() {
     if (this.curMag <= 0) return false;
     
@@ -523,6 +497,7 @@ class Tank {
   }
 }
 
+// ========== ПРОВЕРКА ВИДИМОСТИ ==========
 function canSee(obs, tgt) {
   if (obs === tgt || tgt.dead) return true;
   var d = Math.hypot(obs.x - tgt.x, obs.y - tgt.y);
@@ -542,16 +517,24 @@ function teamSees(tgt, team) {
   return false;
 }
 
+// ========== ПРОВЕРКА РИКОШЕТА (зоно-зависимая, см. armor-system.js) ==========
 function checkRicochet(shooter, target, st) {
   if (!CONFIG.SHELLS[st].rico) return false;
   var arm = target.armor || 0;
   if (arm <= 0) return false;
+  var zone = getArmorZone(shooter, target);
+  var effArm = arm * CONFIG.ARMOR_ZONES[zone].mul;
+  if (shooter && shooter.team === 'player' && typeof getCrewPerkValue === 'function') {
+    var steadyBonus = getCrewPerkValue(shooter.crewTankId, 'gunner', 'accuracyMoving');
+    effArm *= (1 - steadyBonus);
+  }
   var ha = Math.atan2(target.y - shooter.y, target.x - shooter.x);
   var ad = Math.abs(ha - target.angle);
   while (ad > Math.PI) ad = Math.abs(ad - Math.PI * 2);
-  return Math.random() < Math.abs(Math.cos(ad)) * (arm / 400) * (st === 2 ? 0.5 : 1);
+  return Math.random() < Math.abs(Math.cos(ad)) * (effArm / 400) * (st === 2 ? 0.5 : 1);
 }
 
+// ========== ПРОВЕРКА СТОЛКНОВЕНИЙ ==========
 function tankCollides(x, y, angle, size) {
   var pts = [
     { dx: 0, dy: 0 },

@@ -68,12 +68,7 @@ const COLLECTION_DB = {
 
   // === ФРАНЦИЯ - Малые уровни ===
   D1: { n: "D1", nat: "france", tier: 2, hp: 280, dmg: 42, s: 0.75, off: 5, vr: 290, camo: 0.28, cls: 'lt', armor: 45, nc: '#2c3e80', premium: true, collection: true, desc: "Французский лёгкий танк." },
-  FTAC: { n: "FT AC", nat: "france", tier: 2, hp: 230, dmg: 80, s: 0.7, isPT: true, off: 12, vr: 280, camo: 0.4, cls: 'td', nc: '#2c3e80', premium: true, collection: true, desc: "ПТ-САУ 2 уровня." },
-
-  // === НОВЫЕ ТАНКИ БОЕВОГО ПРОПУСКА (Интегрированы сюда) ===
-  PZ2D: { n: "Pz.Kpfw. II Ausf. D", nat: "germany", tier: 2, hp: 280, dmg: 40, s: .75, off: 5, vr: 300, camo: .35, cls: 'lt', nc: '#ffd700', premium: true, collection: true, desc: "Награда 1-го уровня премиум ветки боевого пропуска." },
-  T34E: { n: "Т-34 экранированный", nat: "ussr", tier: 5, hp: 700, dmg: 90, s: .95, off: 5, vr: 340, camo: .25, cls: 'mt', armor: 75, nc: '#ffd700', premium: true, collection: true, desc: "Награда 15-го уровня премиум ветки боевого пропуска." },
-  E75TS: { n: "E 75 TS", nat: "germany", tier: 8, hp: 1600, dmg: 360, s: 1.25, off: 5, vr: 380, camo: .08, cls: 'ht', armor: 155, nc: '#ffd700', premium: true, collection: true, desc: "Главная награда 30-го уровня премиум ветки боевого пропуска." }
+  FTAC: { n: "FT AC", nat: "france", tier: 2, hp: 230, dmg: 80, s: 0.7, isPT: true, off: 12, vr: 280, camo: 0.4, cls: 'td', nc: '#2c3e80', premium: true, collection: true, desc: "ПТ-САУ 2 уровня." }
 };
 
 const CONTAINERS = {
@@ -92,6 +87,7 @@ const CONTAINERS = {
       { type: 'tank', pool: 'legendary', weight: 2, label: "Легенда!" }
     ] 
   },
+  
   premium: { 
     name: "Премиум", 
     icon: "🎁", 
@@ -108,6 +104,7 @@ const CONTAINERS = {
       { type: 'tank', pool: 'mauskonig', weight: 0.1, label: "👑 MAUSEKÖNIG XI!" }
     ] 
   },
+  
   legendary: { 
     name: "Легендарный", 
     icon: "💎", 
@@ -121,6 +118,7 @@ const CONTAINERS = {
       { type: 'tank', pool: 'missile', weight: 5, label: "🚀 Sheridan!" }
     ] 
   },
+  
   event: { 
     name: "Ивентовый", 
     icon: "🎪", 
@@ -135,6 +133,7 @@ const CONTAINERS = {
       { type: 'tank', pool: 'legendary', weight: 30, label: "Легенда!" }
     ] 
   },
+  
   flamebox: { 
     name: "Танко-Жарка", 
     icon: "🔥", 
@@ -146,6 +145,7 @@ const CONTAINERS = {
       { type: 'tank', pool: 'flame', weight: 1, label: "🔥 Огнемётный танк!" }
     ] 
   },
+  
   titanbox: { 
     name: "Titan Box", 
     icon: "⚙️", 
@@ -159,6 +159,7 @@ const CONTAINERS = {
       { type: 'tank', pool: 'titan', weight: 5, label: "⚙️ Titan танк!" }
     ] 
   },
+
   lowlevels: {
     name: "Малые уровни",
     icon: "🪖",
@@ -185,25 +186,19 @@ const DROP_POOLS = {
 };
 
 function initContainers() {
-  const activeDB = window.DB || (typeof DB !== 'undefined' ? DB : null);
-  if (!activeDB) {
-    console.warn("⚠️ База данных техники DB еще не готова. Инициализация контейнеров отложена.");
-    return;
-  }
-
-  for (let id in COLLECTION_DB) {
-    activeDB[id] = COLLECTION_DB[id];
-  }
+  for (let id in COLLECTION_DB) DB[id] = COLLECTION_DB[id];
   
   for (let id in COLLECTION_DB) {
     if (id === 'KV220BT' || id === 'T3485VIC') continue;
     const t = COLLECTION_DB[id];
     
+    // MAUSKONIG в отдельный пул
     if (id === 'MAUSKONIG') {
       DROP_POOLS.mauskonig.push(id);
       continue;
     }
     
+    // Малые уровни (1-3)
     if (t.tier <= 3 && (
       id === 'LTR' || id === 'PZJAG1' || id === 'PZ38H' || id === 'GROBTRAKTOR' || 
       id === 'PZ2G' || id === 'PZ2J' || id === 'PZ3A' || id === 'PZ4A' || id === 'PZS35' || 
@@ -216,6 +211,7 @@ function initContainers() {
       continue;
     }
     
+    // Остальные в обычные пулы
     if (t.titan) DROP_POOLS.titan.push(id);
     else if (t.flame) DROP_POOLS.flame.push(id);
     else if (id === 'SHERIDAN') DROP_POOLS.missile.push(id);
@@ -223,6 +219,10 @@ function initContainers() {
     else if (t.tier <= 8) DROP_POOLS.rare.push(id);
     else DROP_POOLS.legendary.push(id);
   }
+  
+  console.log('📦 COLLECTION_DB инициализирован:', Object.keys(COLLECTION_DB).length, 'танков');
+  console.log('🪖 Малые уровни:', DROP_POOLS.lowlevels.length, 'танков');
+  console.log('👑 Mausekönig pool:', DROP_POOLS.mauskonig.length);
 }
 
 function getRarityColor(tier) {
@@ -305,11 +305,12 @@ function openContainerDirect(cid) {
       rwd.desc = "Все танки из пула уже есть!";
     } else {
       const tid = avail[Math.floor(Math.random() * avail.length)]; 
-      const td = activeDB[tid] || COLLECTION_DB[tid];
+      const td = DB[tid];
       GameState.owned.push(tid);
       rwd.tankId = tid;
       rwd.display = td.n + " [" + (CONFIG.TIER_ROMAN[td.tier] || "XI") + "]";
       
+      // Специальная обработка для Mausekönig
       if (tid === 'MAUSKONIG') {
         rwd.icon = "👑";
         rwd.color = "#ffd700";
@@ -844,6 +845,7 @@ function mkCollCard(id) {
   return card;
 }
 
+// Экспорт функций в window
 window.renderContainerGrid = renderContainerGrid;
 window.renderInventoryGrid = renderInventoryGrid;
 window.renderCollectionGrid = renderCollectionGrid;

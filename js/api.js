@@ -110,6 +110,17 @@ async function saveUserProgress(username, progressData) {
         modules: progressData.modules,
         upgrades: progressData.upgrades,
         upgrades_bought: progressData.upgradesBought,
+        client_total_battles: progressData.totalBattles,
+        camos: progressData.camos,
+        equipped_camo: progressData.equippedCamo,
+        crew: progressData.crew,
+        blueprints: progressData.blueprints,
+        collection_bonuses_claimed: progressData.collectionBonusesClaimed,
+        battle_pass: progressData.battlePass,
+        referral_code: progressData.referralCode,
+        referred_by: progressData.referredBy,
+        news_last_seen_id: progressData.newsLastSeenId,
+        tutorial_done: progressData.tutorialDone,
         updated_at: new Date().toISOString()
       })
       .eq('username', username);
@@ -167,7 +178,18 @@ async function loadUserProgress(username) {
         boosterStock: user.booster_stock || { xp: 0, gold: 0, silver: 0 },
         modules: user.modules || {},
         upgrades: user.upgrades || {},
-        upgradesBought: user.upgrades_bought || {}
+        upgradesBought: user.upgrades_bought || {},
+        totalBattles: user.client_total_battles || 0,
+        camos: user.camos || {},
+        equippedCamo: user.equipped_camo || {},
+        crew: user.crew || {},
+        blueprints: user.blueprints || {},
+        collectionBonusesClaimed: user.collection_bonuses_claimed || [],
+        battlePass: user.battle_pass || { season: 1, level: 1, xp: 0, premium: false, claimedFree: [], claimedPremium: [] },
+        referralCode: user.referral_code || null,
+        referredBy: user.referred_by || null,
+        newsLastSeenId: user.news_last_seen_id || 0,
+        tutorialDone: user.tutorial_done || false
       }
     };
   } catch (error) {

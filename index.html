@@ -66,6 +66,22 @@
     <button class="modal-tab" onclick="switchTab('news', this); renderNewsFeed();">📰 Новости <span id="news-badge"></span></button>
 </div>
 
+<!-- Содержимое вкладки Магазина контейнеров -->
+<div id="tab-shop" class="tab-content active-tab">
+    <div id="container-grid" class="container-grid"></div>
+</div>
+
+<!-- Содержимое вкладки Инвентаря -->
+<div id="tab-inventory" class="tab-content">
+    <div id="inventory-empty" style="display:none;text-align:center;padding:30px;color:#888;">🎒 Инвентарь пуст</div>
+    <div id="inventory-grid" class="inventory-grid"></div>
+</div>
+
+<!-- Содержимое вкладки Коллекции -->
+<div id="tab-collection" class="tab-content">
+    <div id="collection-grid" class="collection-grid"></div>
+</div>
+
 <!-- Содержимое вкладки Боевого Пропуска -->
 <div id="tab-bp" class="tab-content">
     <!-- Генерируется динамически через bp.js -->

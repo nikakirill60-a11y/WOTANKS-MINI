@@ -109,7 +109,7 @@ function update(){
 function updateAI(){
   for(var ai=0;ai<GameState.units.length;ai++){
     var u=GameState.units[ai];
-    if(u.dead||u===GameState.player)continue;
+    if(u.dead||u===GameState.player||u.isRemotePlayer)continue;
     
     // Инициализация ИИ параметров
     if(!u.aiState){

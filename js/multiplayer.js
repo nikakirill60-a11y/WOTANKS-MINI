@@ -4,7 +4,11 @@ console.log('🌐 multiplayer.js загружен');
 let positionSubscription = null;
 let shotSubscription = null;
 let isRoomHost = false;
-let pollingInterval = null;
+let pollingInterval = null;        // поллинг лобби (ожидание игроков)
+let positionsPollInterval = null;  // резервный поллинг позиций во время боя
+let shotsPollInterval = null;      // резервный поллинг выстрелов во время боя
+let lastProcessedShotId = 0;
+let backfillPollInterval = null;   // добор недостающих танков в первые секунды боя
 
 // ========== ЭКРАН ЛОББИ ==========
 function showWaitingScreen(roomCode, mode, players, isHost) {
@@ -257,7 +261,7 @@ async function subscribeToRoomChanges(roomId, mode) {
   startPolling(roomId, mode);
 }
 
-// ========== POLLING ==========
+// ========== POLLING (ЛОББИ) ==========
 function startPolling(roomId, mode) {
   if (pollingInterval) clearInterval(pollingInterval);
 
@@ -345,6 +349,7 @@ async function startMultiplayerBattle(roomId, mode) {
   GameState.multiplayerAllies = [];
   GameState.otherPlayers = {};
   GameState.units = [];
+  lastProcessedShotId = 0;
   
   try {
     const { data: room } = await supabaseClient
@@ -388,12 +393,67 @@ async function startMultiplayerBattle(roomId, mode) {
   const bonuses = getAllBonuses(GameState.selected);
   GameState.player = new Tank(GameState.selected, -1500, 0, 'player', bonuses);
   GameState.units = [GameState.player];
-  
-  // ✅ Создаём ПРЕ-танки для других игроков
+
+  // ✅ Публикуем своё присутствие СРАЗУ, ещё до выбора управления —
+  // это резко снижает шанс, что другие клиенты не увидят наш танк
+  // из-за гонки (createOtherPlayersTanks у них выполнится раньше,
+  // чем мы успеем один раз выбрать управление и вызвать startBattle).
+  earlyPresenceUpsert(roomId);
+
+  // ✅ Создаём танки для игроков, которые уже успели засветиться
   await createOtherPlayersTanks(roomId);
-  
+
+  // ✅ Добираем недостающих союзников/врагов ещё несколько раз в течение
+  // первых секунд боя — на случай, если кто-то ещё не успел синкнуться.
+  startBackfillPolling(roomId);
+
   GameState.pendingBattle = mode * 2;
   document.getElementById('control-modal').classList.add('show');
+}
+
+// ========== РАННЕЕ ОПОВЕЩЕНИЕ О СВОЁМ ПРИСУТСТВИИ ==========
+// Лёгкий upsert без ожидания выбора управления игроком — чтобы другие
+// участники боя увидели нас как можно раньше.
+async function earlyPresenceUpsert(roomId) {
+  if (!supabaseClient || !GameState.player) return;
+  try {
+    await supabaseClient
+      .from('battle_players')
+      .upsert({
+        room_id: roomId,
+        username: currentUser,
+        tank_id: GameState.selected,
+        hp: GameState.player.hp,
+        max_hp: GameState.player.maxHp,
+        x: GameState.player.x,
+        y: GameState.player.y,
+        angle: GameState.player.angle,
+        turret_angle: GameState.player.tAngle,
+        is_alive: true,
+        track_broken: false,
+        on_fire: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'room_id,username' });
+  } catch (error) {
+    console.error('⚠️ Ошибка ранней публикации присутствия:', error);
+  }
+}
+
+// Добираем недостающих игроков раз в 500мс в течение первых ~6 секунд боя
+function startBackfillPolling(roomId) {
+  if (backfillPollInterval) clearInterval(backfillPollInterval);
+  let ticks = 0;
+  backfillPollInterval = setInterval(async () => {
+    ticks++;
+    const need = GameState.multiplayerAllies.length + GameState.multiplayerEnemies.length;
+    const have = Object.keys(GameState.otherPlayers).length;
+    if (have >= need || ticks > 12) {
+      clearInterval(backfillPollInterval);
+      backfillPollInterval = null;
+      return;
+    }
+    await createOtherPlayersTanks(roomId);
+  }, 500);
 }
 
 // ========== СОЗДАНИЕ ТАНКОВ ИГРОКОВ ==========
@@ -402,35 +462,48 @@ async function createOtherPlayersTanks(roomId) {
     const { data } = await supabaseClient
       .from('battle_players')
       .select('*')
-      .eq('room_id', roomId);
+      .eq('room_id', roomId)
+      .order('updated_at', { ascending: true });
 
     if (data) {
+      // ✅ Дедупликация: если по одному пользователю пришло несколько строк
+      // (например, из-за отсутствия unique-constraint в БД), берём только
+      // самую свежую запись, а не создаём танк-призрак на каждую строку.
+      const latestByUser = {};
       for (const pos of data) {
-        if (pos.username !== currentUser) {
-          const isEnemy = GameState.multiplayerEnemies.includes(pos.username);
-          const isAlly = GameState.multiplayerAllies.includes(pos.username);
-          
-          if (isEnemy || isAlly) {
-            console.log('➕ Создаю танк:', pos.username, isEnemy ? 'ВРАГ' : 'СОЮЗНИК');
-            
-            const tank = new Tank(
-              pos.tank_id || 'T26',
-              isEnemy ? 1200 : -1200,
-              Math.random() * 400 - 200,
-              isEnemy ? 'enemy' : 'ally'
-            );
-            
-            tank.hp = pos.hp || tank.maxHp;
-            tank.maxHp = pos.max_hp || tank.maxHp;
-            tank.angle = pos.angle || (isEnemy ? Math.PI : 0);
-            tank.tAngle = pos.turret_angle || tank.angle;
-            
-            GameState.otherPlayers[pos.username] = tank;
-            GameState.units.push(tank);
-          }
+        latestByUser[pos.username] = pos;
+      }
+
+      for (const username in latestByUser) {
+        if (username === currentUser) continue;
+        if (GameState.otherPlayers[username]) continue; // уже создан
+
+        const pos = latestByUser[username];
+        const isEnemy = GameState.multiplayerEnemies.includes(username);
+        const isAlly = GameState.multiplayerAllies.includes(username);
+
+        if (isEnemy || isAlly) {
+          console.log('➕ Создаю танк:', username, isEnemy ? 'ВРАГ' : 'СОЮЗНИК');
+
+          const tank = new Tank(
+            pos.tank_id || 'T26',
+            typeof pos.x === 'number' ? pos.x : (isEnemy ? 1200 : -1200),
+            typeof pos.y === 'number' ? pos.y : (Math.random() * 400 - 200),
+            isEnemy ? 'enemy' : 'ally'
+          );
+
+          tank.hp = pos.hp || tank.maxHp;
+          tank.maxHp = pos.max_hp || tank.maxHp;
+          tank.angle = pos.angle || (isEnemy ? Math.PI : 0);
+          tank.tAngle = pos.turret_angle || tank.angle;
+          tank.dead = pos.is_alive === false;
+          tank.isRemotePlayer = true; // ✅ никогда не трогать ботовским AI
+
+          GameState.otherPlayers[username] = tank;
+          GameState.units.push(tank);
         }
       }
-      console.log('✅ Танки созданы. Всего юнитов:', GameState.units.length);
+      console.log('✅ Танки актуальны. Всего юнитов:', GameState.units.length);
     }
   } catch (error) {
     console.error('❌ Ошибка создания танков:', error);
@@ -469,23 +542,36 @@ async function syncPlayerPositions(roomId) {
           table: 'battle_players',
           filter: `room_id=eq.${roomId}`
         }, (payload) => {
-          const pos = payload.new;
-          if (pos && pos.username !== currentUser) {
-            updateOtherPlayer(pos);
+          try {
+            const pos = payload.new;
+            if (pos && pos.username !== currentUser) {
+              updateOtherPlayer(pos);
+            }
+          } catch (err) {
+            console.error('❌ Ошибка обработки события позиции:', err);
           }
         })
         .subscribe();
+    }
 
-      // Резервный polling
-      setInterval(async () => {
+    if (!positionsPollInterval) {
+      // Резервный polling — работает даже если Realtime недоступен/не
+      // включён для таблицы battle_players.
+      positionsPollInterval = setInterval(async () => {
+        if (!GameState.multiplayerMode || !GameState.currentRoomId) return;
         try {
           const { data } = await supabaseClient
             .from('battle_players')
             .select('*')
-            .eq('room_id', roomId)
+            .eq('room_id', GameState.currentRoomId)
             .neq('username', currentUser);
-          if (data) data.forEach(pos => updateOtherPlayer(pos));
-        } catch (err) {}
+          if (data) data.forEach(pos => {
+            try { updateOtherPlayer(pos); }
+            catch (err) { console.error('❌ Ошибка updateOtherPlayer (polling):', err); }
+          });
+        } catch (err) {
+          console.error('❌ Ошибка polling позиций:', err);
+        }
       }, 300);
     }
 
@@ -498,21 +584,24 @@ async function syncPlayerPositions(roomId) {
 }
 
 function updateOtherPlayer(posData) {
+  if (!posData || !posData.username) return;
+
   const isEnemy = GameState.multiplayerEnemies.includes(posData.username);
   const isAlly = GameState.multiplayerAllies.includes(posData.username);
 
   if (!isEnemy && !isAlly) return;
 
   let tank = GameState.otherPlayers[posData.username];
-  
+
   if (!tank) {
-    console.log('➕ Новый игрок:', pos.username);
+    console.log('➕ Новый игрок:', posData.username);
     tank = new Tank(
       posData.tank_id || 'T26',
       posData.x,
       posData.y,
       isEnemy ? 'enemy' : 'ally'
     );
+    tank.isRemotePlayer = true; // ✅ никогда не трогать ботовским AI
     GameState.otherPlayers[posData.username] = tank;
     GameState.units.push(tank);
     updateScoreboard();
@@ -542,19 +631,69 @@ async function syncPlayerShots(roomId) {
         table: 'player_shots',
         filter: `room_id=eq.${roomId}`
       }, (payload) => {
-        const shot = payload.new;
-        if (shot.username !== currentUser) {
-          GameState.bullets.push({
-            x: shot.x, y: shot.y, a: shot.angle,
-            team: 'enemy', dmg: 50, speed: 12,
-            color: '#ff8800', st: shot.shell_type,
-            shooter: { name: shot.username }
-          });
-          snd('shot');
+        try {
+          const shot = payload.new;
+          if (shot && shot.username !== currentUser) {
+            spawnRemoteShotBullet(shot);
+            if (shot.id) lastProcessedShotId = Math.max(lastProcessedShotId, shot.id);
+          }
+        } catch (err) {
+          console.error('❌ Ошибка обработки выстрела:', err);
         }
       })
       .subscribe();
   }
+
+  if (!shotsPollInterval) {
+    // ✅ Резервный polling для выстрелов — без него, если Realtime не
+    // включён на таблице player_shots, соперники вообще не видят
+    // чужую стрельбу.
+    shotsPollInterval = setInterval(async () => {
+      if (!GameState.multiplayerMode || !GameState.currentRoomId) return;
+      try {
+        let q = supabaseClient
+          .from('player_shots')
+          .select('*')
+          .eq('room_id', GameState.currentRoomId)
+          .neq('username', currentUser)
+          .order('id', { ascending: true })
+          .limit(20);
+        if (lastProcessedShotId) q = q.gt('id', lastProcessedShotId);
+
+        const { data } = await q;
+        if (data && data.length) {
+          data.forEach(shot => {
+            spawnRemoteShotBullet(shot);
+            if (shot.id) lastProcessedShotId = Math.max(lastProcessedShotId, shot.id);
+          });
+        }
+      } catch (err) {
+        console.error('❌ Ошибка polling выстрелов:', err);
+      }
+    }, 400);
+  }
+}
+
+// Создаёт локальную пулю для выстрела другого игрока с ПРАВИЛЬНОЙ
+// принадлежностью команде (важно для 2x2 — выстрел союзника не должен
+// считаться вражеским) и валидным shooter-объектом (иначе расчёт зоны
+// брони получает NaN).
+function spawnRemoteShotBullet(shot) {
+  const isFromEnemy = GameState.multiplayerEnemies.includes(shot.username);
+  const isFromAlly = GameState.multiplayerAllies.includes(shot.username);
+  if (!isFromEnemy && !isFromAlly) return; // выстрел не из этого боя/неизвестный игрок
+
+  const bulletTeam = isFromEnemy ? 'enemy' : 'ally';
+  const shooterTank = GameState.otherPlayers[shot.username];
+
+  GameState.bullets.push({
+    x: shot.x, y: shot.y, a: shot.angle,
+    team: bulletTeam, dmg: 50, speed: 12,
+    color: isFromEnemy ? '#ff8800' : '#3498db',
+    st: shot.shell_type,
+    shooter: shooterTank || { x: shot.x, y: shot.y, team: bulletTeam, name: shot.username }
+  });
+  snd('shot');
 }
 
 async function sendShot(x, y, angle, shellType) {
@@ -588,7 +727,23 @@ function endMultiplayerBattle() {
     pollingInterval = null;
   }
 
+  if (positionsPollInterval) {
+    clearInterval(positionsPollInterval);
+    positionsPollInterval = null;
+  }
+
+  if (shotsPollInterval) {
+    clearInterval(shotsPollInterval);
+    shotsPollInterval = null;
+  }
+
+  if (backfillPollInterval) {
+    clearInterval(backfillPollInterval);
+    backfillPollInterval = null;
+  }
+
   GameState.otherPlayers = {};
+  lastProcessedShotId = 0;
   
   if (GameState.currentRoomId && supabaseClient) {
     supabaseClient.from('battle_rooms').update({ status: 'finished' }).eq('id', GameState.currentRoomId);

@@ -2,18 +2,29 @@
 
 const AudioSystem = {
     context: null,
-    
+    masterGain: null,
+
     init() {
         this.context = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.context.createGain();
+        // Начальная громкость — из настроек игрока (см. settings.js), 1 по умолчанию
+        var initial = (typeof GameState !== 'undefined' && GameState.settings && typeof GameState.settings.volume === 'number') ? GameState.settings.volume : 1;
+        this.masterGain.gain.value = initial;
+        this.masterGain.connect(this.context.destination);
     },
-    
+
+    setVolume(v) {
+        if (!this.context) this.init();
+        this.masterGain.gain.value = Math.max(0, Math.min(1, v));
+    },
+
     play(type, volume = 0.3) {
         if (!this.context) this.init();
         
         const o = this.context.createOscillator();
         const g = this.context.createGain();
         o.connect(g);
-        g.connect(this.context.destination);
+        g.connect(this.masterGain);
         g.gain.value = volume;
         
         switch(type) {

@@ -97,7 +97,12 @@ async function saveProgress() {
     referralCode: GameState.referralCode,
     referredBy: GameState.referredBy,
     newsLastSeenId: GameState.newsLastSeenId,
-    tutorialDone: GameState.tutorialDone
+    tutorialDone: GameState.tutorialDone,
+    // NEW: достижения / ежедневные задания / настройки
+    achievements: GameState.achievements,
+    lifetimeWins: GameState.lifetimeWins,
+    dailyQuests: GameState.dailyQuests,
+    settings: GameState.settings
   };
 
   // Сохраняем локально
@@ -161,6 +166,11 @@ async function loadProgress(username) {
     GameState.referredBy = data.referredBy || null;
     GameState.newsLastSeenId = data.newsLastSeenId || 0;
     GameState.tutorialDone = data.tutorialDone || false;
+    // NEW
+    GameState.achievements = data.achievements || { unlocked: [] };
+    GameState.lifetimeWins = data.lifetimeWins || 0;
+    GameState.dailyQuests = data.dailyQuests || null;
+    GameState.settings = Object.assign({ volume: 1, showTracks: true, lang: 'ru' }, data.settings || {});
 
     if (!GameState.owned.includes(GameState.selected)) {
       GameState.selected = GameState.owned[0];
@@ -180,11 +190,18 @@ async function loadProgress(username) {
     GameState.modules = {};
     GameState.upgrades = {};
     GameState.upgradesBought = {};
+    // NEW
+    GameState.achievements = { unlocked: [] };
+    GameState.lifetimeWins = 0;
+    GameState.dailyQuests = null;
+    GameState.settings = { volume: 1, showTracks: true, lang: 'ru' };
   }
 
   if (typeof updateQuestUI === 'function') updateQuestUI();
   if (typeof updateInvCount === 'function') updateInvCount();
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
+  if (typeof applySettings === 'function') applySettings();
+  if (typeof refreshDailyQuests === 'function') refreshDailyQuests();
 }
 
 // ========== РЕГИСТРАЦИЯ ==========

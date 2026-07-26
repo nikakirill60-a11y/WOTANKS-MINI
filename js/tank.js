@@ -84,6 +84,7 @@ class Tank {
     
     // Двухстволка
     this.dualGun = d.dualGun || false;
+    this.aa = d.aa || false;
     this.dualDelay = d.dualDelay || 400;
     this.dualReady = [true, true];
     this.dualNext = 0;
@@ -115,7 +116,7 @@ class Tank {
       ctx.fillStyle = this.premium ? "#f1c40f" : "#fff";
       ctx.font = "bold 9px Arial";
       ctx.textAlign = "center";
-      var fi = this.flame ? '🔥 ' : (this.missile ? '🚀 ' : (this.titan ? '⚙️ ' : (this.dualGun ? '👑 ' : '')));
+      var fi = this.flame ? '🔥 ' : (this.missile ? '🚀 ' : (this.titan ? '⚙️ ' : (this.aa ? '🛩️ ' : (this.dualGun ? '👑 ' : ''))));
       var pi = this.premium && !this.flame && !this.missile && !this.titan && !this.dualGun ? '★ ' : '';
       ctx.fillText(fi + pi + this.name + ' [' + CONFIG.TIER_ROMAN[this.tier] + ']', 0, -50);
       
@@ -454,6 +455,7 @@ class Tank {
         if (self.flameTick % 10 === 0) dmgLog('🔥-' + Math.floor(dmg), '#ff0000');
         GameState.shakeTimer = 2;
         GameState.shakeIntensity = 1;
+        if (typeof onPlayerHit === 'function') onPlayerHit(Math.atan2(u.y - oy, u.x - ox), dmg);
       }
       
       if (self.flameTick % 5 === 0) {

@@ -345,14 +345,19 @@ function updateBullets(){
         var u2=GameState.units[ui2];
         var fr=(b.team===u2.team)||(b.team==='player'&&u2.team==='ally')||(b.team==='ally'&&u2.team==='player');
         if(!u2.dead&&!fr&&Math.hypot(u2.x-b.x,u2.y-b.y)<30*u2.s){
-          if(checkRicochet(b.shooter,u2,b.st)&&!b.guided){hit=true;sparks(b.x,b.y);snd('rico');if(b.team==='player')crewMsg("Рикошет!","#ff8800");break;}
+          if(checkRicochet(b.shooter,u2,b.st)&&!b.guided){
+            hit=true;sparks(b.x,b.y);snd('rico');
+            if(b.team==='player'){crewMsg("Рикошет!","#ff8800");if(typeof onPlayerShotResult==='function')onPlayerShotResult(false);}
+            if(u2===GameState.player&&typeof onPlayerBlockedDamage==='function')onPlayerBlockedDamage(b.dmg);
+            break;
+          }
           var resolved=resolveHit(b,u2);
           var zoneDmg=resolved.dmg;
           u2.hp-=zoneDmg;hit=true;sparksAdvanced(b.x,b.y,b.a);spawnShellCasing(b.shooter);snd('hit');
           if(!u2.trackBroken&&Math.random()<0.1){u2.trackBroken=true;if(u2===GameState.player)crewMsg("Гусеница!","#e74c3c");}
-          if(b.team==='player'){GameState.battleDmg+=zoneDmg;dmgLog('-'+Math.floor(zoneDmg)+' ('+CONFIG.ARMOR_ZONES[resolved.zone].label+')','#ff4444');crewMsg(CONFIG.CREW_MESSAGES.HIT[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.HIT.length)],'#2ecc71');addCrewXP(b.shooter,Math.floor(zoneDmg*0.05));addBattlePassXP(Math.floor(zoneDmg*0.1));}
-          if(u2===GameState.player){dmgLog('-'+Math.floor(zoneDmg),'#ff0000');GameState.shakeTimer=5;GameState.shakeIntensity=3;}
-          if(u2.hp<=0){u2.dead=true;boom(u2.x,u2.y);snd('boom');if(b.team==='player'){GameState.XP+=u2.tier*500;GameState.battleKills++;crewMsg(CONFIG.CREW_MESSAGES.KILL[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.KILL.length)],'#f1c40f');addBattlePassXP(150);}}
+          if(b.team==='player'){GameState.battleDmg+=zoneDmg;dmgLog('-'+Math.floor(zoneDmg)+' ('+CONFIG.ARMOR_ZONES[resolved.zone].label+')','#ff4444');crewMsg(CONFIG.CREW_MESSAGES.HIT[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.HIT.length)],'#2ecc71');addCrewXP(b.shooter,Math.floor(zoneDmg*0.05));addBattlePassXP(Math.floor(zoneDmg*0.1));if(typeof onPlayerShotResult==='function')onPlayerShotResult(true);}
+          if(u2===GameState.player){dmgLog('-'+Math.floor(zoneDmg),'#ff0000');GameState.shakeTimer=5;GameState.shakeIntensity=3;if(typeof onPlayerHit==='function')onPlayerHit(b.a,zoneDmg);}
+          if(u2.hp<=0){u2.dead=true;boom(u2.x,u2.y);snd('boom');if(b.team==='player'){GameState.XP+=u2.tier*500;GameState.battleKills++;crewMsg(CONFIG.CREW_MESSAGES.KILL[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.KILL.length)],'#f1c40f');addBattlePassXP(150);if(typeof onPlayerKill==='function')onPlayerKill(u2);}}
           updateScoreboard();break;
         }
       }

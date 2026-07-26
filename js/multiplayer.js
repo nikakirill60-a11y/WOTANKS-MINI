@@ -5,10 +5,84 @@ let positionSubscription = null;
 let shotSubscription = null;
 let isRoomHost = false;
 let pollingInterval = null;        // поллинг лобби (ожидание игроков)
-let positionsPollInterval = null;  // резервный поллинг позиций во время боя
-let shotsPollInterval = null;      // резервный поллинг выстрелов во время боя
+let positionsPollInterval = null;  // резервный поллинг позиций во время боя (fallback, редкий)
+let shotsPollInterval = null;      // резервный поллинг выстрелов во время боя (fallback, редкий)
 let lastProcessedShotId = 0;
 let backfillPollInterval = null;   // добор недостающих танков в первые секунды боя
+
+// ========== REALTIME BROADCAST (низкая задержка, без записи в БД) ==========
+// Вместо того чтобы гонять позиции/выстрелы только через поллинг таблиц
+// battle_players/player_shots (запись в БД + опрос раз в 300-400мс),
+// используем Supabase Realtime Broadcast — сообщения летят напрямую
+// между подключёнными клиентами комнаты, минуя базу данных. Это резко
+// снижает задержку и нагрузку на БД. Запись в БД остаётся, но реже —
+// как резервный канал (переподключение, отставшие клиенты, статистика).
+let broadcastChannel = null;
+let broadcastPosInterval = null;
+const BROADCAST_POS_MS = 100;        // как часто рассылаем свою позицию по broadcast
+const DB_BACKUP_POS_MS = 2000;       // как часто теперь пишем позицию в БД (резерв, было 100мс)
+const DB_BACKUP_POLL_MS = 1500;      // как часто теперь опрашиваем БД (резерв, было 300мс)
+const DB_BACKUP_SHOT_POLL_MS = 2000; // резервный опрос выстрелов (было 400мс)
+
+function initBroadcastChannel(roomId) {
+  if (!supabaseClient || !supabaseClient.channel) return;
+  if (broadcastChannel) return;
+
+  broadcastChannel = supabaseClient.channel(`battle_bc:${roomId}`, {
+    config: { broadcast: { self: false, ack: false } }
+  });
+
+  broadcastChannel
+    .on('broadcast', { event: 'pos' }, (msg) => {
+      try {
+        const pos = msg && msg.payload;
+        if (pos && pos.username && pos.username !== currentUser) updateOtherPlayer(pos);
+      } catch (err) {
+        console.error('❌ Ошибка broadcast pos:', err);
+      }
+    })
+    .on('broadcast', { event: 'shot' }, (msg) => {
+      try {
+        const shot = msg && msg.payload;
+        if (shot && shot.username && shot.username !== currentUser) spawnRemoteShotBullet(shot);
+      } catch (err) {
+        console.error('❌ Ошибка broadcast shot:', err);
+      }
+    })
+    .subscribe((status) => {
+      console.log('📡 Broadcast канал боя:', status);
+    });
+
+  if (broadcastPosInterval) clearInterval(broadcastPosInterval);
+  broadcastPosInterval = setInterval(() => {
+    if (!GameState.multiplayerMode || !GameState.player || !broadcastChannel) return;
+    broadcastChannel.send({
+      type: 'broadcast',
+      event: 'pos',
+      payload: {
+        username: currentUser,
+        tank_id: GameState.selected,
+        hp: GameState.player.hp,
+        max_hp: GameState.player.maxHp,
+        x: GameState.player.x,
+        y: GameState.player.y,
+        angle: GameState.player.angle,
+        turret_angle: GameState.player.tAngle,
+        is_alive: !GameState.player.dead,
+        track_broken: GameState.player.trackBroken || false,
+        on_fire: GameState.player.onFire || false
+      }
+    });
+  }, BROADCAST_POS_MS);
+}
+
+function teardownBroadcastChannel() {
+  if (broadcastPosInterval) { clearInterval(broadcastPosInterval); broadcastPosInterval = null; }
+  if (broadcastChannel) {
+    try { broadcastChannel.unsubscribe(); } catch (e) {}
+    broadcastChannel = null;
+  }
+}
 
 // ========== ЭКРАН ЛОББИ ==========
 function showWaitingScreen(roomCode, mode, players, isHost) {
@@ -350,7 +424,11 @@ async function startMultiplayerBattle(roomId, mode) {
   GameState.otherPlayers = {};
   GameState.units = [];
   lastProcessedShotId = 0;
-  
+
+  // ✅ Поднимаем Broadcast-канал сразу — это основной, быстрый путь
+  // передачи позиций/выстрелов для этого боя.
+  initBroadcastChannel(roomId);
+
   try {
     const { data: room } = await supabaseClient
       .from('battle_rooms')
@@ -555,8 +633,10 @@ async function syncPlayerPositions(roomId) {
     }
 
     if (!positionsPollInterval) {
-      // Резервный polling — работает даже если Realtime недоступен/не
-      // включён для таблицы battle_players.
+      // Резервный polling — уже не основной путь (им теперь занимается
+      // Broadcast, см. initBroadcastChannel), но оставлен на случай, если
+      // Broadcast недоступен, а также для медленного добора состояния,
+      // если клиент пропустил broadcast-сообщение (сеть моргнула).
       positionsPollInterval = setInterval(async () => {
         if (!GameState.multiplayerMode || !GameState.currentRoomId) return;
         try {
@@ -572,11 +652,13 @@ async function syncPlayerPositions(roomId) {
         } catch (err) {
           console.error('❌ Ошибка polling позиций:', err);
         }
-      }, 300);
+      }, DB_BACKUP_POLL_MS);
     }
 
+    // Запись в БД теперь редкая (резерв для переподключения/статистики) —
+    // основную частоту (100мс) даёт broadcastChannel.send() в initBroadcastChannel().
     if (GameState.multiplayerMode && GameState.gameActive) {
-      setTimeout(() => syncPlayerPositions(roomId), 100);
+      setTimeout(() => syncPlayerPositions(roomId), DB_BACKUP_POS_MS);
     }
   } catch (error) {
     console.error('❌ Ошибка синхронизации:', error);
@@ -670,7 +752,7 @@ async function syncPlayerShots(roomId) {
       } catch (err) {
         console.error('❌ Ошибка polling выстрелов:', err);
       }
-    }, 400);
+    }, DB_BACKUP_SHOT_POLL_MS);
   }
 }
 
@@ -698,6 +780,19 @@ function spawnRemoteShotBullet(shot) {
 
 async function sendShot(x, y, angle, shellType) {
   if (!GameState.currentRoomId || !GameState.multiplayerMode || !supabaseClient) return;
+
+  // ✅ Быстрый путь: рассылаем выстрел мгновенно всем в комнате через
+  // Broadcast — соперники видят снаряд без ожидания записи в БД.
+  if (broadcastChannel) {
+    broadcastChannel.send({
+      type: 'broadcast',
+      event: 'shot',
+      payload: { username: currentUser, x: x, y: y, angle: angle, shell_type: shellType }
+    });
+  }
+
+  // Запись в БД остаётся (не блокирует геймплей) — нужна для отставших
+  // клиентов без активного broadcast-канала и для истории/бэкфилла.
   try {
     await supabaseClient.from('player_shots').insert([{
       room_id: GameState.currentRoomId,
@@ -711,6 +806,8 @@ async function sendShot(x, y, angle, shellType) {
 
 function endMultiplayerBattle() {
   GameState.multiplayerMode = false;
+
+  teardownBroadcastChannel();
 
   if (positionSubscription) {
     positionSubscription.unsubscribe();

@@ -121,6 +121,10 @@ async function saveUserProgress(username, progressData) {
         referred_by: progressData.referredBy,
         news_last_seen_id: progressData.newsLastSeenId,
         tutorial_done: progressData.tutorialDone,
+        achievements: progressData.achievements,
+        lifetime_wins: progressData.lifetimeWins,
+        daily_quests: progressData.dailyQuests,
+        settings: progressData.settings,
         updated_at: new Date().toISOString()
       })
       .eq('username', username);
@@ -189,7 +193,11 @@ async function loadUserProgress(username) {
         referralCode: user.referral_code || null,
         referredBy: user.referred_by || null,
         newsLastSeenId: user.news_last_seen_id || 0,
-        tutorialDone: user.tutorial_done || false
+        tutorialDone: user.tutorial_done || false,
+        achievements: user.achievements || { unlocked: [] },
+        lifetimeWins: user.lifetime_wins || 0,
+        dailyQuests: user.daily_quests || null,
+        settings: user.settings || { volume: 0.3, showTracks: true, lang: 'ru' }
       }
     };
   } catch (error) {

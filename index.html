@@ -64,6 +64,9 @@
     <button class="modal-tab" onclick="switchTab('blueprints', this); renderBlueprintsGrid();">📐 Чертежи</button>
     <button class="modal-tab" onclick="switchTab('referral', this); SocialSystem.renderReferral();">🔗 Друзья</button>
     <button class="modal-tab" onclick="switchTab('news', this); renderNewsFeed();">📰 Новости <span id="news-badge"></span></button>
+    <!-- NEW: достижения и ежедневные задачи -->
+    <button class="modal-tab" onclick="switchTab('achievements', this); renderAchievementsGrid();">🏆 Достижения</button>
+    <button class="modal-tab" onclick="switchTab('quests', this); refreshDailyQuests();">📋 Задачи <span id="daily-quests-badge"></span></button>
 </div>
 
 <!-- Содержимое вкладки Магазина контейнеров -->
@@ -106,6 +109,7 @@
             <input type="number" id="market-sell-gold" value="0" style="width:100%; margin-bottom:10px;">
             
             <button class="btn" style="width:100%;" onclick="SocialSystem.sellTank(document.getElementById('market-sell-select').value, parseInt(document.getElementById('market-sell-gold').value), 0)">Выставить на рынок</button>
+            <button class="btn" style="width:100%;margin-top:6px;background:#8e44ad" onclick="var sel=document.getElementById('market-sell-select');var id=sel.value;showPriceHistory(id,'tank', DB[id]?DB[id].n:id)">📈 История цен этого танка</button>
         </div>
     </div>
 </div>
@@ -133,6 +137,16 @@
 <!-- NEW: Содержимое вкладки Новости -->
 <div id="tab-news" class="tab-content">
     <div id="news-feed"><!-- заполняется news.js --></div>
+</div>
+
+<!-- NEW: Содержимое вкладки Достижений -->
+<div id="tab-achievements" class="tab-content">
+    <div id="achievements-grid" style="padding:10px"><!-- заполняется achievements.js --></div>
+</div>
+
+<!-- NEW: Содержимое вкладки Ежедневных задач -->
+<div id="tab-quests" class="tab-content">
+    <div id="daily-quests-grid" style="padding:10px"><!-- заполняется daily-quests.js --></div>
 </div>
 
 </div><!-- /container-modal -->
@@ -220,6 +234,8 @@
       <button class="btn btn-upgrade" onclick="showUpgrades()">🔩 ПРОКАЧКА</button>
       <!-- NEW: обучение -->
       <button class="btn" style="background:#8e44ad" onclick="startTutorial()">🎓 ОБУЧЕНИЕ</button>
+      <!-- NEW: настройки -->
+      <button class="btn" style="background:#555" onclick="showSettings()">⚙️</button>
     </div>
   </div>
 
@@ -425,6 +441,11 @@
     <script src="js/news.js"></script>                  <!-- NEW: новости ангара -->
     <script src="js/tutorial.js"></script>              <!-- NEW: интерактивное обучение -->
     <script src="js/perf-hud.js"></script>              <!-- NEW: индикатор пинга/FPS -->
+    <script src="js/achievements.js"></script>          <!-- NEW: достижения/медали -->
+    <script src="js/damage-indicator.js"></script>      <!-- NEW: индикатор направления урона -->
+    <script src="js/daily-quests.js"></script>           <!-- NEW: ежедневные задачи -->
+    <script src="js/settings.js"></script>               <!-- NEW: панель настроек -->
+    <script src="js/market-history.js"></script>          <!-- NEW: история цен рынка -->
 
 <script>
   // Инициализация при загрузке

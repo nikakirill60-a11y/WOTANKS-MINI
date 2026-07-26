@@ -28,6 +28,7 @@ const COLLECTION_DB = {
   TYPE5: { n: "Type 5 Heavy", nat: "japan", tier: 10, gold: 5000, hp: 3500, dmg: 900, s: 1.8, reload: 8000, off: 0, vr: 350, camo: 0.02, cls: 'ht', armor: 300, nc: '#d4a574', premium: true, collection: true, desc: "Японский сверхтяжёлый танк." },
   KV220BT: { n: "КВ-220-2 Бета", nat: "ussr", tier: 6, hp: 950, dmg: 160, s: 0.9, off: 5, vr: 330, camo: 0.1, cls: 'ht', nc: '#8e44ad', premium: true, collection: true, armor: 120, desc: "Уникальный танк бета-теста. Недоступен в контейнерах." },
   T3485VIC: { n: "Т-34-85 Победный", nat: "ussr", tier: 6, hp: 950, dmg: 180, s: 1, off: 5, vr: 360, camo: 0.25, cls: 'mt', nc: '#e74c3c', premium: true, collection: true, desc: "Специальная версия в честь 23 февраля. За победу!" },
+  T34ZSU: { n: "Т-34 Зенитная", nat: "ussr", tier: 5, hp: 820, dmg: 55, s: 1.05, off: 5, vr: 400, camo: 0.16, cls: 'mt', armor: 45, nc: '#5d7a45', premium: true, collection: true, aa: true, dualGun: true, dualDelay: 180, reload: 1500, desc: "Зенитная версия Т-34 со спаренной крупнокалиберной установкой в открытой рубке. Высокая скорострельность и лучший в игре обзор — эффективна против лёгких и быстрых целей, но слабо бронирована." },
 
   // TITAN серия
   TITAN_MK1: { n: "Titan mk.I", nat: "uk", tier: 5, hp: 700, dmg: 130, s: 0.9, off: 5, vr: 340, camo: 0.22, cls: 'mt', nc: '#4a8fb5', premium: true, collection: true, titan: true, mag: 2, reload: 4000, armor: 70, desc: "Титановый корпус. Барабан на 2 снаряда." },

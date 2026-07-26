@@ -132,6 +132,15 @@ const SocialSystem = {
         btn.innerText = l.seller === currentUser ? 'Снять' : 'Купить';
         btn.onclick = () => { l.seller === currentUser ? this.cancelOffer(l.id) : this.buyOffer(l.id); };
         row.appendChild(btn);
+
+        const histBtn = document.createElement('button');
+        histBtn.className = 'btn btn-sm';
+        histBtn.style.background = '#8e44ad';
+        histBtn.innerText = '📈';
+        histBtn.title = 'История цен';
+        histBtn.onclick = () => { if (typeof showPriceHistory === 'function') showPriceHistory(l.item_id, l.item_type, name); };
+        row.appendChild(histBtn);
+
         box.appendChild(row);
       });
     } catch (error) {
@@ -157,6 +166,17 @@ const SocialSystem = {
       }
 
       await supabaseClient.from('marketplace_listings').update({ status: 'sold', buyer: currentUser }).eq('id', listingId).eq('status', 'active');
+
+      // ✅ Логируем продажу для истории цен (график цен на вкладке рынка)
+      supabaseClient.from('market_history').insert([{
+        item_type: listing.item_type,
+        item_id: listing.item_id,
+        price: listing.price,
+        currency: listing.currency,
+        seller: listing.seller,
+        buyer: currentUser,
+        sold_at: new Date().toISOString()
+      }]).then(() => {}, (err) => console.error('⚠️ Ошибка записи истории цен:', err));
 
       if (listing.item_type === 'tank') { if (GameState.owned.indexOf(listing.item_id) === -1) GameState.owned.push(listing.item_id); }
       else if (listing.item_type === 'camo') GameState.camos[listing.item_id] = true;

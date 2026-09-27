@@ -180,7 +180,7 @@ async function loadProgress(username) {
     GameState.XP = 500;
     GameState.GOLD = 0;
     GameState.SILVER = 5000;
-    GameState.owned = ["T26", "PZ2", "CRUS2", "VAEB", "R35"];
+    GameState.owned = ["T26", "PZ2", "T1CUNN", "CRUS2", "RENOTSU", "VAEB", "R35", "STRV21"];
     GameState.selected = "T26";
     GameState.usedPromos = [];
     GameState.quest23 = { active: true, kills: 0, target: 15, claimed: false };

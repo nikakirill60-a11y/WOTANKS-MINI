@@ -13,7 +13,16 @@ const CONFIG = {
     RICO: ["Рикошет!", "Не пробили!"],
     KILL: ["Враг уничтожен!", "Цель уничтожена!"]
   },
-  NATIONS: { ussr: 'СССР', germany: 'Германия', france: 'Франция', uk: 'Британия', china: 'Китай', japan: 'Япония' },
+  NATIONS: {
+    ussr: 'СССР',
+    germany: 'Германия',
+    usa: 'США',
+    uk: 'Британия',
+    japan: 'Япония',
+    china: 'Китай',
+    france: 'Франция',
+    european: 'Сборная Европы'
+  },
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
   PROMOCODES: {
     "BETA_TEST": { tank: "KV220BT" },
@@ -154,7 +163,7 @@ const GameState = {
   SILVER: 5000,
   
   // Танки
-  owned: ["T26", "PZ2", "CRUS2", "VAEB", "R35"],
+  owned: ["T26", "PZ2", "T1CUNN", "CRUS2", "RENOTSU", "VAEB", "R35", "STRV21"],
   selected: "T26",
   curNat: "ussr",
   
@@ -272,7 +281,9 @@ function updateScale() {
   const tc = document.getElementById('tree-canvas');
   if (tc) {
     tc.width = 2200 * nodeScale;
-    tc.height = 1100 * nodeScale;
+    tc.height = 1400 * nodeScale;
+    tc.style.width = (2200 * nodeScale) + 'px';
+    tc.style.height = (1400 * nodeScale) + 'px';
   }
 }
 

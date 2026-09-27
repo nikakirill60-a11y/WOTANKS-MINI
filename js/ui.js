@@ -536,11 +536,17 @@ function renderTree() {
   var nodes = document.getElementById('nodes');
   var tc = document.getElementById('tree-canvas');
   if (!nodes || !tc) return;
-  var ctx3 = tc.getContext('2d');
   var sc = nodeScale;
+  tc.width = 2200 * sc;
+  tc.height = 1400 * sc;
+  tc.style.width = (2200 * sc) + 'px';
+  tc.style.height = (1400 * sc) + 'px';
+  nodes.style.width = (2200 * sc) + 'px';
+  nodes.style.height = (1400 * sc) + 'px';
+  var ctx3 = tc.getContext('2d');
   nodes.innerHTML = '';
   ctx3.clearRect(0, 0, tc.width, tc.height);
-  ctx3.strokeStyle = "#444";
+  ctx3.strokeStyle = "#555";
   ctx3.lineWidth = 2 * sc;
   for (var id in DB) {
     var t = DB[id];
@@ -549,7 +555,7 @@ function renderTree() {
     var sy = t.y * sc;
     if (t.p && DB[t.p] && !DB[t.p].collection) {
       ctx3.beginPath();
-      ctx3.moveTo(DB[t.p].x * sc + 62 * sc, DB[t.p].y * sc + 24 * sc);
+      ctx3.moveTo(DB[t.p].x * sc + 120 * sc, DB[t.p].y * sc + 24 * sc);
       ctx3.lineTo(sx, sy + 24 * sc);
       ctx3.stroke();
     }

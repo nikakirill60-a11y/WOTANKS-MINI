@@ -61,7 +61,7 @@ async function registerUser(username, password) {
         xp: 500,
         gold: 0,
         silver: 5000,
-        owned_tanks: ["T26", "PZ2", "CRUS2", "VAEB", "R35"],
+        owned_tanks: ["T26", "PZ2", "T1CUNN", "CRUS2", "RENOTSU", "VAEB", "R35", "STRV21"],
         selected_tank: "T26",
         used_promos: [],
         quest_23: { active: true, kills: 0, target: 15, claimed: false },

@@ -25,7 +25,16 @@ const COLLECTION_DB = {
   SPRUT99: { n: "Спрут-99", nat: "ussr", tier: 10, gold: 4999, hp: 1400, dmg: 45, s: 0.85, mag: 99, reload: 1000, off: 5, vr: 360, camo: 0.28, cls: 'mt', nc: '#ff6600', premium: true, collection: true, desc: "Особенный танк с барабаном." },
   WTE100: { n: "WT auf E100", nat: "germany", tier: 10, gold: 2000, hp: 2000, dmg: 490, s: 1.3, mag: 5, off: -12, vr: 400, camo: 0.05, cls: 'td', nc: '#7a7a7a', premium: true, collection: true, desc: "Немецкая ПТ-САУ." },
   MAUSKONIG: { n: "Mausekönig", nat: "germany", tier: 11, gold: 9999, hp: 4000, dmg: 650, s: 1.8, off: 5, vr: 380, camo: 0.02, cls: 'ht', armor: 350, nc: '#7a7a7a', premium: true, collection: true, dualGun: true, dualDelay: 400, reload: 6000, desc: "Король мышей. Двуствольный монстр XI уровня." },
-  TYPE5: { n: "Type 5 Heavy", nat: "japan", tier: 10, gold: 5000, hp: 3500, dmg: 900, s: 1.8, reload: 8000, off: 0, vr: 350, camo: 0.02, cls: 'ht', armor: 300, nc: '#d4a574', premium: true, collection: true, desc: "Японский сверхтяжёлый танк." },
+  TYPE5_GOLD: { n: "Type 5 Heavy Gold", nat: "japan", tier: 10, gold: 6000, hp: 3500, dmg: 850, s: 1.6, reload: 8000, off: 0, vr: 370, camo: 0.02, cls: 'ht', armor: 320, nc: '#ffd700', premium: true, collection: true, desc: "Золотой японский сверхтяжёлый танк." },
+  EDELWEISS: { n: "Edelweiss", nat: "japan", tier: 7, hp: 1150, dmg: 220, s: 1.0, off: 5, vr: 370, camo: 0.25, cls: 'mt', nc: '#8f7d4b', premium: true, collection: true, desc: "Специальный средний танк." },
+  M6A2E1: { n: "M6A2E1 Гусь", nat: "usa", tier: 8, hp: 1650, dmg: 320, s: 1.25, off: 12, vr: 370, camo: 0.08, cls: 'ht', armor: 210, nc: '#4e6d42', premium: true, collection: true, desc: "Американский тяжёлый танк с высокой башней." },
+  T28_HTC: { n: "T28 Concept", nat: "usa", tier: 7, hp: 1100, dmg: 310, s: 1.1, isPT: true, off: 5, vr: 340, camo: 0.28, cls: 'td', armor: 200, nc: '#4e6d42', premium: true, collection: true, desc: "Тяжёлая штурмовая ПТ США." },
+  T14: { n: "T14 Heavy", nat: "usa", tier: 5, hp: 850, dmg: 110, s: 1.0, off: 5, vr: 330, camo: 0.15, cls: 'ht', armor: 100, nc: '#4e6d42', premium: true, collection: true, desc: "Штурмовой танк совместной разработки." },
+  AMXCDC: { n: "AMX CDC", nat: "france", tier: 8, hp: 1400, dmg: 240, s: 1.05, off: 5, vr: 390, camo: 0.25, cls: 'mt', nc: '#2c3e80', premium: true, collection: true, desc: "Французский истребитель танков." },
+  AMXM449: { n: "AMX M4 49", nat: "france", tier: 8, hp: 1650, dmg: 320, s: 1.2, off: 5, vr: 370, camo: 0.08, cls: 'ht', armor: 190, nc: '#2c3e80', premium: true, collection: true, desc: "Французский бронированный тяжеловес." },
+  SKODAT27: { n: "Škoda T 27", nat: "european", tier: 8, hp: 1350, dmg: 220, s: 1.05, off: 5, vr: 380, camo: 0.22, cls: 'mt', nc: '#4a6984', premium: true, collection: true, mag: 3, reload: 5000, desc: "Чехословацкий барабанный СТ." },
+  STRV_S1: { n: "Strv S1", nat: "european", tier: 8, hp: 1200, dmg: 390, s: 0.95, isPT: true, off: 10, vr: 380, camo: 0.45, cls: 'td', nc: '#4a6984', premium: true, collection: true, desc: "Шведская гидропневматическая ПТ-САУ." },
+  WZ1122: { n: "112", nat: "china", tier: 8, hp: 1600, dmg: 400, s: 1.2, off: 10, vr: 350, camo: 0.10, cls: 'ht', armor: 180, nc: '#8b0000', premium: true, collection: true, desc: "Китайский тяжёлый танк прорыва." },
   KV220BT: { n: "КВ-220-2 Бета", nat: "ussr", tier: 6, hp: 950, dmg: 160, s: 0.9, off: 5, vr: 330, camo: 0.1, cls: 'ht', nc: '#8e44ad', premium: true, collection: true, armor: 120, desc: "Уникальный танк бета-теста. Недоступен в контейнерах." },
   T3485VIC: { n: "Т-34-85 Победный", nat: "ussr", tier: 6, hp: 950, dmg: 180, s: 1, off: 5, vr: 360, camo: 0.25, cls: 'mt', nc: '#e74c3c', premium: true, collection: true, desc: "Специальная версия в честь 23 февраля. За победу!" },
   T34ZSU: { n: "Т-34 Зенитная", nat: "ussr", tier: 5, hp: 820, dmg: 55, s: 1.05, off: 5, vr: 400, camo: 0.16, cls: 'mt', armor: 45, nc: '#5d7a45', premium: true, collection: true, aa: true, dualGun: true, dualDelay: 180, reload: 1500, desc: "Зенитная версия Т-34 со спаренной крупнокалиберной установкой в открытой рубке. Высокая скорострельность и лучший в игре обзор — эффективна против лёгких и быстрых целей, но слабо бронирована." },
@@ -767,7 +776,7 @@ function renderCollectionGrid() {
     g.appendChild(gr);
   }
 
-  ['ussr', 'germany', 'france', 'uk', 'china', 'japan'].forEach(nat => {
+  ['ussr', 'germany', 'usa', 'uk', 'japan', 'china', 'france', 'european'].forEach(nat => {
     const tanks = Object.keys(COLLECTION_DB).filter(id =>
       COLLECTION_DB[id].nat === nat &&
       !COLLECTION_DB[id].flame &&
@@ -780,7 +789,7 @@ function renderCollectionGrid() {
     if (!tanks.length) return;
     const h = document.createElement('div'); 
     h.className = 'coll-nat-hdr'; 
-    h.innerText = CONFIG.NATIONS[nat]; 
+    h.innerText = CONFIG.NATIONS[nat] || nat; 
     g.appendChild(h);
     const gr = document.createElement('div'); 
     gr.className = 'coll-nat-grid';

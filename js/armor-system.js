@@ -84,6 +84,15 @@ function rollCritical(shooter, target) {
 function resolveHit(bullet, target) {
   var zone = getArmorZone(bullet.shooter, target);
   var dmg = bullet.dmg * getZoneDamageMultiplier(zone);
+  
+  // Силовой щит фон Кригера поглощает 90% урона
+  if (target && target.shieldActive) {
+    dmg *= 0.1;
+    if (typeof spawnParticles === 'function') {
+      spawnParticles(target.x, target.y, '#00e5ff', 10, 4, 15);
+    }
+  }
+
   rollCritical(bullet.shooter, target);
   return { dmg: dmg, zone: zone };
 }

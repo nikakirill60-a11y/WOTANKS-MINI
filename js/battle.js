@@ -207,6 +207,22 @@ function endBattle(won) {
     endMultiplayerBattle();
   }
 
+  // Проверка аренды танков (например, WT_E220 по промокоду)
+  var pTankId = GameState.player ? GameState.player.id : null;
+  if (pTankId && GameState.rentalTanks && GameState.rentalTanks[pTankId]) {
+    GameState.rentalTanks[pTankId]--;
+    if (GameState.rentalTanks[pTankId] <= 0) {
+      delete GameState.rentalTanks[pTankId];
+      GameState.owned = GameState.owned.filter(function(id) { return id !== pTankId; });
+      if (GameState.selected === pTankId) {
+        GameState.selected = GameState.owned[0] || 'T26';
+      }
+      setTimeout(function() {
+        alert("⚠️ Срок аренды " + (DB[pTankId] ? DB[pTankId].n : pTankId) + " завершён! Танк списан из ангара.");
+      }, 600);
+    }
+  }
+
   addBattlePassXP(won ? 300 : 100);
   checkCollectionBonuses();
   
@@ -231,6 +247,11 @@ function endBattle(won) {
 
 function backToGarage() {
   stopPerfMonitor();
+  GameState.waffentragerMode = false;
+  if (typeof WT_STATE !== 'undefined') WT_STATE.active = false;
+  var wtHud = document.getElementById('wt-hud');
+  if (wtHud) wtHud.style.display = 'none';
+
   document.getElementById('result-screen').classList.remove('show');
   document.getElementById('ui').style.display = 'flex';
   document.getElementById('hud').style.display = 'none';

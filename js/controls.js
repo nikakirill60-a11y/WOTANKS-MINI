@@ -3,7 +3,9 @@ function showControlModal(mode){GameState.pendingBattle=mode;document.getElement
 function selectControl(type){
   GameState.controlMode=type;document.getElementById('control-modal').classList.remove('show');
   if(type==='mobile')document.body.classList.add('mobile-mode');else document.body.classList.remove('mobile-mode');
-  if(GameState.pendingBattle==='train')startTraining();else startBattle(GameState.pendingBattle);
+  if(GameState.pendingBattle==='train')startTraining();
+  else if(GameState.pendingBattle==='waffentrager')startWaffentragerEventBattle();
+  else startBattle(GameState.pendingBattle);
 }
 
 function setupPCControls(){
@@ -18,6 +20,14 @@ function setupPCControls(){
     if(e.code==='Digit7')useCons(3);
     if(e.code==='Digit8')useCons(4);
     if(e.code==='Digit9')useCons(5);
+    
+    // Способности Ваффентрагер
+    if(GameState.waffentragerMode && typeof useWaffentragerAbility==='function'){
+      if(e.code==='KeyE') useWaffentragerAbility('emp');
+      if(e.code==='KeyT') useWaffentragerAbility('teleport');
+      if(e.code==='KeyR') useWaffentragerAbility('repair');
+      if(e.code==='ShiftLeft'||e.code==='ShiftRight') useWaffentragerAbility('turbo');
+    }
   };
   window.onkeyup=e=>{GameState.keys[e.code]=false;};
   window.onmousemove=e=>{GameState.mouse.x=e.clientX;GameState.mouse.y=e.clientY;};

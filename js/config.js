@@ -28,7 +28,11 @@ const CONFIG = {
     "BETA_TEST": { tank: "KV220BT" },
     "START2025": { gold: 100, silver: 5000 },
     "TANKS": { xp: 1000 },
-	"MAUS": { gold: 5000, xp: 10000, silver: 50000 }
+    "MAUS": { gold: 5000, xp: 10000, silver: 50000 },
+    "WT220": { rentalTank: "WT_E220", rentalBattles: 1 },
+    "BLITZ220": { rentalTank: "WT_E220", rentalBattles: 1 },
+    "VONKRIEGER": { rentalTank: "WT_E220", rentalBattles: 1 },
+    "E220": { rentalTank: "WT_E220", rentalBattles: 1 }
   },
   MODULES: {
     rammer: { name: "Досылатель", desc: "Перезарядка -10%", icon: "🔧", cost: 5000, stat: 'reload', value: -0.1 },
@@ -161,14 +165,17 @@ const GameState = {
   XP: 500,
   GOLD: 0,
   SILVER: 5000,
+  charges: 0,
   
   // Танки
   owned: ["T26", "PZ2", "T1CUNN", "CRUS2", "RENOTSU", "VAEB", "R35", "STRV21"],
   selected: "T26",
   curNat: "ussr",
+  rentalTanks: {},
   
   // Состояние игры
   gameActive: false,
+  waffentragerMode: false,
   controlMode: 'pc',
   pendingBattle: null,
   

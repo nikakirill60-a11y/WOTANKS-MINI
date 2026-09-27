@@ -90,6 +90,12 @@ class Tank {
     this.dualNext = 0;
     this.dualCooldowns = [0, 0];
     this.dualBothMode = true;
+    
+    // Кастомные модели и эффекты
+    this.customType = d.customType || null;
+    this.splash = d.splash || 0;
+    this.shieldActive = false;
+    this.hasPlasma = false;
   }
 
   // ========== ОТРИСОВКА ==========
@@ -99,6 +105,11 @@ class Tank {
     if (this.team === 'enemy' && !this.dead) {
       this.visible = teamSees(this, 'player');
       if (!this.visible) return;
+    }
+    
+    if (this.customType && typeof drawCustomTank === 'function') {
+      drawCustomTank(this, ctx);
+      return;
     }
     
     ctx.save();
@@ -265,16 +276,26 @@ class Tank {
     }
     finalDmg *= getCritMultiplier(this, 'dmg');
     
+    // Бонус урона от уровня энергии в событии Ваффентрагер
+    if (typeof WT_STATE !== 'undefined' && WT_STATE.active && this.customType && this.customType.startsWith('hound')) {
+      finalDmg *= (1 + (WT_STATE.energyLevel - 1) * 0.25);
+    }
+    
+    var isPlasma = (this.customType === 'wte110' || this.customType === 'wte220');
+    var isSturmtiger = (this.customType === 'sturmtiger');
+
     var b = {
       x: tx,
       y: ty,
       a: fa,
       team: this.team,
       dmg: finalDmg,
-      speed: 12 * sh.sMul * this.shellSpeedMul,
-      color: this.missile ? '#00ffff' : sh.color,
+      speed: isPlasma ? 18 : (isSturmtiger ? 9 : 12 * sh.sMul * this.shellSpeedMul),
+      color: isPlasma ? (this.customType === 'wte220' ? '#c084fc' : '#00f0ff') : (isSturmtiger ? '#ff6600' : (this.missile ? '#00ffff' : sh.color)),
       st: shellType,
-      shooter: this
+      shooter: this,
+      plasma: isPlasma,
+      splash: isSturmtiger ? 120 : (this.splash || 0)
     };
     
     if (this.missile) {

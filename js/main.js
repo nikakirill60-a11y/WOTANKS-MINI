@@ -60,6 +60,10 @@ function update(){
   updateAI();
   updateBullets();
 
+  if (GameState.waffentragerMode && typeof updateWaffentrager === 'function') {
+    updateWaffentrager();
+  }
+
   // Горение игрока
   if(p&&!p.dead&&p.onFire){
     if(!p.fireDmgTimer||Date.now()-p.fireDmgTimer>1000){
@@ -357,10 +361,48 @@ function updateBullets(){
           if(!u2.trackBroken&&Math.random()<0.1){u2.trackBroken=true;if(u2===GameState.player)crewMsg("Гусеница!","#e74c3c");}
           if(b.team==='player'){GameState.battleDmg+=zoneDmg;dmgLog('-'+Math.floor(zoneDmg)+' ('+CONFIG.ARMOR_ZONES[resolved.zone].label+')','#ff4444');crewMsg(CONFIG.CREW_MESSAGES.HIT[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.HIT.length)],'#2ecc71');addCrewXP(b.shooter,Math.floor(zoneDmg*0.05));addBattlePassXP(Math.floor(zoneDmg*0.1));if(typeof onPlayerShotResult==='function')onPlayerShotResult(true);}
           if(u2===GameState.player){dmgLog('-'+Math.floor(zoneDmg),'#ff0000');GameState.shakeTimer=5;GameState.shakeIntensity=3;if(typeof onPlayerHit==='function')onPlayerHit(b.a,zoneDmg);}
-          if(u2.hp<=0){u2.dead=true;boom(u2.x,u2.y);snd('boom');if(b.team==='player'){GameState.XP+=u2.tier*500;GameState.battleKills++;crewMsg(CONFIG.CREW_MESSAGES.KILL[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.KILL.length)],'#f1c40f');addBattlePassXP(150);if(typeof onPlayerKill==='function')onPlayerKill(u2);}}
-          updateScoreboard();break;
+          if(u2.hp<=0){
+            u2.dead=true;
+            boom(u2.x,u2.y);
+            snd('boom');
+            if(u2.customType === 'sentinel' && typeof WT_STATE !== 'undefined' && WT_STATE.active){
+              WT_STATE.plasmaDrops.push({ x: u2.x, y: u2.y, active: true });
+              crewMsg("⚡ Часовой уничтожен! Выпала Плазма!", "#00e5ff");
+            }
+            if(b.team==='player'){
+              GameState.XP+=u2.tier*500;
+              GameState.battleKills++;
+              crewMsg(CONFIG.CREW_MESSAGES.KILL[Math.floor(Math.random()*CONFIG.CREW_MESSAGES.KILL.length)],'#f1c40f');
+              addBattlePassXP(150);
+              if(typeof onPlayerKill==='function')onPlayerKill(u2);
+            }
+          }
+          updateScoreboard();
+          break;
         }
       }
+    }
+    if (hit && b.splash && b.splash > 0) {
+      for (var sUi = 0; sUi < GameState.units.length; sUi++) {
+        var sUnit = GameState.units[sUi];
+        if (sUnit.dead || sUnit.team === b.team) continue;
+        var sDist = Math.hypot(sUnit.x - b.x, sUnit.y - b.y);
+        if (sDist <= b.splash) {
+          var sDmg = Math.floor(b.dmg * (1 - sDist / (b.splash * 1.2)));
+          if (sDmg > 0) {
+            sUnit.hp -= sDmg;
+            spawnParticles(sUnit.x, sUnit.y, '#ff4500', 10, 3, 15);
+            if (sUnit.hp <= 0) {
+              sUnit.dead = true;
+              boom(sUnit.x, sUnit.y);
+              if (b.team === 'player') GameState.battleKills++;
+            }
+          }
+        }
+      }
+      GameState.shakeTimer = 12;
+      GameState.shakeIntensity = 6;
+      boom(b.x, b.y);
     }
     if(hit||Math.abs(b.x-GameState.player.x)>3000||Math.abs(b.y-GameState.player.y)>3000)GameState.bullets.splice(bi,1);
   }
@@ -441,6 +483,9 @@ function draw(){
   }
 
   for(var dui=0;dui<GameState.units.length;dui++){drawTankShadow(ctx,GameState.units[dui],cam);}
+  if (GameState.waffentragerMode && typeof drawWaffentrager === 'function') {
+    drawWaffentrager(ctx, cam);
+  }
   for(var dui=0;dui<GameState.units.length;dui++){GameState.units[dui].draw(ctx);}
   drawCasings(ctx,cam);
 

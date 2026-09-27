@@ -32,7 +32,7 @@ function patchPerfHooks() {
 
 // ========== PING: лёгкий запрос к Supabase ==========
 async function measurePing() {
-  if (!supabaseClient || !supabaseClient.from) { perfPing = null; renderPerfHud(); return; }
+  if (typeof supabaseClient === 'undefined' || !supabaseClient || !supabaseClient.from) { perfPing = null; renderPerfHud(); return; }
   var t0 = performance.now();
   try {
     await supabaseClient.from('users').select('username').limit(1);

@@ -78,11 +78,50 @@ const COLLECTION_DB = {
 
   // === ФРАНЦИЯ - Малые уровни ===
   D1: { n: "D1", nat: "france", tier: 2, hp: 280, dmg: 42, s: 0.75, off: 5, vr: 290, camo: 0.28, cls: 'lt', armor: 45, nc: '#2c3e80', premium: true, collection: true, desc: "Французский лёгкий танк." },
-  FTAC: { n: "FT AC", nat: "france", tier: 2, hp: 230, dmg: 80, s: 0.7, isPT: true, off: 12, vr: 280, camo: 0.4, cls: 'td', nc: '#2c3e80', premium: true, collection: true, desc: "ПТ-САУ 2 уровня." }
+  FTAC: { n: "FT AC", nat: "france", tier: 2, hp: 230, dmg: 80, s: 0.7, isPT: true, off: 12, vr: 280, camo: 0.4, cls: 'td', nc: '#2c3e80', premium: true, collection: true, desc: "ПТ-САУ 2 уровня." },
+
+  // === СОБЫТИЕ: ВАФФЕНТРАГЕР ===
+  WT_E110: { n: "Blitzträger auf E 110", nat: "germany", tier: 10, gold: 20000, hp: 15000, dmg: 560, s: 1.6, mag: 6, shotDelay: 120, reload: 8000, off: -15, vr: 450, camo: 0.02, cls: 'td', armor: 250, nc: '#00e5ff', premium: true, collection: true, customType: 'wte110', desc: "Сверхмощное творение Макса фон Кригера с плазменным ускорителем и силовым щитом." },
+  WT_E220: { n: "Blitzträger auf E 220", nat: "germany", tier: 11, gold: 25000, hp: 18000, dmg: 650, s: 1.65, mag: 8, shotDelay: 100, reload: 7000, off: -15, vr: 480, camo: 0.01, cls: 'td', armor: 300, nc: '#a855f7', premium: true, collection: true, customType: 'wte220', desc: "Ультраредкая золотая модификация Blitzträger с фиолетовыми резонансными кристаллами и колоссальной огневой мощью." },
+  STURMTIGER: { n: "Sturmtiger", nat: "germany", tier: 10, gold: 8000, hp: 2200, dmg: 1250, s: 1.35, isPT: true, off: 6, vr: 360, camo: 0.15, cls: 'td', armor: 220, nc: '#8c7853', premium: true, collection: true, reload: 14000, customType: 'sturmtiger', splash: 120, desc: "Тяжёлая штурмовая мортира калибра 380 мм на шасси Tiger I. Разрушительный фугасный урон с огромным радиусом сплеша!" },
+  WT_E100_P: { n: "WT auf E 100 (P)", nat: "germany", tier: 10, gold: 5000, hp: 2100, dmg: 560, s: 1.35, mag: 5, reload: 9000, off: -12, vr: 420, camo: 0.05, cls: 'td', armor: 180, nc: '#7a7a7a', premium: true, collection: true, desc: "Премиум-версия легендарной 'Вафли' с 5-снарядным автоматом заряжания." },
+  E50_GEPARD: { n: "E 50 G-Serie Gepard", nat: "germany", tier: 10, gold: 6000, hp: 2050, dmg: 390, s: 1.15, off: 5, vr: 410, camo: 0.22, cls: 'mt', armor: 160, nc: '#00ffff', premium: true, collection: true, customType: 'gepard', desc: "Ультраредкая футуристическая версия E 50 M с уникальным стилем Gepard и неоновой подсветкой." },
+  AMBASSADOR: { n: "Ambassador", nat: "european", tier: 9, gold: 4500, hp: 1950, dmg: 440, s: 1.2, off: 8, vr: 380, camo: 0.12, cls: 'ht', armor: 240, nc: '#4a6984', premium: true, collection: true, desc: "Шведский тяжёлый танк IX уровня с мощной лобовой бронёй башни и комфортным орудием." },
+  BURYAN: { n: "Бурьян (Buryan)", nat: "ussr", tier: 9, gold: 4500, hp: 1900, dmg: 430, s: 1.2, off: 8, vr: 375, camo: 0.14, cls: 'ht', armor: 230, nc: '#ff4444', premium: true, collection: true, desc: "Советский экспериментальный тяжёлый танк с отличной подвижностью и надёжным бронированием." },
+  BOBR_HUSARZ: { n: "Bóbr / Husarz", nat: "european", tier: 8, gold: 3500, hp: 1400, dmg: 490, s: 1.05, isPT: true, off: 8, vr: 370, camo: 0.35, cls: 'td', armor: 190, nc: '#e74c3c', premium: true, collection: true, desc: "Польская штурмовая ПТ-САУ с устрашающим разовым уроном и крепкой наклонной рубкой." },
+
+  // ТАНКИ АЛЬЯНСА (ГОНЧИЕ)
+  T55_THUNDER: { n: "T-55 Thunderbolt", nat: "ussr", tier: 10, hp: 2100, dmg: 350, s: 1.15, off: 5, vr: 420, camo: 0.22, cls: 'mt', armor: 160, nc: '#3498db', premium: true, collection: true, customType: 'hound_t55', desc: "Модифицированный танк Гончих с плазменным генератором и турбо-ускорителем." },
+  RESISTOR_140: { n: "Resistor", nat: "ussr", tier: 10, hp: 2000, dmg: 320, s: 1.15, off: 5, vr: 430, camo: 0.24, cls: 'mt', armor: 150, nc: '#3498db', premium: true, collection: true, customType: 'hound_resistor', desc: "Спец-модификация Объекта 140 с электромагнитным отражателем и скорострельным орудием." },
+  THUNDERBOLT_PATTON: { n: "Thunderbolt", nat: "usa", tier: 10, hp: 2300, dmg: 420, s: 1.25, off: 8, vr: 410, camo: 0.12, cls: 'ht', armor: 220, nc: '#3498db', premium: true, collection: true, customType: 'hound_thunderbolt', desc: "Тяжеловооружённый танк поддержки Альянса с усиленным бронированием." },
+  FOUDRE_BC: { n: "Foudre", nat: "france", tier: 10, hp: 1800, dmg: 360, s: 1.1, mag: 4, shotDelay: 150, reload: 5000, off: 5, vr: 440, camo: 0.3, cls: 'mt', armor: 70, nc: '#3498db', premium: true, collection: true, customType: 'hound_foudre', desc: "Сверхскоростной Bat.-Châtillon с 4-снарядным барабаном и гипер-форсажем." },
+  JISKRA_TVP: { n: "Jiskra", nat: "european", tier: 10, hp: 1850, dmg: 340, s: 1.15, mag: 4, shotDelay: 120, reload: 4500, off: 5, vr: 430, camo: 0.26, cls: 'mt', armor: 90, nc: '#3498db', premium: true, collection: true, customType: 'hound_jiskra', desc: "Чехословацкий танк TVP с электрическим автоматом заряжания и ускоренной выдачей барабана." },
+  SENTINEL_BOT: { n: "Часовой", nat: "germany", tier: 8, hp: 1200, dmg: 250, s: 1.1, off: 5, vr: 360, camo: 0.1, cls: 'ht', armor: 140, nc: '#e74c3c', premium: true, collection: true, customType: 'sentinel', desc: "Автоматический боевой страж фон Кригера, охраняющий генераторы плазмы." }
 };
 
 const CONTAINERS = {
-  basic: { 
+  waffentrager: { 
+    name: "Ваффентрагер", 
+    icon: "⚡", 
+    cost: { charges: 1 }, 
+    color: "#00e5ff", 
+    desc: "Контейнер события Ваффентрагер! Шанс на E 220 (0.05%), Sturmtiger (0.5%), WT E 100 (P) (5%)",
+    drops: [
+      { type: 'tank', pool: 'wte220', weight: 0.05, label: "⚡ BLITZTRÄGER E 220 (0.05%)" },
+      { type: 'tank', pool: 'sturmtiger', weight: 0.5, label: "💥 STURMTIGER (0.5%)" },
+      { type: 'tank', pool: 'wte100p', weight: 5, label: "🎖️ WT auf E 100 (P) (5%)" },
+      { type: 'tank', pool: 'gepard', weight: 2, label: "✨ E 50 G-Serie Gepard" },
+      { type: 'tank', pool: 'ambassador', weight: 3, label: "🛡️ Ambassador" },
+      { type: 'tank', pool: 'buryan', weight: 3.5, label: "🚩 Бурьян (Buryan)" },
+      { type: 'tank', pool: 'bobr', weight: 5, label: "🦫 Bóbr / Husarz" },
+      { type: 'charges', amount: [1, 3], weight: 15, label: "⚡ Заряды (1-3)" },
+      { type: 'gold', amount: [200, 1000], weight: 25.95, label: "Золото" },
+      { type: 'silver', amount: [30000, 80000], weight: 20, label: "Серебро" },
+      { type: 'xp', amount: [15000, 40000], weight: 20, label: "Опыт" }
+    ] 
+  },
+  
+  basic: {
     name: "Базовый", 
     icon: "📦", 
     cost: { silver: 25000 }, 
@@ -192,16 +231,31 @@ const DROP_POOLS = {
   missile: ['SHERIDAN'], 
   titan: [],
   mauskonig: ['MAUSKONIG'],
-  lowlevels: []
+  lowlevels: [],
+  wte220: ['WT_E220'],
+  sturmtiger: ['STURMTIGER'],
+  wte100p: ['WT_E100_P'],
+  gepard: ['E50_GEPARD'],
+  ambassador: ['AMBASSADOR'],
+  buryan: ['BURYAN'],
+  bobr: ['BOBR_HUSARZ']
 };
 
 function initContainers() {
   for (let id in COLLECTION_DB) DB[id] = COLLECTION_DB[id];
   
   for (let id in COLLECTION_DB) {
-    if (id === 'KV220BT' || id === 'T3485VIC') continue;
+    if (id === 'KV220BT' || id === 'T3485VIC' || id === 'WT_E110' || id === 'SENTINEL_BOT' || 
+        id === 'T55_THUNDER' || id === 'RESISTOR_140' || id === 'THUNDERBOLT_PATTON' || 
+        id === 'FOUDRE_BC' || id === 'JISKRA_TVP') continue;
     const t = COLLECTION_DB[id];
     
+    // Спец-пулы для контейнера Ваффентрагер
+    if (id === 'WT_E220' || id === 'STURMTIGER' || id === 'WT_E100_P' || 
+        id === 'E50_GEPARD' || id === 'AMBASSADOR' || id === 'BURYAN' || id === 'BOBR_HUSARZ') {
+      continue;
+    }
+
     // MAUSKONIG в отдельный пул
     if (id === 'MAUSKONIG') {
       DROP_POOLS.mauskonig.push(id);
@@ -271,7 +325,15 @@ function openContainerDirect(cid) {
   
   const rwd = { type: sel.type, label: sel.label };
   
-  if (sel.type === 'silver') {
+  if (sel.type === 'charges') {
+    const a = randomRange(sel.amount[0], sel.amount[1]);
+    GameState.charges = (GameState.charges || 0) + a;
+    rwd.amount = a;
+    rwd.display = a + " ⚡ Зарядов";
+    rwd.icon = "⚡";
+    rwd.color = "#00e5ff";
+  }
+  else if (sel.type === 'silver') {
     const a = randomRange(sel.amount[0], sel.amount[1]); 
     GameState.SILVER += a;
     rwd.amount = a; 
@@ -300,7 +362,14 @@ function openContainerDirect(cid) {
     const avail = pool.filter(id => !GameState.owned.includes(id));
     
     if (!avail.length) {
-      const comp = sel.pool === 'mauskonig' ? 10000 : 
+      const comp = sel.pool === 'wte220' ? 25000 :
+                   sel.pool === 'sturmtiger' ? 8000 :
+                   sel.pool === 'wte100p' ? 5000 :
+                   sel.pool === 'gepard' ? 6000 :
+                   sel.pool === 'ambassador' ? 4500 :
+                   sel.pool === 'buryan' ? 4500 :
+                   sel.pool === 'bobr' ? 3500 :
+                   sel.pool === 'mauskonig' ? 10000 : 
                    sel.pool === 'legendary' ? 1000 : 
                    sel.pool === 'flame' ? 1500 : 
                    sel.pool === 'missile' ? 2000 : 
@@ -320,8 +389,25 @@ function openContainerDirect(cid) {
       rwd.tankId = tid;
       rwd.display = td.n + " [" + (CONFIG.TIER_ROMAN[td.tier] || "XI") + "]";
       
-      // Специальная обработка для Mausekönig
-      if (tid === 'MAUSKONIG') {
+      // Специальная обработка для уникальных танков
+      if (tid === 'WT_E220') {
+        rwd.icon = "⚡";
+        rwd.color = "#a855f7";
+        rwd.desc = "УЛЬТРАРЕДКИЙ BLITZTRÄGER AUF E 220 XI УРОВНЯ!";
+        rwd.rarity = "ВЛАДЫКА МОЛНИЙ";
+        rwd.isWTE220 = true;
+      } else if (tid === 'STURMTIGER') {
+        rwd.icon = "💥";
+        rwd.color = "#ff6600";
+        rwd.desc = "ТЯЖЁЛАЯ ШТУРМОВАЯ МОРТИРА 380 ММ С РАЗРУШИТЕЛЬНЫМ ФУГАСОМ!";
+        rwd.rarity = "ШТУРМТИГР";
+        rwd.isSturmtiger = true;
+      } else if (tid === 'WT_E100_P') {
+        rwd.icon = "🎖️";
+        rwd.color = "#3498db";
+        rwd.desc = "ПРЕМИУМ WAFFENTRÄGER AUF E 100 С 5-СНАРЯДНЫМ АВТОМАТОМ!";
+        rwd.rarity = "ВАФФЕНТРАГЕР";
+      } else if (tid === 'MAUSKONIG') {
         rwd.icon = "👑";
         rwd.color = "#ffd700";
         rwd.desc = "ЛЕГЕНДАРНЫЙ ДВУСТВОЛЬНЫЙ ТАНК XI УРОВНЯ!";
@@ -391,11 +477,39 @@ function updateInvCount() {
   }
 }
 
+function buyCharges(count) {
+  count = count || 1;
+  const cost = count * 100;
+  if (GameState.GOLD < cost) {
+    alert("❌ Недостаточно золота! 1 заряд = 100 G (нужно: " + cost + " G)");
+    return false;
+  }
+  GameState.GOLD -= cost;
+  GameState.charges = (GameState.charges || 0) + count;
+  updateResources();
+  renderContainerGrid();
+  if (typeof saveProgress === 'function') saveProgress();
+  showInvNotification(count + " ⚡ Зарядов", "⚡");
+  return true;
+}
+window.buyCharges = buyCharges;
+
 function buyContainer(cid) {
   if (containerAnimating) return;
   const c = CONTAINERS[cid]; 
   if (!c) return;
   
+  if (c.cost.charges) {
+    const curCharges = GameState.charges || 0;
+    if (curCharges < c.cost.charges) {
+      if (confirm("⚡ Недостаточно зарядов! Купить 1 заряд за 100 золота?")) {
+        if (!buyCharges(1)) return;
+      } else {
+        return;
+      }
+    }
+    GameState.charges -= c.cost.charges;
+  }
   if (c.cost.silver && GameState.SILVER < c.cost.silver) { 
     alert("Недостаточно серебра!"); 
     return; 
@@ -508,24 +622,42 @@ function renderContainerGrid() {
   if (!g) return; 
   g.innerHTML = '';
   
+  // Панель быстрой покупки зарядов
+  const chargeBar = document.createElement('div');
+  chargeBar.style.cssText = 'grid-column: 1 / -1; background: linear-gradient(90deg, #102a3a, #1a1a2e); border: 2px solid #00e5ff; border-radius: 8px; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;';
+  chargeBar.innerHTML = 
+    '<div><span style="font-size:18px;font-weight:bold;color:#00e5ff">⚡ Заряды Ваффентрагер: ' + (GameState.charges || 0) + ' шт.</span>' +
+    '<div style="font-size:11px;color:#aaa">Используются для открытия контейнера Ваффентрагер. 1 заряд = 100 G</div></div>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button class="btn btn-sm" style="background:#00e5ff;color:#000;font-weight:bold" onclick="buyCharges(1)">+1 ⚡ (100 G)</button>' +
+      '<button class="btn btn-sm" style="background:#00b4d8;color:#000;font-weight:bold" onclick="buyCharges(5)">+5 ⚡ (500 G)</button>' +
+    '</div>';
+  g.appendChild(chargeBar);
+
   for (let id in CONTAINERS) {
     const c = CONTAINERS[id]; 
-    const costTxt = c.cost.gold ? c.cost.gold + ' G' : c.cost.silver + ' ₽';
-    const ok = c.cost.gold ? GameState.GOLD >= c.cost.gold : GameState.SILVER >= c.cost.silver;
+    const costTxt = c.cost.charges ? c.cost.charges + ' ⚡ Заряд' : c.cost.gold ? c.cost.gold + ' G' : c.cost.silver + ' ₽';
+    const ok = c.cost.charges ? (GameState.charges || 0) >= c.cost.charges : c.cost.gold ? GameState.GOLD >= c.cost.gold : GameState.SILVER >= c.cost.silver;
     const tw = c.drops.reduce((s, d) => s + d.weight, 0);
     
+    const isW = id === 'waffentrager';
     const isF = id === 'flamebox';
     const isT = id === 'titanbox';
     const isLL = id === 'lowlevels';
     
     const card = document.createElement('div');
     card.className = 'c-card' + (ok ? '' : ' no-money') + 
+      (isW ? ' waffentrager-card' : '') +
       (isF ? ' flame-card' : '') + 
       (isT ? ' titan-card' : '') +
       (isLL ? ' lowlevels-card' : '');
     card.style.borderColor = c.color;
     
     let extra = '';
+    
+    if (isW) {
+      extra = '<div class="flame-subtitle" style="color:#00e5ff;text-shadow:0 0 10px #00e5ff">⚡ СОБЫТИЕ ВАФФЕНТРАГЕР ⚡</div>';
+    }
     
     if (isF) {
       const ft = Object.keys(COLLECTION_DB).filter(i => COLLECTION_DB[i].flame);
@@ -567,13 +699,13 @@ function renderContainerGrid() {
         c.drops.map(d => 
           '<div class="c-drop-row">' +
             '<span>' + d.label + '</span>' +
-            '<span class="c-pct">' + Math.round(d.weight / tw * 100) + '%</span>' +
+            '<span class="c-pct">' + (d.weight < 1 ? d.weight : Math.round(d.weight / tw * 100)) + '%</span>' +
           '</div>'
         ).join('') + 
       '</div>' + 
       invInfo + 
       '<div class="c-cost ' + (ok ? '' : 'red') + '">' + costTxt + '</div>' +
-      '<button class="btn c-buy" ' + (ok ? '' : 'disabled') + ' style="background:' + c.color + '" onclick="buyContainer(\'' + id + '\')">КУПИТЬ</button>';
+      '<button class="btn c-buy" ' + (ok ? '' : 'disabled') + ' style="background:' + c.color + '" onclick="buyContainer(\'' + id + '\')">ОТКРЫТЬ</button>';
     
     g.appendChild(card);
   }

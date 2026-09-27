@@ -219,10 +219,12 @@
       <div>ОПЫТ: <span id="xp-val">0</span> XP</div>
       <div class="gold-txt">ЗОЛОТО: <span id="gold-val">0</span> G</div>
       <div class="silver-txt">СЕРЕБРО: <span id="silver-val">0</span> ₽</div>
+      <div style="color:#00e5ff;font-weight:bold">⚡ ЗАРЯДЫ: <span id="charges-val">0</span></div>
     </div>
     <div id="exchange-panel">
       100 XP → 10 G
       <button class="btn btn-sm" onclick="exchangeXP()">ОБМЕН</button>
+      <button class="btn btn-sm" style="background:#00e5ff;color:#000;font-weight:bold;margin-left:5px;" onclick="buyCharges(1)" title="Купить 1 заряд за 100 золота">+1 ⚡ (100 G)</button>
       <span id="exchange-msg"></span>
     </div>
     <div class="top-btns">
@@ -290,6 +292,11 @@
         <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">10x10</button>
         <button class="btn" style="background:#7f8c8d" onclick="toggleTraining()">ТРЕНИРОВКА</button>
       </div>
+
+      <!-- ===== СОБЫТИЕ: ВАФФЕНТРАГЕР ===== -->
+      <div style="margin-top:10px;text-align:center;">
+        <button class="btn wt-event-btn" onclick="showWaffentragerModal()">⚡ ВАФФЕНТРАГЕР (1 vs 10) ⚡</button>
+      </div>
       
       <!-- ===== ОНЛАЙН РЕЖИМЫ ===== -->
       <div style="margin-top:8px;">
@@ -324,6 +331,21 @@
   <!-- NEW: лампочка "Шестое чувство" и индикатор пинга/FPS -->
   <div id="sixth-sense-lamp" title="Вас обнаружили"></div>
   <div id="perf-hud"></div>
+
+  <!-- HUD СОБЫТИЯ ВАФФЕНТРАГЕР -->
+  <div id="wt-hud" style="display:none;">
+    <div id="wt-timer-box">⏳ <span id="wt-timer">06:00</span></div>
+    <div id="wt-shield-box">
+      <div id="wt-shield-status"><span style="color:#00e5ff">🛡️ ЩИТ БОССА АКТИВЕН</span></div>
+      <div id="wt-energy-level">⚡ Уровень энергии: x1 (+0% урона)</div>
+    </div>
+    <div id="wt-ability-bar">
+      <button id="wt-btn-emp" class="wt-ability-btn" onclick="useWaffentragerAbility('emp')">⚡ ЭМИ [E]</button>
+      <button id="wt-btn-tp" class="wt-ability-btn" onclick="useWaffentragerAbility('teleport')">🌀 ТЕЛЕПОРТ [T]</button>
+      <button id="wt-btn-turbo" class="wt-ability-btn" onclick="useWaffentragerAbility('turbo')">🚀 ФОРСАЖ [Shift]</button>
+      <button id="wt-btn-repair" class="wt-ability-btn" onclick="useWaffentragerAbility('repair')">🔧 РЕМОНТ [R]</button>
+    </div>
+  </div>
   
   <!-- НИЖНЯЯ ПАНЕЛЬ -->
   <div id="bottom-bar">
@@ -413,6 +435,78 @@
   <button id="tutorial-skip" onclick="skipTutorial()">Пропустить</button>
 </div>
 
+<!-- ========== МОДАЛКА ИВЕНТА ВАФФЕНТРАГЕР ========== -->
+<div id="waffentrager-modal" class="wt-modal">
+  <div class="wt-modal-content">
+    <div class="wt-modal-header">
+      <h2>⚡ СОБЫТИЕ: ВАФФЕНТРАГЕР (1 vs 10) ⚡</h2>
+      <button class="close-btn" onclick="closeWaffentragerModal()">×</button>
+    </div>
+    
+    <div class="wt-modal-body">
+      <p style="color:#aaa;text-align:center;font-size:13px;">
+        Сразитесь в легендарной битве 1 на 10! Возглавьте сверхмощный <b>Blitzträger</b> с силовым щитом или объединитесь в <b>Альянс Гончих</b>, перегружайте генераторы и сокрушите босса!
+      </p>
+
+      <h3 style="color:#00e5ff;margin-top:15px;text-align:center;">ВЫБЕРИТЕ РОЛЬ</h3>
+      <div class="wt-role-grid">
+        <div id="wt-role-random" class="wt-role-card selected" onclick="selectWTRole('random')">
+          <div class="wt-role-icon">🎲</div>
+          <h4>СЛУЧАЙНО</h4>
+          <p>Автоматический подбор роли: Босс или Гончая</p>
+        </div>
+
+        <div id="wt-role-boss" class="wt-role-card" onclick="selectWTRole('boss')">
+          <div class="wt-role-icon">⚡</div>
+          <h4>BLITZTRÄGER (БОСС)</h4>
+          <p>1 против 10! Силовой щит, ЭМИ-удар, гипер-залпы и телепорт</p>
+        </div>
+
+        <div id="wt-role-hound" class="wt-role-card" onclick="selectWTRole('hound')">
+          <div class="wt-role-icon">🐺</div>
+          <h4>ГОНЧИЕ (АЛЬЯНС)</h4>
+          <p>Команда 10 танков: сбор плазмы, перегрузка генераторов, снятие щита</p>
+        </div>
+      </div>
+
+      <div id="wt-hound-picker" style="margin-top:15px;">
+        <h4 style="color:#3498db;text-align:center;">ВЫБЕРИТЕ МАШИНУ ГОНЧИХ</h4>
+        <div class="wt-hound-grid">
+          <div id="wt-hound-T55_THUNDER" class="wt-hound-card selected" onclick="selectWTHound('T55_THUNDER')">
+            <div class="wt-hound-name">T-55 Thunderbolt</div>
+            <div class="wt-hound-desc">Турбо-СТ • Сбалансированный штурмовик</div>
+          </div>
+          <div id="wt-hound-RESISTOR_140" class="wt-hound-card" onclick="selectWTHound('RESISTOR_140')">
+            <div class="wt-hound-name">Resistor (Об. 140)</div>
+            <div class="wt-hound-desc">Высокий ДПМ • Электро-отражатель</div>
+          </div>
+          <div id="wt-hound-THUNDERBOLT_PATTON" class="wt-hound-card" onclick="selectWTHound('THUNDERBOLT_PATTON')">
+            <div class="wt-hound-name">Thunderbolt (Patton)</div>
+            <div class="wt-hound-desc">Тяжёлая броня • Огневая поддержка</div>
+          </div>
+          <div id="wt-hound-FOUDRE_BC" class="wt-hound-card" onclick="selectWTHound('FOUDRE_BC')">
+            <div class="wt-hound-name">Foudre (Bat.-Chât.)</div>
+            <div class="wt-hound-desc">4 снаряда барабан • Гипер-скорость</div>
+          </div>
+          <div id="wt-hound-JISKRA_TVP" class="wt-hound-card" onclick="selectWTHound('JISKRA_TVP')">
+            <div class="wt-hound-name">Jiskra (TVP 50/51)</div>
+            <div class="wt-hound-desc">Скоростной барабан • Плазменный залп</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#111;border:1px solid #333;border-radius:8px;padding:10px;margin-top:15px;display:flex;justify-content:space-around;text-align:center;">
+        <div>⚡ <b>Награда за победу:</b> <span style="color:#00e5ff">1–3 Заряда</span></div>
+        <div>📦 <b>Контейнер:</b> <span style="color:#f1c40f">E 220, Sturmtiger, WT E100</span></div>
+      </div>
+    </div>
+
+    <div class="wt-modal-footer">
+      <button class="btn wt-start-btn" onclick="showControlModal('waffentrager')">⚡ В БОЙ 1 vs 10 ⚡</button>
+    </div>
+  </div>
+</div>
+
 <!-- ========== СКРИПТЫ (ПРАВИЛЬНЫЙ ПОРЯДОК!) ========== -->
 <!-- Порядок подключения JS файлов: исходный порядок сохранён,
      новые файлы отмечены NEW и вставлены в рабочих точках зависимостей -->
@@ -420,6 +514,7 @@
     <script src="js/supabase.js"></script>
     <script src="js/tanks.js"></script>
     <script src="js/containers.js"></script>
+    <script src="js/waffentrager.js"></script>          <!-- NEW: режим Ваффентрагер 1 vs 10 -->
     <script src="js/audio.js"></script>
     <script src="js/tank.js"></script>
     <script src="js/armor-system.js"></script>       <!-- NEW: бронезоны + крит.повреждения -->

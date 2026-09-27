@@ -28,9 +28,11 @@ function updateResources() {
   var xp = document.getElementById('xp-val');
   var gold = document.getElementById('gold-val');
   var silver = document.getElementById('silver-val');
+  var charges = document.getElementById('charges-val');
   if (xp) xp.innerText = GameState.XP;
   if (gold) gold.innerText = GameState.GOLD;
   if (silver) silver.innerText = GameState.SILVER;
+  if (charges) charges.innerText = GameState.charges || 0;
 }
 
 // ========== Обмен XP на золото ==========
@@ -353,8 +355,22 @@ function activatePromo() {
     if (reward.silver) { GameState.SILVER += reward.silver; msg += reward.silver + '💰 '; }
     if (reward.xp) { GameState.XP += reward.xp; msg += reward.xp + 'XP '; }
     if (reward.tank) {
-      if (GameState.owned.indexOf(reward.tank) === -1) { GameState.owned.push(reward.tank); msg += 'Танк: ' + DB[reward.tank].n; }
-      else { msg += '+500G'; GameState.GOLD += 500; }
+      if (GameState.owned.indexOf(reward.tank) === -1) { GameState.owned.push(reward.tank); msg += 'Танк: ' + DB[reward.tank].n + ' '; }
+      else { msg += '+500G '; GameState.GOLD += 500; }
+    }
+    if (reward.rentalTank) {
+      var rtid = reward.rentalTank;
+      GameState.rentalTanks = GameState.rentalTanks || {};
+      GameState.rentalTanks[rtid] = (GameState.rentalTanks[rtid] || 0) + (reward.rentalBattles || 1);
+      if (GameState.owned.indexOf(rtid) === -1) {
+        GameState.owned.push(rtid);
+      }
+      GameState.selected = rtid;
+      msg += 'Аренда на ' + (reward.rentalBattles || 1) + ' бой: ' + (DB[rtid] ? DB[rtid].n : rtid) + '! ';
+    }
+    if (reward.charges) {
+      GameState.charges = (GameState.charges || 0) + reward.charges;
+      msg += reward.charges + ' ⚡ ';
     }
     if (reward.boosterXP) { GameState.boosterStock.xp += (reward.boosterXP || 0); }
     if (reward.boosterSilver) { GameState.boosterStock.silver += (reward.boosterSilver || 0); }
@@ -363,7 +379,7 @@ function activatePromo() {
     updateResources();
     renderCarousel();
     updateBoosterUI();
-    saveProgress();
+    if (typeof saveProgress === 'function') saveProgress();
   } else { if (result) { result.innerText = "❌ Неверный код!"; result.style.color = "#e74c3c"; } }
 }
 

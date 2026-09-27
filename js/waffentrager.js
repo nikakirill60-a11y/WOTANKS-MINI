@@ -131,33 +131,36 @@ function startWaffentragerBattle(role, houndTankId, bossId) {
   document.querySelectorAll('.cons-btn').forEach(function(b) { b.classList.remove('used'); b.classList.add('ready'); });
   document.querySelectorAll('.m-cons').forEach(function(b) { b.classList.remove('used'); });
 
-  document.getElementById('ui').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  document.getElementById('result-screen').classList.remove('show');
+  var uiEl = document.getElementById('ui');
+  if (uiEl) uiEl.style.display = 'none';
+  var hudEl = document.getElementById('hud');
+  if (hudEl) hudEl.style.display = 'block';
+  var rsEl = document.getElementById('result-screen');
+  if (rsEl && rsEl.classList) rsEl.classList.remove('show');
 
   // Показываем HUD Ваффентрагера
   var wtHud = document.getElementById('wt-hud');
   if (wtHud) wtHud.style.display = 'block';
 
-  if (GameState.controlMode === 'mobile') {
-    document.getElementById('mobile-controls').classList.add('show');
-  } else {
-    document.getElementById('mobile-controls').classList.remove('show');
+  var mcEl = document.getElementById('mobile-controls');
+  if (mcEl && mcEl.classList) {
+    if (GameState.controlMode === 'mobile') mcEl.classList.add('show');
+    else mcEl.classList.remove('show');
   }
-  startPerfMonitor();
+  if (typeof startPerfMonitor === 'function') startPerfMonitor();
 
   GameState.bullets = [];
   GameState.particles = [];
   GameState.tracks = [];
-  setupWalls('city');
-  setupTerrain('city');
+  if (typeof setupWalls === 'function') setupWalls('city');
+  if (typeof setupTerrain === 'function') setupTerrain('city');
 
   var allHoundIds = ['T55_THUNDER', 'RESISTOR_140', 'THUNDERBOLT_PATTON', 'FOUDRE_BC', 'JISKRA_TVP'];
 
   if (role === 'boss') {
     // ИГРОК = БОСС
     var playerBossId = bossId || 'WT_E110';
-    var bonuses = getAllBonuses(playerBossId);
+    var bonuses = (typeof getAllBonuses === 'function') ? getAllBonuses(playerBossId) : null;
     GameState.player = new Tank(playerBossId, 0, 0, 'player', bonuses);
     GameState.player.shieldActive = true;
     GameState.player.customType = (playerBossId === 'WT_E220') ? 'wte220' : 'wte110';
@@ -200,7 +203,7 @@ function startWaffentragerBattle(role, houndTankId, bossId) {
   } else {
     // ИГРОК = ГОНЧАЯ
     var chosenHound = houndTankId || 'T55_THUNDER';
-    var pBonuses = getAllBonuses(chosenHound);
+    var pBonuses = (typeof getAllBonuses === 'function') ? getAllBonuses(chosenHound) : null;
     GameState.player = new Tank(chosenHound, -1100, 0, 'player', pBonuses);
     GameState.player.customType = DB[chosenHound].customType || 'hound_t55';
     GameState.player.hasPlasma = false;
@@ -274,7 +277,7 @@ function updateWaffentrager() {
       WT_STATE.shieldOverloaded = false;
       if (WT_STATE.boss) WT_STATE.boss.shieldActive = true;
       crewMsg("⚡ ЩИТ BLITZTRÄGER СНОВА АКТИВЕН!", "#00e5ff");
-      snd('hit');
+      if (typeof snd === 'function') snd('hit');
     }
   }
 
@@ -308,7 +311,7 @@ function updateWaffentrager() {
         drop.active = false;
         WT_STATE.plasmaDrops.splice(pi, 1);
         spawnParticles(unit.x, unit.y, '#00ffff', 25, 4, 30);
-        snd('hit');
+        if (typeof snd === 'function') snd('hit');
         if (unit === p) {
           crewMsg("⚡ ВЫ ПОДОБРАЛИ ПЛАЗМУ! ВЕЗИТЕ К ГЕНЕРАТОРУ!", "#00ffff");
         } else {
@@ -345,7 +348,7 @@ function updateWaffentrager() {
           spawnParticles(gen.x, gen.y, '#ffffff', 20, 5, 30);
         }
         boom(gen.x, gen.y);
-        snd('boom');
+        if (typeof snd === 'function') snd('boom');
 
         if (carrier === p) {
           GameState.XP += 2000;
@@ -446,7 +449,7 @@ function useWaffentragerAbility(type, customCaster, targetX, targetY) {
     WT_STATE.empCooldown = now + 25000;
 
     WT_STATE.empWave = { x: caster.x, y: caster.y, r: 20, maxR: 320, life: 30 };
-    snd('boom');
+    if (typeof snd === 'function') snd('boom');
 
     // Наносим урон и оглушаем всех врагов вокруг
     for (var i = 0; i < GameState.units.length; i++) {
@@ -483,7 +486,7 @@ function useWaffentragerAbility(type, customCaster, targetX, targetY) {
     caster.x = destX;
     caster.y = destY;
     spawnParticles(caster.x, caster.y, '#ffffff', 40, 6, 35);
-    snd('hit');
+    if (typeof snd === 'function') snd('hit');
     crewMsg("🌀 ТЕЛЕПОРТАЦИЯ!", "#00e5ff");
   }
   else if (type === 'turbo') {
@@ -943,17 +946,24 @@ function endWaffentragerBattle(won) {
   updateResources();
   if (typeof saveProgress === 'function') saveProgress();
 
-  document.getElementById('result-screen').classList.add('show');
-  document.getElementById('result-title').innerText = won ? "ПОБЕДА В СОБЫТИИ!" : "ПОРАЖЕНИЕ";
-  document.getElementById('result-title').style.color = won ? "#00e5ff" : "#e74c3c";
+  var rsEl = document.getElementById('result-screen');
+  if (rsEl && rsEl.classList) rsEl.classList.add('show');
+  var rtEl = document.getElementById('result-title');
+  if (rtEl) {
+    rtEl.innerText = won ? "ПОБЕДА В СОБЫТИИ!" : "ПОРАЖЕНИЕ";
+    rtEl.style.color = won ? "#00e5ff" : "#e74c3c";
+  }
 
-  document.getElementById('result-stats').innerHTML =
-    '⚡ <b>Заряды Ваффентрагер: +' + chargesWon + ' ⚡</b><br>' +
-    'Урон: ' + Math.floor(GameState.battleDmg) + '<br>' +
-    'Фрагов: ' + GameState.battleKills + '<br>' +
-    'Серебро: +' + silverReward + ' ₽<br>' +
-    'Опыт: +' + xpReward + ' XP<br>' +
-    'Золото: +' + goldReward + ' G';
+  var rstEl = document.getElementById('result-stats');
+  if (rstEl) {
+    rstEl.innerHTML =
+      '⚡ <b>Заряды Ваффентрагер: +' + chargesWon + ' ⚡</b><br>' +
+      'Урон: ' + Math.floor(GameState.battleDmg) + '<br>' +
+      'Фрагов: ' + GameState.battleKills + '<br>' +
+      'Серебро: +' + silverReward + ' ₽<br>' +
+      'Опыт: +' + xpReward + ' XP<br>' +
+      'Золото: +' + goldReward + ' G';
+  }
 }
 
 // Экспорт в глобальную область

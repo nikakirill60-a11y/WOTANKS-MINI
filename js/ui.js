@@ -45,11 +45,57 @@ function exchangeXP() {
 }
 
 // ========== Выбор нации ==========
+var NAT_BUTTON_LABELS = {
+  ussr: 'СССР',
+  germany: 'ГЕРМАНИЯ',
+  usa: 'США',
+  uk: 'БРИТАНИЯ',
+  japan: 'ЯПОНИЯ',
+  china: 'КИТАЙ',
+  france: 'ФРАНЦИЯ',
+  european: 'ЕВРОПА'
+};
+
+function renderNatButtons() {
+  var container = document.getElementById('nat-buttons');
+  if (!container) return;
+  var nations = Object.keys(CONFIG.NATIONS);
+  var currentBtns = container.querySelectorAll('.n-btn');
+  if (currentBtns.length !== nations.length) {
+    container.innerHTML = '';
+    nations.forEach(function(nat) {
+      var btn = document.createElement('button');
+      btn.className = 'n-btn' + (GameState.curNat === nat ? ' active-n' : '');
+      btn.textContent = NAT_BUTTON_LABELS[nat] || (CONFIG.NATIONS[nat] ? CONFIG.NATIONS[nat].toUpperCase() : nat.toUpperCase());
+      btn.onclick = function() { setNat(nat, this); };
+      container.appendChild(btn);
+    });
+  } else {
+    currentBtns.forEach(function(b, idx) {
+      var nat = nations[idx];
+      b.classList.toggle('active-n', GameState.curNat === nat);
+    });
+  }
+}
+
 function setNat(nat, btn) {
   GameState.curNat = nat;
   renderTree();
-  document.querySelectorAll('.n-btn').forEach(function(b) { b.classList.remove('active-n'); });
-  if (btn) btn.classList.add('active-n');
+  var container = document.getElementById('nat-buttons');
+  if (container) {
+    var nations = Object.keys(CONFIG.NATIONS);
+    var btns = container.querySelectorAll('.n-btn');
+    btns.forEach(function(b, idx) {
+      if (b === btn || nations[idx] === nat) {
+        b.classList.add('active-n');
+      } else {
+        b.classList.remove('active-n');
+      }
+    });
+  } else {
+    document.querySelectorAll('.n-btn').forEach(function(b) { b.classList.remove('active-n'); });
+    if (btn) btn.classList.add('active-n');
+  }
 }
 
 // ========== Выбор снаряда ==========
@@ -533,6 +579,7 @@ function drawTankIcon(canvas, tankId) {
 
 // ========== Дерево исследований ==========
 function renderTree() {
+  renderNatButtons();
   var nodes = document.getElementById('nodes');
   var tc = document.getElementById('tree-canvas');
   if (!nodes || !tc) return;
@@ -751,6 +798,7 @@ window.toggleTraining = toggleTraining;
 window.renderCarousel = renderCarousel;
 window.drawTankIcon = drawTankIcon;
 window.renderTree = renderTree;
+window.renderNatButtons = renderNatButtons;
 window.updateScoreboard = updateScoreboard;
 window.showLeaderboard = showLeaderboard;
 window.hideLeaderboard = hideLeaderboard;

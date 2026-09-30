@@ -210,6 +210,7 @@
 <!-- ========== ГЛАВНЫЙ ИНТЕРФЕЙС ========== -->
 <div id="ui" style="display:none;">
   <!-- ===== TOP BAR ===== -->
+  <div id="live-activity-ticker" style="background:linear-gradient(90deg,#0f1423,#1a2639);border-bottom:1px solid #00e5ff;color:#fff;padding:6px 15px;font-size:12px;text-align:center;box-shadow:0 0 10px rgba(0,229,255,0.2);">📢 <b>События сервера:</b> Игрок VonKrieger_99 выбил Blitzträger auf E 220! | 👹 Мировой босс Левиафан атакован! | 🛡️ Клановые битвы открыты!</div>
   <div id="top-bar">
     <div class="user-info">
       👤 <span id="current-user">Player</span>
@@ -234,6 +235,15 @@
       <button class="btn btn-inventory" onclick="openInventoryTab()">🎒<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
       <button class="btn btn-modules" onclick="showModules()">⚙️ МОДУЛИ</button>
       <button class="btn btn-upgrade" onclick="showUpgrades()">🔩 ПРОКАЧКА</button>
+      <!-- НОВЫЕ ФИЧИ В ВЕРХНЕМ МЕНЮ -->
+      <button class="btn" style="background:#1b4f72;border:1px solid #3498db;font-weight:bold" onclick="FeaturesHub.openClans()">🛡️ КЛАНЫ</button>
+      <button class="btn" style="background:#2e4053;border:1px solid #5dade2;font-weight:bold" onclick="FeaturesHub.openMailbox()">📬 ПОЧТА</button>
+      <button class="btn" style="background:#78281f;border:1px solid #e74c3c;font-weight:bold" onclick="FeaturesHub.openWorldBoss()">👹 БОСС-РЕЙД</button>
+      <button class="btn" style="background:#512e5f;border:1px solid #af7ac5;font-weight:bold" onclick="FeaturesHub.openRanked()">🏅 ЛИГА</button>
+      <button class="btn" style="background:#145a32;border:1px solid #2ecc71;font-weight:bold" onclick="FeaturesHub.openCalendar()">📅 НАГРАДЫ</button>
+      <button class="btn" style="background:#7d6608;border:1px solid #f1c40f;font-weight:bold" onclick="FeaturesHub.openWheel()">🎡 КОЛЕСО</button>
+      <button class="btn" style="background:#117864;border:1px solid #1abc9c;font-weight:bold" onclick="FeaturesHub.openVaults()">🏦 СЕЙФЫ</button>
+      <button class="btn" style="background:#b9770e;border:1px solid #e67e22;font-weight:bold" onclick="FeaturesHub.openSpecialModes()">🔥 РЕЖИМЫ</button>
       <!-- NEW: обучение -->
       <button class="btn" style="background:#8e44ad" onclick="startTutorial()">🎓 ОБУЧЕНИЕ</button>
       <!-- NEW: настройки -->

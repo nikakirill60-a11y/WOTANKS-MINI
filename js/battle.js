@@ -92,6 +92,13 @@ function startBattle(mode) {
   setupWalls(GameState.curMap);
   setupTerrain(GameState.curMap);
 
+  if (typeof WeatherEngine !== 'undefined' && WeatherEngine.initWeatherForBattle) {
+    WeatherEngine.initWeatherForBattle(GameState.curMap);
+  }
+  if (typeof CombatMechanics !== 'undefined' && CombatMechanics.setupFuelBarrels) {
+    CombatMechanics.setupFuelBarrels(GameState.curMap);
+  }
+
   // ✅ ПРОВЕРКА МУЛЬТИПЛЕЕРА
   if (GameState.multiplayerMode) {
     console.log('🌐 МУЛЬТИПЛЕЕР БОЙ!');
@@ -225,6 +232,28 @@ function endBattle(won) {
 
   addBattlePassXP(won ? 300 : 100);
   checkCollectionBonuses();
+
+  // 78. Пополнение сейфов золота и серебра
+  if (typeof EconomyEngine !== 'undefined' && EconomyEngine.addBattleToVault) {
+    EconomyEngine.addBattleToVault(silver, won ? 15 : 5);
+  }
+
+  // 7. Обновление рейтинга в Лиге
+  let rankedInfo = '';
+  if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.updateRankedMatch) {
+    const rRes = SupabaseFeatures.updateRankedMatch(won, GameState.battleKills, GameState.battleDmg);
+    rankedInfo = `<br><span style="color:${rRes.league.color};font-weight:bold;">${rRes.league.icon} ${rRes.league.name}: ${rRes.rating} MMR (${rRes.delta >= 0 ? '+' : ''}${rRes.delta})</span>`;
+  }
+
+  // 10. Урон по Мировому Боссу
+  if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.dealWorldBossDamage) {
+    SupabaseFeatures.dealWorldBossDamage(Math.floor(GameState.battleDmg));
+  }
+
+  // 1. Автосинхронизация с облаком Supabase
+  if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.autoCloudSync) {
+    SupabaseFeatures.autoCloudSync();
+  }
   
   document.getElementById('result-screen').classList.add('show');
   document.getElementById('result-title').innerText = won ? "ПОБЕДА!" : "ПОРАЖЕНИЕ";
@@ -240,7 +269,7 @@ function endBattle(won) {
     'Фрагов: ' + GameState.battleKills + '<br>' +
     'Серебро: +' + silver + '₽<br>' +
     'Опыт: +' + xpReward + ' XP<br>' +
-    'Золото: +' + goldReward + ' G' + boostInfo;
+    'Золото: +' + goldReward + ' G' + boostInfo + rankedInfo;
   
   updateBoosterUI();
 }

@@ -1,12 +1,15 @@
 // js/features-hub.js
-// 🌐 Глобальный координатор всех 100 фич: Интеграция с Supabase, UI, Хоткеи, Модальные окна
+// 🌐 Глобальный координатор всех 100 фич
 console.log('🌟 features-hub.js загружается...');
 
 const FeaturesHub = {
+  initialized: false,
+
   init() {
-    console.log('🚀 Инициализация FeaturesHub (100 Фич)...');
+    if (this.initialized) return;
+    this.initialized = true;
     this.injectStyles();
-    this.injectModals();
+    this.ensureModalsExist();
     this.injectBattleHUD();
     this.bindKeyboardShortcuts();
     this.startAutoSyncLoop();
@@ -14,7 +17,6 @@ const FeaturesHub = {
     console.log('✅ FeaturesHub готов к работе!');
   },
 
-  // 1. АВТОСИНХРОНИЗАЦИЯ С SUPABASE КАЖДЫЕ 30 СЕКУНД
   startAutoSyncLoop() {
     setInterval(() => {
       if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.autoCloudSync) {
@@ -23,61 +25,26 @@ const FeaturesHub = {
     }, 30000);
   },
 
-  // 14. ЖИВАЯ БЕГУЩАЯ СТРОКА СОБЫТИЙ СЕРВЕРА
   startLiveActivityTicker() {
     const ticker = document.getElementById('live-activity-ticker');
     if (!ticker) return;
-    const events = SupabaseFeatures.getLiveServerEvents();
+    const events = (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.getLiveServerEvents) 
+      ? SupabaseFeatures.getLiveServerEvents() 
+      : [{ text: 'Обновление 2.0 активно!', time: 'сейчас' }];
     let idx = 0;
     setInterval(() => {
-      if (events.length > 0) {
-        ticker.innerHTML = `📢 <b>Сервер:</b> ${events[idx % events.length].text} <span style="color:#888">(${events[idx % events.length].time})</span>`;
+      if (events && events.length > 0) {
+        ticker.innerHTML = `📢 <b>События сервера:</b> ${events[idx % events.length].text} <span style="color:#888">(${events[idx % events.length].time})</span>`;
         idx++;
       }
     }, 6000);
   },
 
-  // СТИЛИ ДЛЯ ВСЕХ 100 НОВЫХ ЭЛЕМЕНТОВ
   injectStyles() {
+    if (document.getElementById('features-hub-styles')) return;
     const styleEl = document.createElement('style');
     styleEl.id = 'features-hub-styles';
     styleEl.innerHTML = `
-      /* Топ бар и лента событий */
-      #live-activity-ticker {
-        background: linear-gradient(90deg, rgba(20,20,30,0.95), rgba(40,40,60,0.95));
-        border-bottom: 1px solid #00e5ff;
-        color: #fff;
-        padding: 6px 15px;
-        font-size: 13px;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .extra-top-btns {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        margin-top: 6px;
-      }
-      .btn-feature {
-        background: #2c3e50;
-        color: #fff;
-        border: 1px solid #4a69bd;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-weight: bold;
-        font-size: 12px;
-        cursor: pointer;
-        transition: 0.2s;
-      }
-      .btn-feature:hover {
-        background: #34495e;
-        border-color: #00e5ff;
-        box-shadow: 0 0 8px rgba(0,229,255,0.4);
-      }
-
-      /* Модальные окна */
       .f-modal {
         display: none;
         position: fixed;
@@ -117,8 +84,6 @@ const FeaturesHub = {
         border-radius: 4px;
         cursor: pointer;
       }
-
-      /* Боевой HUD для снарядов и снаряжения */
       #hud-ammo-panel {
         position: absolute;
         bottom: 80px;
@@ -151,85 +116,16 @@ const FeaturesHub = {
         border-color: #fff;
         font-weight: bold;
       }
-      #sixth-sense-icon {
-        display: none;
-        position: absolute;
-        top: 25%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 64px;
-        animation: pulseBulb 0.6s infinite alternate;
-        z-index: 200;
-      }
-      #sixth-sense-icon.active { display: block; }
-      @keyframes pulseBulb {
-        from { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
-        to { transform: translate(-50%, -50%) scale(1.2); opacity: 1; filter: drop-shadow(0 0 15px #ffcc00); }
-      }
-
-      /* Киллфид */
-      #killfeed-container {
-        position: absolute;
-        top: 60px;
-        right: 15px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        z-index: 100;
-        pointer-events: none;
-      }
-      .killfeed-item {
-        background: rgba(0, 0, 0, 0.75);
-        border-left: 3px solid #ff4757;
-        padding: 4px 10px;
-        border-radius: 3px;
-        font-size: 12px;
-        color: #fff;
-      }
-      .killfeed-item .killer { color: #2ed573; font-weight: bold; }
-      .killfeed-item .victim { color: #ff6b81; font-weight: bold; }
-
-      /* Радиальное меню Z */
-      #radial-menu-overlay {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 9000;
-        justify-content: center;
-        align-items: center;
-      }
-      .radial-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 110px);
-        gap: 12px;
-      }
-      .radial-item {
-        background: #1e272e;
-        border: 2px solid #00e5ff;
-        color: #fff;
-        padding: 15px 5px;
-        text-align: center;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 13px;
-      }
-      .radial-item:hover {
-        background: #00e5ff;
-        color: #000;
-      }
     `;
     document.head.appendChild(styleEl);
   },
 
-  // ВСТАВКА МОДАЛЬНЫХ ОКОН ДЛЯ СИСТЕМ
-  injectModals() {
-    const modalsHtml = `
-      <!-- Бегущая строка -->
-      <div id="live-activity-ticker">📢 Загрузка ленты событий сервера...</div>
+  ensureModalsExist() {
+    if (document.getElementById('modal-clans')) return;
 
-      <!-- Модалка Кланов -->
+    const container = document.createElement('div');
+    container.id = 'features-modals-root';
+    container.innerHTML = `
       <div id="modal-clans" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -240,7 +136,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка Почты -->
       <div id="modal-mailbox" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -251,7 +146,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка Мирового Босса -->
       <div id="modal-worldboss" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -262,7 +156,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка Рейтинга / Лиг -->
       <div id="modal-ranked" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -273,7 +166,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка 30-дневного Календаря -->
       <div id="modal-calendar" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -284,7 +176,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка Колеса Фортуны -->
       <div id="modal-wheel" class="f-modal">
         <div class="f-modal-content" style="text-align:center;">
           <div class="f-modal-header">
@@ -297,7 +188,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка Сейфов -->
       <div id="modal-vaults" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -308,7 +198,6 @@ const FeaturesHub = {
         </div>
       </div>
 
-      <!-- Модалка Спец. Режимов -->
       <div id="modal-special-modes" class="f-modal">
         <div class="f-modal-content">
           <div class="f-modal-header">
@@ -326,47 +215,13 @@ const FeaturesHub = {
           </div>
         </div>
       </div>
-
-      <!-- Радиальное меню Z -->
-      <div id="radial-menu-overlay" onclick="FeaturesHub.closeRadial(event)">
-        <div class="radial-grid">
-          <div class="radial-item" onclick="UIEngine.sendQuickCommand(0)">⚔️ Атакую!</div>
-          <div class="radial-item" onclick="UIEngine.sendQuickCommand(1)">🆘 Помощь!</div>
-          <div class="radial-item" onclick="UIEngine.sendQuickCommand(2)">🏃 За мной!</div>
-          <div class="radial-item" onclick="UIEngine.sendQuickCommand(3)">⏱️ КД!</div>
-          <div class="radial-item" onclick="UIEngine.sendQuickCommand(4)">👍 Так точно!</div>
-          <div class="radial-item" onclick="UIEngine.sendQuickCommand(5)">👎 Отмена!</div>
-        </div>
-      </div>
     `;
-
-    const container = document.createElement('div');
-    container.innerHTML = modalsHtml;
     document.body.appendChild(container);
-
-    // Добавление кнопок в гараж
-    const topBtns = document.querySelector('.top-btns');
-    if (topBtns) {
-      const extraDiv = document.createElement('div');
-      extraDiv.className = 'extra-top-btns';
-      extraDiv.innerHTML = `
-        <button class="btn-feature" onclick="FeaturesHub.openClans()">🛡️ КЛАНЫ</button>
-        <button class="btn-feature" onclick="FeaturesHub.openMailbox()">📬 ПОЧТА</button>
-        <button class="btn-feature" onclick="FeaturesHub.openWorldBoss()">👹 БОСС-РЕЙД</button>
-        <button class="btn-feature" onclick="FeaturesHub.openRanked()">🏅 ЛИГА</button>
-        <button class="btn-feature" onclick="FeaturesHub.openCalendar()">📅 НАГРАДЫ</button>
-        <button class="btn-feature" onclick="FeaturesHub.openWheel()">🎡 КОЛЕСО</button>
-        <button class="btn-feature" onclick="FeaturesHub.openVaults()">🏦 СЕЙФЫ</button>
-        <button class="btn-feature" style="background:#e67e22;" onclick="FeaturesHub.openSpecialModes()">🔥 РЕЖИМЫ</button>
-      `;
-      topBtns.parentElement.appendChild(extraDiv);
-    }
   },
 
-  // БОЕВОЙ HUD (Снаряды, Лампочка, Киллфид)
   injectBattleHUD() {
     const hud = document.getElementById('hud');
-    if (!hud) return;
+    if (!hud || document.getElementById('hud-ammo-panel')) return;
 
     const ammoPanel = document.createElement('div');
     ammoPanel.id = 'hud-ammo-panel';
@@ -380,54 +235,45 @@ const FeaturesHub = {
     `;
     hud.appendChild(ammoPanel);
 
-    const bulb = document.createElement('div');
-    bulb.id = 'sixth-sense-icon';
-    bulb.innerText = '💡';
-    hud.appendChild(bulb);
-
-    const killfeed = document.createElement('div');
-    killfeed.id = 'killfeed-container';
-    hud.appendChild(killfeed);
-
-    CombatMechanics.renderAmmoBar();
+    if (typeof CombatMechanics !== 'undefined' && CombatMechanics.renderAmmoBar) {
+      CombatMechanics.renderAmmoBar();
+    }
   },
 
-  // ГОРЯЧИЕ КЛАВИШИ
   bindKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
       if (!GameState.gameActive) return;
-      if (e.key === '1') CombatMechanics.setShellType('AP');
-      if (e.key === '2') CombatMechanics.setShellType('APCR');
-      if (e.key === '3') CombatMechanics.setShellType('HEAT');
-      if (e.key === '4') CombatMechanics.useRepairKit(GameState.player);
-      if (e.key === '5') CombatMechanics.useMedkit(GameState.player);
-      if (e.key === '6') CombatMechanics.deploySmokeScreen(GameState.player);
-      if (e.key === '7') CombatMechanics.callArtilleryStrike(GameState.player.x, GameState.player.y);
-      if (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я') UIEngine.toggleRadialMenu();
-      if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') UIEngine.togglePhotoMode();
-      if (e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') CustomizationEngine.playHorn();
+      if (e.key === '1' && typeof CombatMechanics !== 'undefined') CombatMechanics.setShellType('AP');
+      if (e.key === '2' && typeof CombatMechanics !== 'undefined') CombatMechanics.setShellType('APCR');
+      if (e.key === '3' && typeof CombatMechanics !== 'undefined') CombatMechanics.setShellType('HEAT');
+      if (e.key === '4' && typeof CombatMechanics !== 'undefined') CombatMechanics.useRepairKit(GameState.player);
+      if (e.key === '5' && typeof CombatMechanics !== 'undefined') CombatMechanics.useMedkit(GameState.player);
+      if (e.key === '6' && typeof CombatMechanics !== 'undefined') CombatMechanics.deploySmokeScreen(GameState.player);
+      if (e.key === '7' && typeof CombatMechanics !== 'undefined') CombatMechanics.callArtilleryStrike(GameState.player.x, GameState.player.y);
+      if ((e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я') && typeof UIEngine !== 'undefined') UIEngine.toggleRadialMenu();
+      if ((e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') && typeof UIEngine !== 'undefined') UIEngine.togglePhotoMode();
+      if ((e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') && typeof CustomizationEngine !== 'undefined') CustomizationEngine.playHorn();
     });
   },
 
-  // МОДАЛЬНЫЕ ОКНА: ОТКРЫТИЕ И РЕНДЕРИНГ
   openModal(id) {
+    this.ensureModalsExist();
     const el = document.getElementById(id);
     if (el) el.style.display = 'flex';
   },
+
   closeModal(id) {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
-  },
-  closeRadial(e) {
-    if (e.target.id === 'radial-menu-overlay') {
-      UIEngine.toggleRadialMenu(false);
-    }
   },
 
   async openClans() {
     this.openModal('modal-clans');
     const container = document.getElementById('clans-content');
-    const clans = await SupabaseFeatures.getClansList();
+    if (!container) return;
+    const clans = (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.getClansList) 
+      ? await SupabaseFeatures.getClansList() 
+      : [];
     container.innerHTML = `
       <div style="margin-bottom:15px;display:flex;gap:10px;">
         <input type="text" id="new-clan-name" placeholder="Название клана" style="flex:1;padding:8px;">
@@ -451,19 +297,27 @@ const FeaturesHub = {
   },
 
   async createClanAction() {
-    const name = document.getElementById('new-clan-name').value;
-    const tag = document.getElementById('new-clan-tag').value;
+    const nameEl = document.getElementById('new-clan-name');
+    const tagEl = document.getElementById('new-clan-tag');
+    if (!nameEl || !tagEl) return;
+    const name = nameEl.value;
+    const tag = tagEl.value;
     if (!name || !tag) return alert('Введите название и тег!');
-    const res = await SupabaseFeatures.createClan(name, tag);
-    if (!res.success) return alert(res.error);
-    alert(`🎉 Клан [${tag}] ${name} успешно создан!`);
-    this.openClans();
+    if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.createClan) {
+      const res = await SupabaseFeatures.createClan(name, tag);
+      if (!res.success) return alert(res.error);
+      alert(`🎉 Клан [${tag}] ${name} успешно создан!`);
+      this.openClans();
+    }
   },
 
   async openMailbox() {
     this.openModal('modal-mailbox');
     const container = document.getElementById('mailbox-content');
-    const mails = await SupabaseFeatures.getMailbox();
+    if (!container) return;
+    const mails = (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.getMailbox) 
+      ? await SupabaseFeatures.getMailbox() 
+      : [];
     container.innerHTML = mails.map(m => `
       <div style="background:#222;border-left:4px solid #00e5ff;padding:12px;margin-bottom:10px;border-radius:4px;">
         <div style="display:flex;justify-content:space-between;">
@@ -480,18 +334,23 @@ const FeaturesHub = {
   },
 
   async claimMail(mailId) {
-    const res = await SupabaseFeatures.claimMailAttachment(mailId);
-    if (res.success) {
-      alert('🎁 Награда успешно зачислена на аккаунт!');
-      this.openMailbox();
-      if (typeof updateUI === 'function') updateUI();
+    if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.claimMailAttachment) {
+      const res = await SupabaseFeatures.claimMailAttachment(mailId);
+      if (res.success) {
+        alert('🎁 Награда успешно зачислена на аккаунт!');
+        this.openMailbox();
+        if (typeof updateUI === 'function') updateUI();
+      }
     }
   },
 
   async openWorldBoss() {
     this.openModal('modal-worldboss');
     const container = document.getElementById('worldboss-content');
-    const boss = await SupabaseFeatures.getWorldBossStatus();
+    if (!container) return;
+    const boss = (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.getWorldBossStatus) 
+      ? await SupabaseFeatures.getWorldBossStatus() 
+      : { name: 'Левиафан', maxHp: 10000000, currentHp: 7500000, tierMilestones: [] };
     const hpPct = Math.round((boss.currentHp / boss.maxHp) * 100);
     container.innerHTML = `
       <div style="text-align:center;margin-bottom:15px;">
@@ -504,7 +363,7 @@ const FeaturesHub = {
       </div>
       <h4>Этапы наград рейда:</h4>
       <div style="display:flex;flex-direction:column;gap:6px;">
-        ${boss.tierMilestones.map(m => `
+        ${(boss.tierMilestones || []).map(m => `
           <div style="background:#222;padding:8px;border-radius:4px;display:flex;justify-content:space-between;">
             <span>Цель: ${m.hpTarget.toLocaleString()} HP</span>
             <span style="color:#f1c40f;">${m.reward}</span>
@@ -518,8 +377,11 @@ const FeaturesHub = {
   openRanked() {
     this.openModal('modal-ranked');
     const container = document.getElementById('ranked-content');
+    if (!container) return;
     const rating = GameState.rankedRating || 1000;
-    const league = SupabaseFeatures.getRankLeague(rating);
+    const league = (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.getRankLeague)
+      ? SupabaseFeatures.getRankLeague(rating)
+      : { name: '🛡️ Бронза', color: '#cd7f32', icon: '🛡️' };
     container.innerHTML = `
       <div style="text-align:center;padding:20px;background:#222;border-radius:8px;">
         <div style="font-size:48px;">${league.icon}</div>
@@ -533,7 +395,10 @@ const FeaturesHub = {
   openCalendar() {
     this.openModal('modal-calendar');
     const container = document.getElementById('calendar-content');
-    const days = EconomyEngine.getDailyCalendarData();
+    if (!container) return;
+    const days = (typeof EconomyEngine !== 'undefined' && EconomyEngine.getDailyCalendarData)
+      ? EconomyEngine.getDailyCalendarData()
+      : [];
     container.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:8px;">
         ${days.map(d => `
@@ -551,19 +416,24 @@ const FeaturesHub = {
 
   openWheel() {
     this.openModal('modal-wheel');
-    document.getElementById('wheel-result').innerText = '';
+    const resEl = document.getElementById('wheel-result');
+    if (resEl) resEl.innerText = '';
   },
 
   spinWheelAction() {
-    const res = EconomyEngine.spinWheel();
-    if (res) {
-      document.getElementById('wheel-result').innerText = `🎉 ВЫИГРЫШ: ${res.name}!`;
+    if (typeof EconomyEngine !== 'undefined' && EconomyEngine.spinWheel) {
+      const res = EconomyEngine.spinWheel();
+      const resEl = document.getElementById('wheel-result');
+      if (res && resEl) {
+        resEl.innerText = `🎉 ВЫИГРЫШ: ${res.name}!`;
+      }
     }
   },
 
   openVaults() {
     this.openModal('modal-vaults');
     const container = document.getElementById('vaults-content');
+    if (!container) return;
     const v = GameState.vaults || { gold: 0, silver: 0, maxGold: 1000, maxSilver: 200000 };
     container.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;text-align:center;">
@@ -590,4 +460,8 @@ const FeaturesHub = {
 };
 
 window.FeaturesHub = FeaturesHub;
+document.addEventListener('DOMContentLoaded', () => { FeaturesHub.init(); });
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  FeaturesHub.init();
+}
 console.log('✅ features-hub.js полностью готов');

@@ -1,17 +1,8 @@
--- ====================================================================
--- 🎮 CITY TANKS / WOTANKS-MINI — ПОЛНЫЙ SQL СКРИПТ ДЛЯ SUPABASE SQL EDITOR
--- ====================================================================
--- Запустите весь этот скрипт в панели: Supabase Dashboard -> SQL Editor -> New Query -> Run
--- Скрипт безопасен (идемпотентен): создаёт все таблицы, добавляет недостающие колонки,
--- настраивает RLS политики для анонимного/клиентского доступа, индексы и Realtime.
--- ====================================================================
-
--- 1. РАСШИРЕНИЯ
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ====================================================================
--- 2. ТАБЛИЦА: users (Профиль игрока, ресурсы, инвентарь, прокачка, статистика)
+-- 1. ТАБЛИЦА: users
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -61,7 +52,6 @@ CREATE TABLE IF NOT EXISTS public.users (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Добавляем колонки, если таблица users уже существовала в более старой версии
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS charges INTEGER DEFAULT 0;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS ranked_rating INTEGER DEFAULT 1000;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS clan_id TEXT DEFAULT NULL;
@@ -75,7 +65,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT FALS
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS last_online TIMESTAMPTZ DEFAULT NOW();
 
 -- ====================================================================
--- 3. ТАБЛИЦА: battle_history (История боёв)
+-- 2. ТАБЛИЦА: battle_history
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.battle_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -93,7 +83,7 @@ CREATE TABLE IF NOT EXISTS public.battle_history (
 );
 
 -- ====================================================================
--- 4. ТАБЛИЦА: chat_messages (Глобальный, клановый и боевой чат)
+-- 3. ТАБЛИЦА: chat_messages
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -105,12 +95,12 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
 );
 
 -- ====================================================================
--- 5. ТАБЛИЦА: clans (Кланы игроков)
+-- 4. ТАБЛИЦА: clans
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.clans (
     id TEXT PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    tag TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    tag TEXT NOT NULL,
     emblem TEXT DEFAULT '🛡️',
     leader TEXT NOT NULL,
     members JSONB DEFAULT '[]'::jsonb,
@@ -120,25 +110,33 @@ CREATE TABLE IF NOT EXISTS public.clans (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.clans ADD COLUMN IF NOT EXISTS emblem TEXT DEFAULT '🛡️';
+ALTER TABLE public.clans ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;
+ALTER TABLE public.clans ADD COLUMN IF NOT EXISTS treasury_silver BIGINT DEFAULT 50000;
+ALTER TABLE public.clans ADD COLUMN IF NOT EXISTS treasury_gold BIGINT DEFAULT 500;
+
 -- ====================================================================
--- 6. ТАБЛИЦА: marketplace_listings (Рынок предметов и танков)
+-- 5. ТАБЛИЦА: marketplace_listings
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.marketplace_listings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     seller TEXT NOT NULL,
     buyer TEXT DEFAULT NULL,
-    item_type TEXT NOT NULL,      -- 'tank', 'camo', 'blueprint', 'item'
+    item_type TEXT NOT NULL,
     item_id TEXT NOT NULL,
     item_name TEXT NOT NULL,
     price_gold INTEGER DEFAULT 0,
     price_silver INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'active', -- 'active', 'sold', 'cancelled'
+    status TEXT DEFAULT 'active',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     sold_at TIMESTAMPTZ DEFAULT NULL
 );
 
+ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS buyer TEXT DEFAULT NULL;
+ALTER TABLE public.marketplace_listings ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+
 -- ====================================================================
--- 7. ТАБЛИЦА: market_history (История сделок рынка)
+-- 6. ТАБЛИЦА: market_history
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.market_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -153,19 +151,25 @@ CREATE TABLE IF NOT EXISTS public.market_history (
 );
 
 -- ====================================================================
--- 8. ТАБЛИЦА: news (Новости и события ангара)
+-- 7. ТАБЛИЦА: news
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.news (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
-    text TEXT NOT NULL,
+    body TEXT NOT NULL,
+    text TEXT DEFAULT NULL,
     tag TEXT DEFAULT 'EVENT',
     image TEXT DEFAULT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.news ADD COLUMN IF NOT EXISTS body TEXT;
+ALTER TABLE public.news ADD COLUMN IF NOT EXISTS text TEXT;
+ALTER TABLE public.news ADD COLUMN IF NOT EXISTS tag TEXT DEFAULT 'EVENT';
+ALTER TABLE public.news ADD COLUMN IF NOT EXISTS image TEXT DEFAULT NULL;
+
 -- ====================================================================
--- 9. ТАБЛИЦА: referrals (Реферальная программа)
+-- 8. ТАБЛИЦА: referrals
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.referrals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -175,15 +179,15 @@ CREATE TABLE IF NOT EXISTS public.referrals (
 );
 
 -- ====================================================================
--- 10. ТАБЛИЦЫ МУЛЬТИПЛЕЕРА: battle_rooms, battle_players, player_shots
+-- 9. ТАБЛИЦЫ: battle_rooms, battle_players, player_shots
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.battle_rooms (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    room_code TEXT UNIQUE,
+    room_code TEXT,
     host_username TEXT NOT NULL,
     mode TEXT DEFAULT '1v1',
     map TEXT DEFAULT 'city',
-    status TEXT DEFAULT 'waiting', -- 'waiting', 'playing', 'finished'
+    status TEXT DEFAULT 'waiting',
     players JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -219,7 +223,7 @@ CREATE TABLE IF NOT EXISTS public.player_shots (
 );
 
 -- ====================================================================
--- 11. ТАБЛИЦА: mailbox (Почтовый ящик с наградами)
+-- 10. ТАБЛИЦА: mailbox
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.mailbox (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -233,7 +237,7 @@ CREATE TABLE IF NOT EXISTS public.mailbox (
 );
 
 -- ====================================================================
--- 12. ТАБЛИЦА: world_boss (Глобальный босс сервера)
+-- 11. ТАБЛИЦА: world_boss
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.world_boss (
     id TEXT PRIMARY KEY DEFAULT 'leviathan',
@@ -247,7 +251,7 @@ CREATE TABLE IF NOT EXISTS public.world_boss (
 );
 
 -- ====================================================================
--- 13. ИНДЕКСЫ ДЛЯ МАКСИМАЛЬНОЙ СКОРОСТИ (Leaderboards, Searches, Auth)
+-- 12. ИНДЕКСЫ
 -- ====================================================================
 CREATE INDEX IF NOT EXISTS idx_users_username ON public.users(username);
 CREATE INDEX IF NOT EXISTS idx_users_xp ON public.users(xp DESC);
@@ -264,9 +268,8 @@ CREATE INDEX IF NOT EXISTS idx_player_shots_room ON public.player_shots(room_id,
 CREATE INDEX IF NOT EXISTS idx_mailbox_username ON public.mailbox(username, claimed);
 
 -- ====================================================================
--- 14. ROW LEVEL SECURITY (RLS) И ПОЛИТИКИ ДОСТУПА
+-- 13. ROW LEVEL SECURITY (RLS) ПОЛИТИКИ
 -- ====================================================================
--- Включаем RLS на всех таблицах
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.battle_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
@@ -281,7 +284,6 @@ ALTER TABLE public.player_shots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mailbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.world_boss ENABLE ROW LEVEL SECURITY;
 
--- Создаем универсальные политики для клиентского доступа (anon / authenticated)
 DROP POLICY IF EXISTS "Public select users" ON public.users;
 CREATE POLICY "Public select users" ON public.users FOR SELECT USING (true);
 
@@ -328,9 +330,8 @@ DROP POLICY IF EXISTS "Public world_boss" ON public.world_boss;
 CREATE POLICY "Public world_boss" ON public.world_boss FOR ALL USING (true);
 
 -- ====================================================================
--- 15. НАСТРОЙКА REALTIME (Realtime Replication)
+-- 14. НАСТРОЙКА REALTIME
 -- ====================================================================
--- Включаем репликацию для живого мультиплеера и чата
 DO $$
 BEGIN
   BEGIN
@@ -355,9 +356,9 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- 16. СТАРТОВЫЕ ДАННЫЕ (Seed Data: Новости, Босс, Кланы)
+-- 15. СТАРТОВЫЕ ДАННЫЕ
 -- ====================================================================
-INSERT INTO public.news (id, title, text, tag)
+INSERT INTO public.news (id, title, body, tag)
 VALUES 
   (1, '⚡ СОБЫТИЕ: Возрождение Ваффентрагера!', 'Бросьте вызов Blitzträger auf E 110 или сыграйте за босса против 10 Гончих Альянса! Зарабатывайте заряды и открывайте контейнеры с Blitzträger auf E 220 и Sturmtiger!', 'ВАЖНО'),
   (2, '🌐 Обновление 2.0: 100 новых фич и кланы!', 'В игре появились кланы, 30-дневный календарь наград, мировой босс Левиафан, колесо фортуны и рейтинговая лига!', 'ОБНОВЛЕНИЕ')
@@ -373,7 +374,3 @@ VALUES
   ('clan_steel', 'Стальной Кулак', 'STEEL', '⚔️', 'IronGeneral', 3, 150000, 3500),
   ('clan_krieger', 'Орден Ваффентрагера', 'KRIEGER', '⚡', 'VonKrieger_99', 5, 500000, 15000)
 ON CONFLICT (id) DO NOTHING;
-
--- ====================================================================
--- ГОТОВО! БАЗА ДАННЫХ WOTANKS-MINI ПОЛНОСТЬЮ НАСТРОЕНА! 🚀
--- ====================================================================

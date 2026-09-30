@@ -64,6 +64,14 @@ function update(){
     updateWaffentrager();
   }
 
+  // 100 Фич: обновление систем боя, погоды, эффектов и геймпада
+  if (typeof UIEngine !== 'undefined' && UIEngine.pollGamepad) UIEngine.pollGamepad();
+  if (typeof CombatMechanics !== 'undefined' && CombatMechanics.update) CombatMechanics.update(0.016);
+  if (typeof WeatherEngine !== 'undefined' && WeatherEngine.update) WeatherEngine.update(0.016);
+  if (typeof WeatherEngine !== 'undefined' && WeatherEngine.updateWaterPhysics) WeatherEngine.updateWaterPhysics(p, 0.016);
+  if (typeof WeatherEngine !== 'undefined' && WeatherEngine.updateCaptureBases) WeatherEngine.updateCaptureBases(GameState.units, 0.016);
+  if (typeof VisualFX !== 'undefined' && VisualFX.update) VisualFX.update(0.016);
+
   // Горение игрока
   if(p&&!p.dead&&p.onFire){
     if(!p.fireDmgTimer||Date.now()-p.fireDmgTimer>1000){
@@ -489,6 +497,17 @@ function draw(){
   for(var dui=0;dui<GameState.units.length;dui++){GameState.units[dui].draw(ctx);}
   drawCasings(ctx,cam);
 
+  // 100 Фич: отрисовка погоды, бочек, дыма, арты и эффектов
+  if (typeof CombatMechanics !== 'undefined' && CombatMechanics.draw) {
+    CombatMechanics.draw(ctx, cam.x, cam.y);
+  }
+  if (typeof VisualFX !== 'undefined' && VisualFX.draw) {
+    VisualFX.draw(ctx, cam.x, cam.y);
+  }
+  if (typeof WeatherEngine !== 'undefined' && WeatherEngine.draw) {
+    WeatherEngine.draw(ctx, cam.x, cam.y, canvas.width, canvas.height);
+  }
+
   for(var bli=0;bli<GameState.bullets.length;bli++){
     var bl=GameState.bullets[bli];
     ctx.fillStyle=bl.color;ctx.beginPath();ctx.arc(bl.x-cam.x,bl.y-cam.y,4,0,Math.PI*2);ctx.fill();
@@ -551,6 +570,9 @@ function init(){
   updateResources();
   updateInvCount();
   updateBoosterUI();
+  if (typeof FeaturesHub !== 'undefined' && FeaturesHub.init) {
+    FeaturesHub.init();
+  }
   gameLoop();
   console.log('🎮 CITY TANKS! Танков:',Object.keys(DB).length);
 }

@@ -109,7 +109,8 @@ function traceBattleRay(x, y, h, dx, dy, dh, limit, shooter, wallsOnly = false, 
       if (t <= distance) {
         distance = t;
         hit = u;
-        part = turret < body ? 'turret' : 'hull';
+        // On casemate models the upper mesh can be hit, but is part of the hull.
+        part = turret < body && u.turretArmor != null ? 'turret' : 'hull';
       }
     }
   return { x: x + dx * distance, y: y + dy * distance, h: h + dh * distance, distance, hit, part };

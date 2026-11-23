@@ -28,7 +28,7 @@ class Tank {
     this.camo = (d.camo || 0.2) * (1 + (mb.camo || 0));
     this.armor = Math.floor((d.armor || 0) * (1 + (mb.armor || 0)));
 
-    this.turretArmor = Math.floor(d.turretArmor * (1 + (mb.armor || 0)));
+    this.turretArmor = d.turretArmor == null ? null : Math.floor(d.turretArmor * (1 + (mb.armor || 0)));
     this.pen = d.pen;
 
     // ✅ Критические повреждения модулей (см. armor-system.js)
@@ -36,7 +36,10 @@ class Tank {
     this.angle = 0;
     // World-space gun bearing; a limited mount is constrained relative to the hull.
     this.tAngle = this.lookYaw = this.lookPitch = 0;
-    this.yawArc = d.yawArc ? (d.yawArc * Math.PI) / 180 : Math.PI;
+    // In the renderer turret.rotation.y = hull bearing − gun bearing.
+    const [modelMin, modelMax] = d.yawLimits || [-180, 180];
+    this.minYaw = (-modelMax * Math.PI) / 180;
+    this.maxYaw = (-modelMin * Math.PI) / 180;
     this.minPitch = d.minPitch == null ? -0.48 : (d.minPitch * Math.PI) / 180;
     this.maxPitch = d.maxPitch == null ? 0.58 : (d.maxPitch * Math.PI) / 180;
     this.lastShot = 0;
@@ -122,10 +125,14 @@ class Tank {
     this.lookPitch = bounded(pitch, this.minPitch, this.maxPitch);
     this.constrainTraverse();
   }
+  canTraverseTo(bearing) {
+    const delta = wrapAngle(bearing - this.angle);
+    return delta >= this.minYaw && delta <= this.maxYaw;
+  }
   constrainTraverse() {
-    if (this.yawArc === Math.PI) return;
+    if (this.minYaw === -Math.PI && this.maxYaw === Math.PI) return;
     // Limited mount: neither the mesh nor the stored input can wind up past its stops.
-    const stop = (a) => wrapAngle(this.angle + bounded(wrapAngle(a - this.angle), -this.yawArc, this.yawArc));
+    const stop = (a) => wrapAngle(this.angle + bounded(wrapAngle(a - this.angle), this.minYaw, this.maxYaw));
     this.tAngle = stop(this.tAngle);
     this.lookYaw = stop(this.lookYaw);
   }

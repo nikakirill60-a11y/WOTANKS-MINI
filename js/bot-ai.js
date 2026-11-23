@@ -218,7 +218,7 @@ const BotAI = (() => {
         a = Math.atan2(dy, dx);
       u.lookAtPoint(t.x, t.y, t.aimHeight);
       u.slewSight(0.042);
-      const outOfArc = Math.abs(turn(a, u.angle)) > u.yawArc;
+      const outOfArc = !u.canTraverseTo(a);
       const ready = b.open && !outOfArc && Math.abs(turn(u.lookYaw, u.tAngle)) < 0.035;
       b.aimTicks = ready ? b.aimTicks + 1 : 0;
       const closeAlly = b.open && friendInWay(u, t);

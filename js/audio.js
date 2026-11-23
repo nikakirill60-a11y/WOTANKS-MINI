@@ -1,0 +1,98 @@
+// ========== АУДИО СИСТЕМА ==========
+
+const AudioSystem = {
+    context: null,
+    masterGain: null,
+
+    init() {
+        this.context = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.context.createGain();
+        // Начальная громкость — из настроек игрока (см. settings.js), 1 по умолчанию
+        var initial = (typeof GameState !== 'undefined' && GameState.settings && typeof GameState.settings.volume === 'number') ? GameState.settings.volume : 1;
+        this.masterGain.gain.value = initial;
+        this.masterGain.connect(this.context.destination);
+    },
+
+    setVolume(v) {
+        // init() reads the saved volume on first playback, after entering the garage.
+        if (this.masterGain) this.masterGain.gain.value = Math.max(0, Math.min(1, v));
+    },
+
+    play(type, volume = 0.3) {
+        if (!this.context) this.init();
+        
+        const o = this.context.createOscillator();
+        const g = this.context.createGain();
+        o.connect(g);
+        g.connect(this.masterGain);
+        g.gain.value = volume;
+        
+        switch(type) {
+            case 'shot':
+                o.type = 'sawtooth';
+                o.frequency.value = 80;
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.3);
+                o.start();
+                o.stop(this.context.currentTime + 0.3);
+                break;
+                
+            case 'rapidfire':
+                o.type = 'square';
+                o.frequency.value = 150;
+                g.gain.value = 0.2;
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.1);
+                o.start();
+                o.stop(this.context.currentTime + 0.1);
+                break;
+                
+            case 'bigshot':
+                o.type = 'sawtooth';
+                o.frequency.value = 40;
+                g.gain.value = 0.5;
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.5);
+                o.start();
+                o.stop(this.context.currentTime + 0.5);
+                break;
+                
+            case 'hit':
+                o.type = 'square';
+                o.frequency.value = 200;
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.15);
+                o.start();
+                o.stop(this.context.currentTime + 0.15);
+                break;
+                
+            case 'rico':
+                o.type = 'sine';
+                o.frequency.value = 2000;
+                o.frequency.exponentialRampToValueAtTime(4000, this.context.currentTime + 0.2);
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.3);
+                o.start();
+                o.stop(this.context.currentTime + 0.3);
+                break;
+                
+            case 'boom':
+                o.type = 'sawtooth';
+                o.frequency.value = 30;
+                g.gain.value = 0.6;
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.8);
+                o.start();
+                o.stop(this.context.currentTime + 0.8);
+                break;
+                
+            case 'eng':
+                o.type = 'sawtooth';
+                o.frequency.value = 35 + Math.random() * 10;
+                g.gain.value = 0.04;
+                g.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.1);
+                o.start();
+                o.stop(this.context.currentTime + 0.1);
+                break;
+        }
+    }
+};
+
+// Сокращённая функция для совместимости
+function snd(type, volume) {
+    AudioSystem.play(type, volume);
+}

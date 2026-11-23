@@ -1,0 +1,71 @@
+/* Field instruments use the same brass, slate and muted green as the depot. */
+#game { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:none; outline:0; }
+#game[hidden], #battle-notice[hidden] { display:none; }
+#hud { z-index:2; font-family:'Segoe UI',Arial,sans-serif; color:#f2f4e9; background:linear-gradient(180deg,#0c191d59,transparent 15%,transparent 84%,#10171048); }
+.combat-eyebrow { color:#d8c69f; font:600 10px/1.4 Consolas,monospace; letter-spacing:.16em; text-transform:uppercase; }
+.combat-location { position:absolute; top:19px; left:22px; padding:8px 13px; border-left:2px solid #dfbd7d; background:linear-gradient(90deg,#18221fea,#18221f8c); }
+.combat-location strong { display:block; font:600 clamp(16px,2.2vw,25px)/1.25 'Segoe UI',Arial,sans-serif; letter-spacing:-.025em; }
+.combat-score { display:flex; align-items:center; gap:15px; position:absolute; top:19px; left:50%; transform:translateX(-50%); padding:6px 14px; background:#192420e6; border:1px solid #c7d3c059; border-radius:3px; font:700 23px/1.05 Consolas,monospace; }
+.combat-score i { font-size:13px; color:#a6b0a2; font-style:normal; }
+.combat-score #allies-list, .combat-score #enemies-list { position:static; border:0; }
+.combat-score #allies-list { color:#92e0c9; }.combat-score #enemies-list { color:#ffa58c; }
+#hud #battle-exit, .battle-cancel { pointer-events:auto; background:#192420dc; border:1px solid #d5d6be69; color:#f2efe3; padding:8px 12px; border-radius:3px; cursor:pointer; font:600 12px 'Segoe UI',Arial,sans-serif; }
+#battle-exit { position:absolute; right:22px; top:19px; }
+#battle-exit:hover,.battle-cancel:hover { background:#344037; }
+#hud #perf-hud { position:absolute; top:58px; left:auto; right:22px; background:#18221fab; font:10px Consolas,monospace; padding:3px 5px; border:0; }
+#battle-reticle { position:absolute; width:27px; height:27px; transform:translate(-50%,-50%); border:1.5px solid currentColor; border-radius:50%; color:#ffffe9; filter:drop-shadow(0 1px 2px #121810); }
+#battle-reticle i { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:3px; height:3px; border-radius:50%; background:currentColor; }
+#battle-reticle::before,#battle-reticle::after { content:''; position:absolute; top:50%; width:8px; height:1.5px; background:currentColor; }#battle-reticle::before{right:100%}#battle-reticle::after{left:100%}
+#battle-reticle.locked { color:#ff967e; } #battle-reticle.loading { border-style:dashed; }
+#hud #bottom-bar { width:clamp(265px,25vw,365px); align-items:stretch; gap:4px; left:22px; bottom:20px; transform:none; padding:11px 13px; background:linear-gradient(115deg,#17211ff2,#202c27df); border:1px solid #d1d5bd58; border-radius:4px; }
+.armor-readout { display:flex; align-items:baseline; justify-content:space-between; gap:6px; font:700 19px/1.1 'Segoe UI',Arial,sans-serif; }.armor-readout span { font:600 12px Consolas,monospace; color:#dce7d4; }
+#hud #hp-ui { height:5px; border:0; margin:1px 0; background:#4a4540; }#hud #hp-bar { background:#9dc792; }
+#hud #ammo-ui { color:#e7ca93; border:none; background:none; text-align:left; padding:2px 0; font:600 10px Consolas,monospace; letter-spacing:.08em; }
+#hud #shell-ui,#hud #cons-ui,#hud #field-actions { justify-content:flex-start; border:0; background:none; padding:0; margin:0; gap:3px; }
+#hud #field-actions { order:1; padding-top:4px; border-top:1px solid #99aa962c; }
+#hud .cons-btn,#hud .shell-opt,#hud #field-actions button { color:#d1d9ca; background:#d7e2ce0b; border:1px solid #99aa9645; border-radius:2px; font:10px/1.3 'Segoe UI',Arial,sans-serif; padding:3px 5px; }
+#hud .shell-opt.active { border-color:#d6b675; color:#f2d194; }#hud .cons-btn.used { opacity:.4; }
+#hud #minimap { right:22px; bottom:20px; border:1px solid #b7c6ab; box-shadow:0 2px 12px #19222055; border-radius:3px; }
+#hud #combat-message { top:23%; font:600 18px 'Segoe UI',sans-serif; }#hud #dmg-log { bottom:23%; font-size:14px; }
+#battle-notice, #control-modal.show, #result-screen.show { background:radial-gradient(ellipse at center,#303b32f7,#101713fa 70%); color:#eeeede; font-family:'Segoe UI',Arial,sans-serif; text-align:center; }
+#battle-notice { position:fixed; inset:0; z-index:500; display:grid; place-items:center; padding:18px; }
+#battle-notice>div { width:min(100%,430px); padding:26px; border:1px solid #60705d; border-radius:6px; background:#202922; }
+#battle-notice h2 { margin:8px 0; }#battle-notice-text { color:#c7d1c4; line-height:1.55; margin-bottom:18px; }
+#battle-notice button,#result-screen button { background:#d2b279; color:#1b241f; font-weight:700; border-radius:3px; }
+#control-modal .control-option { color:#e4ebdf; border:1px solid #596857; background:#27322b; height:auto; min-height:145px; padding:13px; }
+#control-modal .control-option:hover { border-color:#d5b481; }#control-modal .control-icon { font-size:32px; }#control-modal p { margin-top:6px; color:#b8c5b6; font-size:12px; line-height:1.45; }
+#control-modal h2,#result-title { font:650 clamp(23px,3vw,38px) 'Segoe UI',Arial,sans-serif; letter-spacing:-.035em; }#result-stats { font-size:16px; }
+.supply-charges { grid-column:1/-1; padding:10px; color:#b5ddda; } .supply-charges button { margin-left:8px; }
+.mobile-mode #hud #bottom-bar { width:min(45vw,245px); left:12px; bottom:150px; padding:6px 9px; }
+.mobile-mode #hud #field-actions button { font-size:9px; padding:3px; }
+.mobile-mode #mobile-controls>* { touch-action:none; user-select:none; }
+.mobile-mode #mobile-controls #mobile-cons { flex-direction:row; flex-wrap:wrap; gap:3px; top:76px; left:12px; max-width:150px; }
+.mobile-mode .m-cons { width:42px; height:28px; font-size:10px; border:1px solid #a7b995; background:#26312bcc; color:#d6e8cb; border-radius:3px; }
+.mobile-mode .m-cons.used { opacity:.45; }
+.mobile-mode #mobile-controls #joystick-zone { width:clamp(86px,19vmin,126px); height:clamp(86px,19vmin,126px); bottom:15px; left:13px; }
+.mobile-mode #fire-zone { bottom:20px; right:14px; } .mobile-mode .mobile-btn.fire { width:72px; height:72px; background:#4f382cd1; border:2px solid #dfa887; color:#f2d3af; }
+.mobile-mode #mobile-shells { right:12px; bottom:102px; flex-direction:row; }.mobile-mode .m-shell { width:33px; height:30px; border-width:1px; border-radius:4px; }
+.mobile-mode #hud #minimap { bottom:auto; top:83px; right:12px; max-width:108px; max-height:108px; }
+@media(max-width:640px),(max-height:520px) {
+  .combat-location { top:9px; left:10px; padding:6px 8px; }.combat-location strong { font-size:15px; }.combat-eyebrow { font-size:8px; }
+  .combat-score { top:10px; gap:7px; padding:5px 8px; font-size:17px; }
+  #battle-exit { top:9px;right:10px; }#hud #battle-exit { font-size:10px; padding:6px; }#hud #perf-hud { top:39px;right:10px; }
+  .mobile-mode #hud #bottom-bar { bottom:122px; }.mobile-mode .armor-readout { font-size:14px; }.mobile-mode .armor-readout span { font-size:10px; }
+  #control-modal .control-option { margin:5px; padding:9px; min-height:115px; width:min(43vw,200px); }.control-icon { margin:0; }
+  #hud #combat-message { font-size:13px; }
+}
+@media(max-height:460px) {
+  .mobile-mode #hud #bottom-bar { left:125px; bottom:8px; max-width:164px; }
+  .mobile-mode #hud #minimap { top:61px; max-width:72px; max-height:72px; }.mobile-mode #mobile-controls #mobile-cons { top:58px; }
+}
+@media(min-width:740px) {
+  .combat-score #allies-list::before, .combat-score #enemies-list::after { font:600 9px Consolas,monospace; letter-spacing:.13em; vertical-align:middle; }
+  .combat-score #allies-list::before { content:'СВОИ'; margin-right:9px; }
+  .combat-score #enemies-list::after { content:'ПРОТИВНИК'; margin-left:9px; }
+}
+/* Clip-fed guns use one ammunition type. */
+body.drum-equipped #shell-ui, body.drum-equipped #mobile-shells { display: none; }
+#water-warning { position:absolute; top:31%; left:50%; transform:translateX(-50%); width:max-content; max-width:90vw; padding:5px 10px; background:#273b43ed; border:1px solid #9ac7ce; border-radius:3px; color:#daeff4; font:600 12px 'Segoe UI',sans-serif; }
+
+.drive-readout { display:flex; justify-content:space-between; gap:8px; color:#b9c7b4; font:10px/1.3 Consolas,monospace; }
+#drive-speed { color:#dce9d5; font-variant-numeric:tabular-nums; }

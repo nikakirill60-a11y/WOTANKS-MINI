@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CITY TANKS</title>
+  
+  <!-- СТИЛИ -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/features.css">
+  <link rel="stylesheet" href="css/hangar.css">
+  <link rel="stylesheet" href="css/battle.css">
+</head>
+<body>
+
+<!-- ========== ВЫБОР УПРАВЛЕНИЯ ========== -->
+<div id="control-modal">
+  <h2>ВЫБЕРИТЕ УПРАВЛЕНИЕ</h2>
+  <div class="control-options">
+    <button type="button" class="control-option" onclick="selectControl('pc')">
+      <div class="control-icon">🖥️</div>
+      <h3>ПК / Ноутбук</h3>
+      <p>WASD — движение и поворот корпуса<br>Мышь — прицел · ЛКМ — огонь<br>Колесо — зум · пробел — тормоз</p>
+    </button>
+    <button type="button" class="control-option" onclick="selectControl('mobile')">
+      <div class="control-icon">📱</div>
+      <h3>Телефон / Планшет</h3>
+      <p>Джойстик — ход и поворот корпуса<br>Коснитесь цели или ведите по полю пальцем<br>Кнопка «Огонь» — выстрел</p>
+    </button>
+  </div>
+  <button class="battle-cancel" onclick="document.getElementById('control-modal').classList.remove('show')">Назад в ангар</button>
+</div>
+
+<!-- ========== КОНТЕЙНЕРЫ ========== -->
+<div id="container-modal">
+  <div class="modal-header">
+    <h2>📦 КОНТЕЙНЕРЫ</h2>
+    <button type="button" class="btn btn-close" onclick="hideContainerShop()">В ангар</button>
+  </div>
+<div class="modal-tabs">
+    <button class="modal-tab active" onclick="switchTab('shop', this)">📦 Магазин</button>
+    <button class="modal-tab" onclick="switchTab('inventory', this)">🎒 Инвентарь</button>
+
+</div>
+
+<!-- Содержимое вкладки Магазина контейнеров -->
+<div id="tab-shop" class="tab-content active-tab">
+    <div id="container-grid" class="container-grid"></div>
+</div>
+
+<!-- Содержимое вкладки Инвентаря -->
+<div id="tab-inventory" class="tab-content">
+    <div id="inventory-empty" style="display:none;text-align:center;padding:30px;color:#888;">🎒 Инвентарь пуст</div>
+    <div id="inventory-grid" class="inventory-grid"></div>
+</div>
+
+</div><!-- /container-modal -->
+
+<dialog id="calendar-modal" aria-labelledby="calendar-title">
+  <div class="modal-header"><h2 id="calendar-title">Календарь наград</h2>
+    <button type="button" class="btn" onclick="this.closest('dialog').close()">В ангар</button></div>
+  <div id="calendar-days"></div>
+</dialog>
+
+<!-- ========== ПРОМОКОД ========== -->
+<div id="promo-modal">
+  <div class="promo-content">
+    <h2>🎟️ ПРОМОКОД</h2>
+    <input type="text" id="promo-input" placeholder="Введите код...">
+    <button class="btn" onclick="activatePromo()">АКТИВИРОВАТЬ</button>
+    <button class="btn btn-close" onclick="hidePromo()">ЗАКРЫТЬ</button>
+    <div id="promo-result"></div>
+  </div>
+</div>
+
+<!-- ========== ОТКРЫТИЕ КОНТЕЙНЕРА ========== -->
+<div id="container-opening">
+  <div id="anim-container"></div>
+  <div id="reward-display"></div>
+</div>
+
+<!-- ========== МОДУЛИ И ПРОКАЧКА ========== -->
+<div id="module-modal" class="module-modal"></div>
+<div id="upgrade-modal" class="upgrade-modal"></div>
+
+<!-- ========== ГЛАВНЫЙ ИНТЕРФЕЙС ========== -->
+<div id="ui">
+  <header id="top-bar">
+    <div class="hangar-topline">
+      <div class="garage-brand">
+        <svg width="36" height="38" viewBox="0 0 36 38" fill="none" aria-hidden="true"><path d="m18 1 15 6v15l-15 14L3 22V7z" stroke="currentColor" stroke-width="2"/><path d="m9 12 9 4 9-4v4l-9 4-9-4zm0 8 9 4 9-4-9 9z" fill="currentColor"/></svg>
+        <div><strong>CITY TANKS</strong><small id="save-status" role="status">Сохранение в этом браузере</small></div>
+      </div>
+      <div id="res-panel" aria-label="Ресурсы">
+        <div><small>Опыт</small><b><span id="xp-val">0</span> XP</b></div>
+        <div class="gold-txt"><small>Золото</small><b><span id="gold-val">0</span> G</b></div>
+        <div><small>Серебро</small><b><span id="silver-val">0</span> ₽</b></div>
+        <div><small>Заряды</small><b><span id="charges-val">0</span> ⚡</b></div>
+      </div>
+      <div id="exchange-panel">
+        <button class="btn btn-sm" onclick="exchangeXP()" title="Обменять 100 XP на 10 золота">ОБМЕН</button>
+        <button class="btn btn-sm" onclick="buyCharges(1)" title="Купить 1 заряд за 100 золота">+1 ⚡ · 100 G</button>
+        <span id="exchange-msg" role="status"></span>
+      </div>
+      <button type="button" class="garage-settings" onclick="showSettings()" aria-label="Настройки" title="Настройки">⚙</button>
+    </div>
+    <nav class="top-btns" aria-label="Сервисы ангара">
+      <button class="depot-tool" onclick="showPromo()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5h18v3a3 3 0 0 0 0 6v3H3v-3a3 3 0 0 0 0-6ZM15 6v2m0 2v2m0 2v2"/></svg>Код</button>
+      <button class="depot-tool" onclick="showContainerShop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-5 9 5v10l-9 5-9-5V7Zm0 0 9 5 9-5m-9 5v10M7 5l9 5"/></svg>Контейнеры</button>
+      <button class="depot-tool" onclick="openInventoryTab()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v13H4zM7 8V5h10v3m-8 4h6"/></svg>Инвентарь<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
+      <button class="depot-tool" onclick="showModules()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 7 4v8l-7 4-7-4V6Zm-7 4 7 4 7-4m-7 4v8m-8 1 8 4 8-4"/></svg>Модули</button>
+      <button class="depot-tool" onclick="showUpgrades()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 6-6 4 4 7-7m-6 0h6v6M4 20h16"/></svg>Прокачка</button>
+      <button class="depot-tool" onclick="openCalendar()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v15H3zM7 3v5m10-5v5M3 11h18m-14 4h3"/></svg>Награды</button>
+      <button class="depot-tool" onclick="startTutorial()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5zM6 12v4c3 4 9 4 12 0v-4m4-3v7"/></svg>Обучение</button>
+    </nav>
+  </header>
+
+  <main id="main-garage-area">
+    <div class="hangar-workspace">
+      <div class="hangar-heading">
+        <div><p class="bay-kicker">ГАРАЖНЫЙ КОМПЛЕКС <span>/</span> 01</p><h1>3D-ангар</h1></div>
+        <div class="bay-tabs" role="group" aria-label="Раздел ангара">
+          <button id="bay-inspect-tab" aria-controls="bay-inspection" aria-pressed="true">Осмотр</button>
+          <button id="bay-research-tab" aria-controls="bay-research" aria-pressed="false">Дерево развития</button>
+        </div>
+      </div>
+      <div class="bay-grid">
+        <section id="bay-inspection" class="bay-panel" aria-label="Осмотр техники">
+          <div class="bay-stage">
+            <div id="bay-viewport">
+              <div id="bay-poster" hidden><img alt=""><span></span></div>
+              <span id="bay-loading" role="status" hidden>Загрузка модели…</span>
+            </div>
+            <div id="bay-angles" role="group" aria-label="Ракурс осмотра" hidden>
+              <button data-view="iso">3/4</button><button data-view="front">Спереди</button><button data-view="side">Сбоку</button><button data-view="top">Сверху</button>
+            </div>
+            <div class="bay-caption"><p id="bay-kind" class="bay-kicker"></p><h2 id="bay-name"></h2><p id="bay-meta"></p></div>
+            <span class="bay-plate" aria-hidden="true">BOX <b>01</b></span>
+          </div>
+          <div class="bay-toolbar">
+            <label for="bay-picker">Осмотреть <select id="bay-picker" title="Осмотр не меняет машину для боя"></select></label>
+            <a id="bay-open" target="_blank" rel="noopener" hidden>Карточка модели ↗</a>
+          </div>
+        </section>
+        <section id="bay-research" class="bay-panel" aria-label="Дерево развития" hidden>
+          <div class="branch-heading">
+            <div><p class="bay-kicker">ВЕТКА <span>/</span> <b id="branch-number"></b></p><h2 id="branch-title"></h2></div>
+            <div id="nat-buttons" role="group" aria-label="Нация ветки"></div>
+          </div>
+          <div class="tree-legend"><span><i></i> В ангаре</span><span><i></i> Доступно</span><span><i></i> Закрыто</span></div>
+          <div id="tree-container" class="tree-view" tabindex="0" role="region" aria-labelledby="branch-title">
+            <div id="tree-map"><canvas id="tree-canvas" aria-hidden="true"></canvas><div id="nodes"></div></div>
+          </div>
+          <div class="tree-nav"><span>Нажмите узел, чтобы исследовать или выбрать танк.</span><div>
+            <button type="button" id="tree-prev" aria-label="Предыдущие уровни">←</button>
+            <button type="button" id="tree-next" aria-label="Следующие уровни">→</button></div></div>
+          <section class="tree-dossier" aria-label="Характеристики узла">
+            <img id="tree-photo" alt="">
+            <div><p class="bay-kicker">КАРТОЧКА УЗЛА <span>/</span> <b id="tree-tier"></b></p>
+              <h3 id="tree-name"></h3><p id="tree-status"></p></div>
+            <button type="button" id="tree-inspect">Осмотреть в 3D ↗</button>
+            <dl id="tree-stats"></dl>
+          </section>
+        </section>
+        <aside class="bay-dispatch" aria-label="Машина для боя">
+          <p class="bay-kicker"><i class="bay-led"></i> ВЫБРАНО ДЛЯ БОЯ</p>
+          <h2 id="dispatch-name"></h2><p id="dispatch-meta"></p>
+          <div class="dispatch-heading">БАЗОВЫЕ ХАРАКТЕРИСТИКИ</div>
+          <dl class="dispatch-stats" aria-label="Базовые характеристики">
+            <div><dt>Прочность</dt><dd id="dispatch-hp"></dd></div>
+            <div><dt id="dispatch-dmg-label">Урон</dt><dd id="dispatch-dmg"></dd></div>
+            <div><dt id="dispatch-reload-label">Перезарядка</dt><dd id="dispatch-reload"></dd></div>
+            <div><dt>Пробитие</dt><dd id="dispatch-pen"></dd></div>
+            <div><dt>Лоб корпуса / башни</dt><dd id="dispatch-armor"></dd></div>
+            <div><dt>Скорость</dt><dd id="dispatch-speed"></dd></div>
+            <div><dt>Обзор</dt><dd id="dispatch-view"></dd></div>
+          </dl>
+          <p id="dispatch-drum" hidden></p>
+          <!-- УПРАВЛЕНИЕ БОЕМ -->
+          <div id="battle-controls">
+            <div class="dispatch-heading">3D-БОЙ С БОТАМИ</div>
+            <div class="dispatch-map">
+              <label for="map-select">Карта</label> <select id="map-select" aria-describedby="map-size map-detail"></select>
+            </div>
+            <details class="sector-brief"><summary>План сектора <b id="map-size"></b></summary>
+              <canvas id="map-plan" role="img" width="360" height="242" aria-label="Схема выбранной карты"></canvas>
+              <div class="plan-key"><span>◇ Вы</span><span>◇ Противник</span></div>
+              <p id="map-detail"></p>
+            </details>
+            <div class="btn-group">
+              <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
+              <button class="btn" onclick="showControlModal(10)">10x10</button>
+              <button class="btn" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+            </div>
+
+            <!-- ТРЕНИРОВКА -->
+            <div id="training-panel" style="display:none">
+              <div class="training-options">
+                <label for="train-nat-select">Нация соперника</label><select id="train-nat-select" onchange="fillEnemySelect()"></select>
+                <label for="enemy-select">Машина соперника</label><select id="enemy-select"></select>
+                <button class="btn" onclick="showControlModal('train')">НАЧАТЬ</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <details class="bay-supply">
+        <summary>Бустеры снабжения</summary>
+        <div id="booster-display" class="booster-bar"></div>
+      </details>
+    </div>
+  </main>
+
+  <section id="tank-carousel-container" aria-label="Ваши танки">
+    <div class="fleet-heading"><span>МОЯ ТЕХНИКА</span><b id="fleet-count"></b><i></i><small>ВЫБОР МАШИНЫ ДЛЯ БОЯ</small></div>
+    <div id="tank-carousel"></div>
+  </section>
+</div>
+
+<!-- ========== HUD (ВО ВРЕМЯ БОЯ) ========== -->
+<div id="hud">
+  <div class="combat-location"><span class="combat-eyebrow" id="combat-sector"></span><strong id="combat-map"></strong></div>
+  <div class="combat-score" aria-label="Оставшиеся машины"><span id="allies-list"></span><i>:</i><span id="enemies-list"></span></div>
+  <button type="button" id="battle-exit" onclick="leaveBattle()">Выйти из боя</button>
+  <div id="battle-reticle" aria-hidden="true"><i></i></div>
+
+  <div id="perf-hud"></div>
+  <div id="water-warning" hidden></div>
+
+  <!-- НИЖНЯЯ ПАНЕЛЬ -->
+  <div id="bottom-bar">
+    <div id="field-actions">
+      <button class="btn btn-sm" onclick="CombatMechanics.deploySmokeScreen(GameState.player)">💨 Дым [X]</button>
+      <button class="btn btn-sm" onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">🎯 Арта [C]</button>
+    </div>
+    <div class="armor-readout"><b id="combat-tank"></b><span id="hp-text"></span></div>
+    <div id="hp-ui"><div id="hp-bar"></div></div>
+    <div class="drive-readout"><span id="drive-speed">0 км/ч</span><span id="drive-surface">Грунт</span></div>
+    <div id="ammo-ui"><span id="ammo-val">ЗАРЯЖЕНО</span></div>
+    <div id="shell-ui">
+      <span class="shell-opt active" onclick="setShell(0)">1:ББ</span>
+      <span class="shell-opt" onclick="setShell(1)">2:ОФ</span>
+      <span class="shell-opt" onclick="setShell(2)">3:Подкал</span>
+    </div>
+    <div id="cons-ui">
+      <span class="cons-btn ready" id="cons1" onclick="useCons(0)">4:Ремкомплект</span>
+      <span class="cons-btn ready" id="cons2" onclick="useCons(1)">5:Аптечка</span>
+      <span class="cons-btn ready" id="cons3" onclick="useCons(2)">6:Адреналин</span>
+      <span class="cons-btn ready" id="cons4" onclick="useCons(3)">7:Огнетушитель</span>
+      <span class="cons-btn ready" id="cons5" onclick="useCons(4)">8:Доп.паёк</span>
+      <span class="cons-btn ready" id="cons6" onclick="useCons(5)">9:Топливо</span>
+    </div>
+  </div>
+
+  <!-- ЛОГИ И ИНФОРМАЦИЯ -->
+  <div id="dmg-log"></div>
+  <div id="combat-message"></div>
+  <canvas id="minimap" role="img" aria-label="Мини-карта боя"></canvas>
+</div>
+
+<!-- ========== МОБИЛЬНОЕ УПРАВЛЕНИЕ ========== -->
+<div id="mobile-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-stick"></div>
+    </div>
+  </div>
+  <div id="fire-zone">
+    <div class="mobile-btn fire" id="fire-btn">ОГОНЬ</div>
+  </div>
+  <div id="mobile-shells">
+    <div class="m-shell active" onclick="setShell(0)">ББ</div>
+    <div class="m-shell" onclick="setShell(1)">ОФ</div>
+    <div class="m-shell" onclick="setShell(2)">ПК</div>
+  </div>
+  <div id="mobile-cons">
+    <div class="m-cons" id="mcons1" onclick="useCons(0)">РЕМ</div>
+    <div class="m-cons" id="mcons2" onclick="useCons(1)">АПТ</div>
+    <div class="m-cons" id="mcons3" onclick="useCons(2)">АДР</div>
+    <div class="m-cons" id="mcons4" onclick="useCons(3)">ОГН</div>
+    <div class="m-cons" id="mcons5" onclick="useCons(4)">ПАЁ</div>
+    <div class="m-cons" id="mcons6" onclick="useCons(5)">ТОП</div>
+  </div>
+</div>
+
+<!-- ========== ЭКРАН РЕЗУЛЬТАТОВ ========== -->
+<div id="result-screen">
+  <p class="combat-eyebrow">ИТОГИ БОЯ</p>
+  <div id="result-title"></div>
+  <div id="result-stats"></div>
+  <button class="btn" style="margin-top:15px" onclick="backToGarage()">В АНГАР</button>
+</div>
+
+<!-- ========== CANVAS ДЛЯ ИГРЫ ========== -->
+<canvas id="game" hidden aria-label="Трёхмерное поле боя" tabindex="-1"></canvas>
+
+<!-- NEW: обучение — оверлей поверх всего интерфейса -->
+<div id="tutorial-overlay">
+  <div id="tutorial-text">...</div>
+  <button id="tutorial-skip" onclick="skipTutorial()">Пропустить</button>
+</div>
+
+<section id="battle-notice" role="status" hidden>
+  <div><p class="combat-eyebrow">CITY TANKS &nbsp;/&nbsp; БОЕВОЙ ВЫЕЗД</p>
+    <h2 id="battle-notice-title"></h2><p id="battle-notice-text"></p>
+    <button class="btn" onclick="backToGarage()">Вернуться в ангар</button>
+  </div>
+</section>
+
+    <script src="models/catalog.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/containers.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/battle-space.js"></script>
+    <script src="js/battle-maps.js"></script>
+    <script src="js/battle-navigation.js"></script>
+    <script src="js/bot-ai.js"></script>
+    <script src="js/map-chart.js"></script>
+    <script src="js/tank.js"></script>
+    <script src="js/armor-system.js"></script>       <!-- NEW: бронезоны + крит.повреждения -->
+    <script src="js/terrain.js"></script>              <!-- NEW: физика ландшафта -->
+    <script src="js/track-drive.js"></script>
+    <script src="js/destructible.js"></script>         <!-- NEW: разрушаемые здания -->
+    <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
+    <script src="js/local-profile.js"></script>
+    <script src="js/garage-viewer.js"></script>
+    <script src="js/research-tree.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="vendor/three-r180.min.js"></script>
+    <script src="js/battle-models.js"></script>
+    <script src="js/depot-room.js"></script>
+    <script src="js/depot-view.js"></script>
+    <script src="js/battle-world.js"></script>
+    <script src="js/battle-view.js"></script>
+    <script src="js/battle.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/tutorial.js"></script>              <!-- NEW: интерактивное обучение -->
+    <script src="js/perf-hud.js"></script>              <!-- NEW: индикатор FPS -->
+    <script src="js/damage-indicator.js"></script>      <!-- NEW: индикатор направления урона -->
+    <script src="js/settings.js"></script>               <!-- NEW: панель настроек -->
+
+    <!-- Снаряжение, окружение и дополнительные окна ангара -->
+    <script src="js/features/combat-mechanics.js"></script>
+    <script src="js/features/weather-environments.js"></script>
+
+</body>
+</html>

@@ -5,7 +5,7 @@ function renderCalendar() {
   document.getElementById('advent-status').textContent = today < '2026-12-01' ? 'Первый подарок откроется 1 декабря.' :
     today > '2026-12-31' ? 'Адвент завершён. Полученные награды остаются в ангаре.' :
     !dates.includes(today) ? 'Проверьте дату устройства. Уже отмеченные посещения сохранены.' :
-    `Подарок за сегодня: ${rewardText(WinterSeason.reward(dates.indexOf(today)+1))}. Начислено в ангар.`;
+    `Подарок за сегодня: ${rewardText(WinterSeason.reward(dates.indexOf(today)+1))}. Награда сохранена.`;
   document.getElementById('calendar-days').replaceChildren(...Array.from({length:31}, (_,i) => {
     const key = `2026-12-${String(i+1).padStart(2,'0')}`, got = dates.indexOf(key), cell = document.createElement('div');
     cell.className = 'advent-date ' + (got >= 0 ? 'received' : key < today ? 'missed' : 'future');
@@ -17,7 +17,7 @@ function renderCalendar() {
     cell.append(num,status); return cell;
   }));
   for (const [n,id] of [[15,'BT42'],[31,'TL7OLEN']]) {
-    document.getElementById('milestone-'+n).textContent = dates.length >= n ? 'Получено · в ангаре' : `Ещё визитов: ${n-dates.length}`;
+    document.getElementById('milestone-'+n).textContent = dates.length >= n ? (GameState.pendingVehicles.includes(id) ? 'Получено · ожидает слота' : 'Получено · в ангаре') : `Ещё визитов: ${n-dates.length}`;
   }
 }
 function openCalendar() {

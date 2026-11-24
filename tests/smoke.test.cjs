@@ -626,7 +626,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
 
 test('Germany is a separate connected mobile tree: stats before unlocking, free starter, no cross-nation shortcuts',async t=>{
   const prior=['MS1','T26','IS3'];let xp=500000;
-  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp})}});
+  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp,garageSlots:prior.length+10})}});
   await click('Дерево развития');await click('ГЕРМАНИЯ');
   assert.equal(await page.locator('#branch-number').textContent(),'02');assert.match(await page.locator('#branch-title').innerText(),/Rhm\. Panzerwagen/);
   assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids));
@@ -671,7 +671,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
 test('US research from a free T1 Cunningham to M48 Patton, locked stats and local progress',async t=>{
   const prior=['MS1','IS3','LTR'],names=['T1 Cunningham','T2 Medium Tank','M2 Medium Tank','M3 Lee','M4 Sherman',
     'M4A3E8 Sherman','T20','M26 Pershing','M46 Patton','M48 Patton'];
-  let xp=414000;const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp})}});
+  let xp=414000;const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp,garageSlots:prior.length+10})}});
   await click('Дерево развития');await click('США');
   assert.equal(await page.locator('#branch-number').innerText(),'03');assert.match(await page.locator('#branch-title').innerText(),/M48 Patton/);
   assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),usIds);
@@ -751,7 +751,7 @@ test('capture-denied preview: relative mouse, actual barrel on quick click, moun
 
 test('shared-root research on a phone: both added routes unlock in order, including the Borsig, and persist with old vehicles', async t=>{
   const owned=['MS1','T26','KV1S','IS7','LTR','PZII','RHMPZW','T1C'];let xp=828000;
-  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'IS7',XP:xp})}});
+  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'IS7',XP:xp,garageSlots:owned.length+mediumIds.length+tdIds.length})}});
   assert.equal(await page.locator('#bay-picker,#tree-inspect,#bay-open').count(),0);
   await click('Дерево развития');
   for(const [nation,root,ids,names,blocked,parent] of [
@@ -850,7 +850,7 @@ test('on a real slope the rendered track bed, offset gun, sight ray and live hit
 
 test('Sweden on mobile: locked nodes load only icons and stats; both research paths persist with one starter',async t=>{
   const prior=['MS1','IS3','T1C'];let xp=828000;
-  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,curNat:'european',selected:'IS3',XP:xp})}});
+  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,curNat:'european',selected:'IS3',XP:xp,garageSlots:prior.length+19})}});
   assert.equal((await saved(page)).curNat,'ussr');const requests=[];page.on('request',r=>{if(r.url().endsWith('.mesh.js'))requests.push(r.url());});
   await click('Дерево развития');await click('ШВЕЦИЯ');const before=await saved(page);
   assert.equal(await page.locator('#nodes .node').count(),19);assert.equal(await page.locator('#nodes .node img').count(),19);
@@ -909,7 +909,8 @@ test('supplied Swedish rigs in combat: Kranvagn fires 3 × 400; hydraulic mounts
 
 test('IS-4 research on a phone: one KV-1 feeds both heavy routes without cross-unlocks or duplicate charges',async t=>{
   const prior=sovietIds.slice(0,5).concat('IS7','OBJ140','KRANVAGN');let xp=408000;
-  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'KV1',XP:xp})}});
+  // Reserve one more berth: the last assertion isolates the XP gate on the other branch.
+  const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'KV1',XP:xp,garageSlots:prior.length+is4Ids.length+1})}});
   await click('Дерево развития');assert.match(await page.locator('#branch-title').innerText(),/ИС-4/);
   const layout=await page.evaluate(()=>{
     const c=document.getElementById('tree-container'),ns=[...document.querySelectorAll('#nodes .node')];
@@ -970,7 +971,7 @@ test('the 20 supplied Maus, E 100 and scout models deploy in ten offline 3D prac
 test('four-lane research on a phone: all three new routes charge each distinct node once, then persist', async t => {
   const owned = ['MS1','BT2','BT7','A20','T34','LTR','IS4','WTE100'];
   let xp = 1234000;
-  const {page,click} = await offlineGame(t, {mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'A20',XP:xp})}});
+  const {page,click} = await offlineGame(t, {mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'A20',XP:xp,garageSlots:owned.length+panzerIds.length+mausIds.length+e100Ids.length+scoutIds.length})}});
   await click('Дерево развития');
   await click('ГЕРМАНИЯ');
   const graph = await page.evaluate(() => {

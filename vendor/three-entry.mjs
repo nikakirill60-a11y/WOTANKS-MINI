@@ -4,6 +4,7 @@
 export { WebGLRenderer, Scene, PerspectiveCamera, Group, Object3D, Mesh, InstancedMesh,
   MeshStandardMaterial, MeshLambertMaterial, MeshPhongMaterial, MeshBasicMaterial, ShaderMaterial, Color, Vector2, Vector3, Raycaster,
   Box3, Matrix4, BoxGeometry, PlaneGeometry, CylinderGeometry, ConeGeometry, SphereGeometry,
+  DodecahedronGeometry, Shape, ExtrudeGeometry, CatmullRomCurve3, TubeGeometry, PointLight,
   IcosahedronGeometry, CircleGeometry, RingGeometry, BufferGeometry, BufferAttribute,
   HemisphereLight, DirectionalLight, FogExp2, CanvasTexture, RepeatWrapping, SRGBColorSpace,
   DoubleSide, BackSide, DynamicDrawUsage, ACESFilmicToneMapping, PCFSoftShadowMap, GridHelper, PMREMGenerator } from 'three';

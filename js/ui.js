@@ -33,6 +33,7 @@ function updateResources() {
   if (gold) gold.innerText = GameState.GOLD;
   if (silver) silver.innerText = GameState.SILVER;
   if (charges) charges.innerText = GameState.charges || 0;
+  refreshSupplyTab();
   if (!document.getElementById('bay-research').hidden) renderTree();
 }
 
@@ -329,6 +330,7 @@ function sellTank(tid) {
       GameState.selected = GameState.owned[0];
       if (BRANCHES[DB[GameState.selected].nat]) GameState.curNat = DB[GameState.selected].nat;
     }
+    HangarSlots.deliver();
     delete GameState.upgrades[tid];
     delete GameState.upgradesBought[tid];
     delete GameState.modules[tid];
@@ -478,6 +480,5 @@ window.hideContainerShop = hideContainerShop;
 window.switchTab = switchTab;
 window.openInventoryTab = openInventoryTab;
 window.updateInvCount = updateInvCount;
-window.collectReward = collectReward;
 
 console.log('✅ ui.js загружена полностью!');

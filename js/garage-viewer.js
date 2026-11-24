@@ -33,7 +33,7 @@ const GarageViewer = (() => {
   }
 
   async function showStand() {
-    if (!inspecting || GameState.gameActive) {
+    if (!inspecting || GameState.gameActive || el('container-modal').open) {
       suspend();
       return;
     }
@@ -100,7 +100,10 @@ const GarageViewer = (() => {
       el('dispatch-speed').textContent = speedLabel(tank) + ' км/ч';
       el('dispatch-view').textContent = Math.round(tank.vr / BATTLE_UNITS_PER_METRE) + ' м';
     }
-    el('fleet-count').textContent = String(GameState.owned.length).padStart(2, '0');
+    el('fleet-count').textContent = `${GameState.owned.length} / ${GameState.garageSlots}`;
+    const waiting = el('fleet-pending');
+    waiting.hidden = !GameState.pendingVehicles.length;
+    waiting.textContent = `Ожидают слота: ${GameState.pendingVehicles.length}`;
     if (fromCarousel && !inspecting) setPane(true);
     else showStand();
   }

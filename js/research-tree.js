@@ -12,6 +12,7 @@ function researchState(id) {
     return { kind: 'owned', text: id === GameState.selected ? 'Выбран для боя' : 'В ангаре' };
   if (parent && !GameState.owned.includes(parent))
     return { kind: 'locked', text: 'Сначала исследуйте ' + DB[parent].n };
+  if (HangarSlots.free() <= 0) return { kind: 'locked', full: true, text: HangarSlots.fullMessage() };
   if (t.xp === 0)
     return { kind: 'available', text: 'Стартовая машина · нажмите узел, чтобы получить бесплатно' };
   if (GameState.XP < t.xp) return { kind: 'locked', text: 'Не хватает ' + xpLabel(t.xp - GameState.XP) };
@@ -65,8 +66,8 @@ function researchTank(id) {
   showTreeCard(id);
   if (state.kind === 'locked') return;
   if (state.kind === 'available') {
+    if (!HangarSlots.park(id)) return;
     GameState.XP -= DB[id].xp;
-    GameState.owned.push(id);
   }
   GameState.selected = id;
   saveProgress();
@@ -181,7 +182,7 @@ function renderTree() {
       ? '✓ Для боя'
       : state.kind === 'owned'
         ? 'В ангаре'
-        : t.xp
+        : state.full ? 'Нет места' : t.xp
           ? xpLabel(t.xp)
           : 'Бесплатно';
     const img = document.createElement('img');

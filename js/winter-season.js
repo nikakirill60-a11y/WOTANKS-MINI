@@ -24,7 +24,7 @@ const WinterSeason = (() => {
     dates.push(day); dates.sort();
     const r = reward(dates.length);
     for (const [field, amount] of Object.entries(r.resources)) GameState[field] += amount;
-    if (r.vehicle && !GameState.owned.includes(r.vehicle)) GameState.owned.push(r.vehicle);
+    if (r.vehicle) HangarSlots.award(r.vehicle);
     return r;
   }
   let midnight, previousDay;
@@ -60,6 +60,6 @@ const WinterSeason = (() => {
 
 function rewardText(reward) {
   const units = {GOLD:'G',SILVER:'₽',XP:'XP',charges:'⚡'};
-  return [reward.vehicle && DB[reward.vehicle].n, ...Object.entries(reward.resources).map(([k,v]) =>
+  return [reward.vehicle && (DB[reward.vehicle].n + (GameState.pendingVehicles.includes(reward.vehicle) ? ' (ожидает слота)' : '')), ...Object.entries(reward.resources).map(([k,v]) =>
     v.toLocaleString('ru-RU') + ' ' + units[k])].filter(Boolean).join(' · ');
 }

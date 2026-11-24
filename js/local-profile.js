@@ -57,6 +57,7 @@ function decodeProgress(data) {
   const restored = restoreField(defaults, data);
   restored.owned = [...new Set(restored.owned.map(savedTankId).filter(Boolean))];
   if (!restored.owned.length) restored.owned = defaults.owned;
+  HangarSlots.restore(restored);
   restored.selected = savedTankId(restored.selected);
   if (!restored.owned.includes(restored.selected)) restored.selected = restored.owned[0];
   if (!PLAYABLE_NATIONS.includes(data.curNat)) {

@@ -48,7 +48,7 @@ test('collection: a single 5% roll for the whole pool, equal missing vehicles, t
     const pool=CONTAINERS.collection.vehicles;
     function draw(owned,outcome,detail){
       GameState.owned=['MS1',...owned];
-      const rolls=[outcome,detail];
+      const rolls=[outcome,detail,.9];
       const r=openContainerDirect('collection',()=>rolls.shift());
       return r.id || [r.type,r.amount];
     }
@@ -91,9 +91,9 @@ test('150 gold each; insufficient funds leave old boxes alone; single and mixed 
     assert.equal(unused,0);
     return page.locator('#reward-display').innerText();
   }
-  assert.match(await open('ОТКРЫТЬ 1',[.05,0]),/10000 ₽/);await click('ЗАБРАТЬ');
+  assert.match(await open('ОТКРЫТЬ 1',[.05,0,.5]),/10000 ₽/);await click('ЗАБРАТЬ');
   assert.deepEqual((await saved()).owned,['MS1','T62A']);
-  const rewards=await open('ОТКРЫТЬ ВСЕ',[.99,.999999, .049999,.999999, .524999,.999999, .525,0]);
+  const rewards=await open('ОТКРЫТЬ ВСЕ',[.99,.999999,.5, .049999,.999999,.5, .524999,.999999,.5, .525,0,.5]);
   assert.match(rewards,/TL-7/);assert.match(rewards,/125 G/);assert.match(rewards,/30000 ₽/);await click('ЗАБРАТЬ');
   const s=await saved();assert.deepEqual(s.inventory,{basic:2});assert.deepEqual(s.owned,['MS1','T62A','TL7']);
   assert.equal(s.SILVER,115000);assert.equal(s.GOLD,274);assert.equal(s.XP,paid.XP);assert.equal(s.charges,paid.charges);
@@ -106,7 +106,7 @@ test('completed collection shows resource-only odds before purchase; no silver i
   const {page,click,saved}=await openGame(t,{seed:{GOLD:150,SILVER:0,owned:['MS1','M4A3E2','T71DA','JPANTHERII','T62A','TL7']}});
   await click('Контейнеры');const box=page.locator('.c-card').filter({hasText:'Коллекционный контейнер'});
   assert.match(await box.locator('.c-desc').innerText(),/Все пять.*Серебро — 50%, золото — 50%/);
-  await box.getByRole('button').click();assert.equal((await saved()).GOLD,0);assert.equal((await saved()).inventory.collection,1);
-  await click('🎒 Инвентарь');await click('ОТКРЫТЬ 1');await click('ЗАБРАТЬ');const s=await saved();
+  await box.getByRole('button',{name:'КУПИТЬ · 150 G'}).click();assert.equal((await saved()).GOLD,0);assert.equal((await saved()).inventory.collection,1);
+  await click('Инвентарь');await click('ОТКРЫТЬ 1');await click('ЗАБРАТЬ');const s=await saved();
   assert.equal(s.owned.length,6);assert.deepEqual(s.inventory,{});assert.ok(s.SILVER>=10000 || s.GOLD>=25);
 });

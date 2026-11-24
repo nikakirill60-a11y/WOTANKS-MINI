@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/hangar.css">
   <link rel="stylesheet" href="css/battle.css">
   <link rel="stylesheet" href="css/winter.css">
+  <link rel="stylesheet" href="css/supplies.css">
 </head>
 <body data-hangar="winter">
 
@@ -33,29 +34,23 @@
 </div>
 
 <!-- ========== КОНТЕЙНЕРЫ ========== -->
-<div id="container-modal">
-  <div class="modal-header">
-    <h2>📦 КОНТЕЙНЕРЫ</h2>
-    <button type="button" class="btn btn-close" onclick="hideContainerShop()">В ангар</button>
-  </div>
-<div class="modal-tabs">
-    <button class="modal-tab active" onclick="switchTab('shop', this)">📦 Магазин</button>
-    <button class="modal-tab" onclick="switchTab('inventory', this)">🎒 Инвентарь</button>
-
-</div>
-
-<!-- Содержимое вкладки Магазина контейнеров -->
-<div id="tab-shop" class="tab-content active-tab">
-    <div id="container-grid" class="container-grid"></div>
-</div>
-
-<!-- Содержимое вкладки Инвентаря -->
-<div id="tab-inventory" class="tab-content">
-    <div id="inventory-empty" style="display:none;text-align:center;padding:30px;color:#888;">🎒 Инвентарь пуст</div>
-    <div id="inventory-grid" class="inventory-grid"></div>
-</div>
-
-</div><!-- /container-modal -->
+<dialog id="container-modal" aria-labelledby="supply-title">
+  <header class="supply-head"><div><p class="season-kicker">СЕВЕРНОЕ ДЕПО / СНАБЖЕНИЕ</p><h2 id="supply-title">Контейнеры</h2></div>
+    <button type="button" class="winter-back" onclick="hideContainerShop()">В ангар</button></header>
+  <div class="supply-nav"><div class="modal-tabs" role="group" aria-label="Раздел склада">
+    <button class="modal-tab active" onclick="switchTab('shop', this)">Магазин</button>
+    <button class="modal-tab" onclick="switchTab('inventory', this)">Инвентарь</button>
+  </div><span id="supply-feedback" role="status"></span><b id="supply-capacity"></b></div>
+  <p class="supply-notice" id="supply-notice" role="status"></p>
+  <section id="tab-shop" class="tab-content active-tab" aria-label="Магазин контейнеров">
+    <div class="supply-inner"><div class="supply-subhead"><div><p class="season-kicker">КАТАЛОГ / 04 ПОСТАВКИ</p><h3>Выберите контейнер</h3><p id="supply-balance"></p></div>
+      <button class="winter-back" onclick="buyCharges(1)">+1 заряд · 100 G</button></div><div id="container-grid"></div></div>
+  </section>
+  <section id="tab-inventory" class="tab-content" aria-label="Запас контейнеров"><div class="supply-inner">
+    <div id="vehicle-deliveries" hidden></div><h3>Ваши контейнеры</h3>
+    <p id="inventory-empty" hidden>Пока пусто. Купленные контейнеры появятся здесь.</p><div id="inventory-grid"></div>
+  </div></section>
+</dialog>
 
 <dialog id="calendar-modal" class="winter-dialog" aria-labelledby="calendar-title">
   <header class="winter-dialog-head"><div><p class="season-kicker">СЕВЕРНОЕ ДЕПО / 01—31 ДЕКАБРЯ 2026</p><h2 id="calendar-title">Адвент-календарь</h2></div>
@@ -106,10 +101,14 @@
 </div>
 
 <!-- ========== ОТКРЫТИЕ КОНТЕЙНЕРА ========== -->
-<div id="container-opening">
-  <div id="anim-container"></div>
-  <div id="reward-display"></div>
-</div>
+<dialog id="container-opening" aria-labelledby="unpack-title">
+  <header class="unpack-head"><div><p class="season-kicker" id="unpack-mode"></p><h2 id="unpack-title"></h2></div>
+    <button type="button" class="winter-back" id="unpack-back">Назад</button></header>
+  <div id="anim-container"><span class="stage-mark" aria-hidden="true">CT &nbsp;/&nbsp; ПРИЁМКА</span></div>
+  <div class="unpack-foot"><p id="unpack-hint" role="status"></p><button type="button" id="unpack-demo" class="winter-back">Посмотреть внутри</button><button type="button" id="unpack-skip" class="winter-back">Пропустить анимацию</button></div>
+  <section id="reward-display" hidden aria-label="Полученные награды"><p class="season-kicker">РЕЗУЛЬТАТ ОТКРЫТИЯ</p><div id="reward-lines"></div>
+    <button type="button" class="winter-action" id="unpack-collect">ЗАБРАТЬ</button></section>
+</dialog>
 
 <!-- ========== МОДУЛИ И ПРОКАЧКА ========== -->
 <div id="module-modal" class="module-modal"></div>
@@ -244,7 +243,7 @@
   </main>
 
   <section id="tank-carousel-container" aria-label="Ваши танки">
-    <div class="fleet-heading"><span>МОЯ ТЕХНИКА</span><b id="fleet-count"></b><i></i><small>ВЫБОР МАШИНЫ ДЛЯ БОЯ</small></div>
+    <div class="fleet-heading"><span>МОЯ ТЕХНИКА</span><b id="fleet-count" title="Занято слотов / всего"></b><button id="fleet-pending" type="button" onclick="openInventoryTab()" hidden></button><i></i><small>ВЫБОР МАШИНЫ ДЛЯ БОЯ</small></div>
     <div id="tank-carousel"></div>
   </section>
 </div>
@@ -368,6 +367,7 @@
 
     <script src="models/catalog.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/hangar-slots.js"></script>
     <script src="js/containers.js"></script>
     <script src="js/winter-season.js"></script>
     <script src="js/premium-shop.js"></script>
@@ -395,6 +395,8 @@
     <script src="js/ui.js"></script>
     <script src="js/controls.js"></script>
     <script src="vendor/three-r180.min.js"></script>
+    <script src="js/crate-model.js"></script>
+    <script src="js/crate-view.js"></script>
     <script src="js/battle-models.js"></script>
     <script src="js/depot-room.js"></script>
     <script src="js/winter-landscape.js"></script>

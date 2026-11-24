@@ -80,3 +80,16 @@ test('failed initial cloud read never initializes a fresh save; offline outbox s
   await synced(page);assert.equal(await page.locator('#gold-val').innerText(),'3200');assert.equal(api.rows.get(who).revision,9);
   await logout(page);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
 });
+
+test('berths, pending Advent tank and box receipt belong only to the signed-in profile',async t=>{
+  const api=service(),uid=randomUUID(),email='supply_pilot@players.citytanks.invalid';api.time='2026-11-22T10:00:00Z';api.users.set(email,{id:uid,email,password:'test crate pass'});
+  const fleet=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','IS7'];
+  api.rows.set(uid,{revision:2,progress:{owned:fleet,pendingVehicles:['BT42'],garageSlots:10,inventory:{collection:1}}});
+  const {page,click,saved}=await openGame(t,{route:api.route,seed:{GOLD:110,inventory:{collection:3},garageSlots:12}});const guest=await saved();
+  await form(page,'supply_pilot','test crate pass','Войти');await active(page);await click('В ангар');await click('Ожидают слота: 1');
+  await page.getByRole('button',{name:'ОТКРЫТЬ 1',exact:true}).evaluate(b=>{const normal=Math.random,rolls=[0,.999999,0];Math.random=()=>rolls.length?rolls.shift():normal();try{b.click();}finally{Math.random=normal;}});
+  await synced(page);const row=api.rows.get(uid);assert.equal(row.progress.garageSlots,11);assert.deepEqual(row.progress.pendingVehicles,['TL7']);
+  assert.deepEqual(row.progress.owned,fleet.concat('BT42'));assert.deepEqual(row.progress.inventory,{});assert.deepEqual(await saved(),guest);
+  await page.reload();await active(page);assert.equal(await page.locator('#fleet-count').innerText(),'11 / 11');await logout(page);
+  assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#fleet-count').innerText(),'1 / 12');assert.deepEqual(api.forbidden,[]);
+});

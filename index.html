@@ -184,6 +184,9 @@
             <div><p class="bay-kicker">ДЕРЕВО <span>/</span> <b id="branch-number"></b></p><h2 id="branch-title"></h2></div>
             <div id="nat-buttons" role="group" aria-label="Нация ветки"></div>
           </div>
+          <label class="route-filter" id="route-filter" hidden>Показать ветку
+            <select id="tree-route" aria-controls="tree-map"></select>
+          </label>
           <div class="tree-legend"><span><i></i> В ангаре</span><span><i></i> Доступно</span><span><i></i> Закрыто</span></div>
           <div id="tree-container" class="tree-view" tabindex="0" role="region" aria-labelledby="branch-title">
             <div id="tree-map"><canvas id="tree-canvas" aria-hidden="true"></canvas><div id="nodes"></div></div>

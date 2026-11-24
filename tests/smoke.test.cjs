@@ -19,10 +19,20 @@ const e100Ids = ['VK3601H','TIGERI','TIGERII','E75','E100'];
 const tdIds = ['PZJAG1','MARDER2','MARDER38','PZSFL4C','NASHORN','STEMIL','RHMBWT','WTPZ4','WTE100'];
 const usIds = ['T1C','T2MEDIUM','M2MEDIUM','M3LEE','M4SHERMAN','M4A3E8','T20','PERSHING','M46PATTON','M48PATTON'];
 
+const obj430Ids = ['OBJ430','OBJ430U'];
+const k91Ids = ['A43','A44','OBJ416','OBJ430II','K91'];
+const e50Ids = ['VK3002M','PANTHER','PANTHERII','E50','E50M'];
+const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGPZE100'];
+const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds);
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids);
+
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
 const meshCounts = {BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
+  A43:4665,A44:5232,OBJ416:6798,OBJ430II:6909,K91:7883,OBJ430:7137,OBJ430U:5790,
+  VK3002M:5762,PANTHER:5830,PANTHERII:4691,E50:4989,E50M:4825,GRILLE15:7315,
+  HETZER:5233,STUG3G:4502,JGPZIV:3638,JAGDP:5681,FERDINAND:4022,JAGDTIGER:5341,JGPZE100:5780,
   PZ35T:2486,PZ38T:2637,PZIVD:3160,PZIVH:3263,VK3001P:2890,TIGERP:3161,VK10001P:2723,MAUSCHEN:3174,MAUS:2760,
   VK3601H:2659,TIGERI:2972,TIGERII:3394,E75:2944,E100:2986,T50:4700,MT25:2313,LTG:3221,LTTB:3339,T54L:2919,T100LT:3398,
   T150:2514,KV3:2866,KV4:3259,STI:3226,IS4:3284,
@@ -271,7 +281,7 @@ test('migration keeps earned late tiers, supplies, modules, settings and currenc
   await click('Дерево развития');assert.equal(await page.locator('.n-btn.active-n').innerText(),'ГЕРМАНИЯ');
   await click('СССР');assert.equal(await page.locator('#nodes .node.owned').count(),3);
   await click('Выбрать: Объект 257');assert.equal(await page.locator('#dispatch-name').innerText(),'Объект 257');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietIds.concat(is4Ids,mediumIds,scoutIds,['T62A','IS6']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietTreeIds.concat(['T62A','IS6']));
   const rewards=await page.evaluate(()=>{
     for(const id of ['basic','supply','premium'])openContainerDirect(id);
     for(const code of ['BETA_TEST','WT220','START2025']){document.getElementById('promo-input').value=code;activatePromo();}
@@ -478,14 +488,14 @@ test('offline team modes use the shared 3D asset; touch driving/firing, replay a
 test('research, icons and offline mesh loading: the complete line is visible; only real vehicles can be unlocked',async t=>{
   const {page,click}=await offlineGame(t);
   await click('Дерево развития');
-  assert.equal(await page.locator('#nodes .node').count(),30);assert.equal(await page.locator('#bay-research table').count(),0);
+  assert.equal(await page.locator('#nodes .node').count(),sovietTreeIds.length);assert.equal(await page.locator('#bay-research table').count(),0);
   const edges=await page.evaluate(()=>{
     const nodes=[...document.querySelectorAll('#nodes .node')], c=document.getElementById('tree-canvas'), ctx=c.getContext('2d'), dpr=c.width/c.offsetWidth;
     return nodes.slice(1).map(n=>{
       const p=nodes.find(b=>b.dataset.tankId===researchParent(n.dataset.tankId)), x=(p.offsetLeft+p.offsetWidth+n.offsetLeft)/2, y=(p.offsetTop+n.offsetTop+n.offsetHeight)/2;
       return ctx.getImageData(Math.round(x*dpr),Math.round(y*dpr),1,1).data[3]>0;
     });
-  });assert.deepEqual(edges,Array(29).fill(true),'each prerequisite has a visible connector');
+  });assert.deepEqual(edges,Array(sovietTreeIds.length-1).fill(true),'each prerequisite has a visible connector');
   await click('Характеристики: Т-46');assert.deepEqual((await saved(page)).owned,['MS1']);
   assert.equal(await page.locator('#tree-inspect,#depot-canvas,#bay-picker,#bay-open').count(),0);
   assert.equal(await page.locator('#tree-name').innerText(),'Т-46');
@@ -629,7 +639,7 @@ test('Germany is a separate connected mobile tree: stats before unlocking, free 
   const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp,garageSlots:prior.length+10})}});
   await click('Дерево развития');await click('ГЕРМАНИЯ');
   assert.equal(await page.locator('#branch-number').textContent(),'02');assert.match(await page.locator('#branch-title').innerText(),/Rhm\. Panzerwagen/);
-  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids));
+  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),germanTreeIds);
   assert.equal(await page.locator('#tree-name').innerText(),'Leichttraktor');assert.equal(await page.locator('#dispatch-name').innerText(),'ИС-3');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth));
   await click('Характеристики: Spähpanzer Ru 251');assert.match(await page.locator('#tree-status').textContent(),/HWK 12/);
@@ -656,7 +666,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LEOPARD'],selected:'LEOPARD'})}});
   assert.equal(await page.locator('#dispatch-dmg-label').innerText(),'Урон кассеты');assert.equal(await page.locator('#dispatch-dmg').innerText(),'240 (8 × 30)');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('germany');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids,['JPANTHERII','LOWE']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['JPANTHERII','LOWE']));
   await page.locator('#enemy-select').selectOption('VK2801');await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);
   const units=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -918,7 +928,7 @@ test('IS-4 research on a phone: one KV-1 feeds both heavy routes without cross-u
     return {ids:ns.map(n=>n.dataset.tankId),width:document.documentElement.scrollWidth===innerWidth,
       bottomFits:ns.every(n=>n.offsetTop+n.offsetHeight<=c.clientHeight),scrolls:c.scrollWidth>c.clientWidth,
       forks:y('KV1S')<y('KV1')&&y('KV1')<y('T150')&&y('T150')<y('T3485')};
-  });assert.deepEqual(layout.ids,sovietIds.concat(is4Ids,mediumIds,scoutIds));assert.ok(layout.width && layout.bottomFits && layout.scrolls && layout.forks);
+  });assert.deepEqual(layout.ids,sovietTreeIds);assert.ok(layout.width && layout.bottomFits && layout.scrolls && layout.forks);
   await click('Характеристики: КВ-3');assert.match(await page.locator('#tree-status').innerText(),/Т-150/);
   await click('Характеристики: ИС-4');assert.match(await page.locator('#tree-status').innerText(),/СТ-I/);
   assert.deepEqual((await saved(page)).owned,prior);assert.equal((await saved(page)).selected,'KV1');
@@ -968,7 +978,7 @@ test('the 20 supplied Maus, E 100 and scout models deploy in ten offline 3D prac
     ['T100LT','Т-100 ЛТ','T54L',300,1120], ['LTG','ЛТГ','T50',180,340], ['LTTB','ЛТТБ','MT25',190,480]
   ]));
 
-test('four-lane research on a phone: all three new routes charge each distinct node once, then persist', async t => {
+test('multi-lane research on a phone: Maus, E 100 and T-100 LT charge each distinct node once, then persist', async t => {
   const owned = ['MS1','BT2','BT7','A20','T34','LTR','IS4','WTE100'];
   let xp = 1234000;
   const {page,click} = await offlineGame(t, {mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'A20',XP:xp,garageSlots:owned.length+panzerIds.length+mausIds.length+e100Ids.length+scoutIds.length})}});
@@ -989,7 +999,7 @@ test('four-lane research on a phone: all three new routes charge each distinct n
         document.documentElement.scrollWidth === innerWidth && c.scrollWidth > c.clientWidth,
       split:y('VK3001P') < y('PZIVH') && y('PZIVH') < y('VK3601H')};
   });
-  assert.deepEqual(graph,{count:33,edges:32,fits:true,split:true});
+  assert.deepEqual(graph,{count:germanTreeIds.length,edges:germanTreeIds.length-1,fits:true,split:true});
   await click('Характеристики: E 100');
   assert.match(await page.locator('#tree-status').innerText(),/E 75/);
   assert.match(await page.locator('#tree-stats').innerText(),/680/);
@@ -1031,4 +1041,63 @@ test('winter lineup: all 12 new 3D vehicles enter offline practice; Finnish/Japa
     const ttx=await page.evaluate(id=>[shotDamage(DB[id]),(DB[id].mag||1)-1,DB[id].reload],id);
     assert.deepEqual([result.damage,result.rounds,result.reload],ttx);
   }
+});
+
+test('route picker on a phone: browse the five supplied paths, buy only the twenty new nodes, keep sibling unlocks and XP separate', async t => {
+  // Existing fork vehicles are already in this garage; no artificial tier skips or re-purchases.
+  const owned = ['MS1','T34','T44','PZIVH','MARDER2','WTPZ4','JPANTHERII'];
+  const paths = [
+    ['СССР','Т-44',obj430Ids,['Объект 430','Объект 430У'],9],
+    ['СССР','Т-34',k91Ids,['А-43','А-44','Объект 416','Объект 430 II','К-91'],6],
+    ['ГЕРМАНИЯ','Pz.Kpfw. IV Ausf. H',e50Ids,['VK 30.02 (M)','Panther','Panther II','E 50','E 50 Ausf. M'],6],
+    ['ГЕРМАНИЯ','Waffenträger auf Pz. IV',['GRILLE15'],['Grille 15'],10],
+    ['ГЕРМАНИЯ','Marder II',jagdIds,['Hetzer','StuG III Ausf. G','Jagdpanzer IV','Jagdpanther','Ferdinand','Jagdtiger','Jagdpanzer E 100'],4]
+  ];
+  const costs = [0,150,350,1500,4000,8000,25000,60000,120000,195000];
+  let xp = paths.reduce((sum,[,,,,tier])=>sum+costs.slice(tier-1).reduce((a,b)=>a+b),0);
+  const {page,click} = await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'T44',XP:xp,garageSlots:owned.length+20})}});
+  const meshes = []; page.on('request',r=>{if (r.url().endsWith('.mesh.js')) meshes.push(r.url());});
+  await click('Дерево развития');
+  const picker = page.getByLabel('Показать ветку');
+  for (const [nation, fork, ids, names, tier] of paths) {
+    await click(nation);
+    const before = await saved(page), end = ids.at(-1);
+    await picker.selectOption(end);
+    assert.equal(await page.locator('#tree-name').innerText(), names.at(-1));
+    const nodes = await page.locator('#nodes .node').evaluateAll(list => list.map(n => [n.dataset.tankId,n.querySelector('b').textContent]));
+    assert.equal(nodes.length,10); assert.equal(nodes[tier-2][1],fork); assert.deepEqual(nodes.slice(tier-1).map(n=>n[0]),ids);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth === innerWidth));
+    assert.deepEqual(await saved(page),before,'choosing a path previews, never buys or equips');
+    if (ids.length > 1) {
+      await click('Характеристики: '+names[1]); assert.ok((await page.locator('#tree-status').innerText()).includes(names[0]));
+      assert.deepEqual(await saved(page),before);
+    }
+    for (const [i,id] of ids.entries()) {
+      await click('Исследовать: '+names[i]); owned.push(id); xp -= costs[tier+i-1];
+      const s=await saved(page); assert.deepEqual([s.owned,s.selected,s.XP],[owned,id,xp]);
+      await click('Выбрать: '+names[i]); assert.equal((await saved(page)).XP,xp);
+    }
+  }
+  assert.deepEqual(meshes,[],'tree rows use their own icons, not twenty 3D viewers');
+  await picker.selectOption(''); assert.equal(await page.locator('#nodes .node').count(),germanTreeIds.length);
+  await click('США'); assert.ok(await picker.isHidden()); await click('ГЕРМАНИЯ'); assert.equal(await picker.inputValue(),'');
+  await page.reload(); const s=await saved(page); assert.deepEqual([s.owned,s.selected,s.XP],[owned,'JGPZE100',0]);
+  assert.equal(await page.locator('#dispatch-dmg').innerText(),'1050'); assert.equal(await page.locator('#dispatch-armor').innerText(),'250 / — мм');
+});
+
+test('twenty supplied meshes for the five new routes deploy offline in ten 3D training pairs', t =>
+  checkSingleShotSorties(t, [
+    ['HETZER','Hetzer','STUG3G',110,380], ['A43','А-43','JGPZIV',115,585],
+    ['A44','А-44','PANTHER',300,900], ['OBJ416','Объект 416','JAGDP',320,660],
+    ['PANTHERII','Panther II','VK3002M',240,600], ['K91','К-91','OBJ430II',320,1280],
+    ['OBJ430U','Объект 430У','OBJ430',440,1310], ['E50M','E 50 Ausf. M','E50',390,1360],
+    ['GRILLE15','Grille 15','FERDINAND',750,650], ['JGPZE100','Jagdpanzer E 100','JAGDTIGER',1050,800]
+  ]));
+
+test('renamed legacy vehicles migrate by identity without confusing the 430s, Panthers or E 100s',async t=>{
+  const legacy=['OB430II','OB430U','PANTHER2','GRILLE','STUG3','JGPZ4','JPANTHER','JPANTHER2','JAGTIGER','JGE100','VK30D2'];
+  const {page}=await offlineGame(t,{seed:{[saveKey]:JSON.stringify({owned:legacy,selected:'OB430II',XP:150,modules:{JPANTHER:['optics'],JPANTHER2:['turbo']}})}});
+  const s=await saved(page);assert.deepEqual(s.owned,['OBJ430II','OBJ430U','PANTHERII','GRILLE15','STUG3G','JGPZIV','JAGDP','JPANTHERII','JAGDTIGER','JGPZE100']);
+  assert.equal(s.selected,'OBJ430II');assert.equal(s.XP,150);assert.deepEqual(s.modules,{JAGDP:['optics'],JPANTHERII:['turbo']});
+  await page.reload();assert.deepEqual(await saved(page),s);
 });

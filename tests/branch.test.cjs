@@ -30,7 +30,7 @@ test('branch 01 uses the ten supplied stat lines and ten distinct playable model
   assert.ok(line.every(id => DB[id].nat==='ussr'));
   assert.equal(new Set(line).size,10);
   assert.deepEqual(line.map(researchParent),[undefined,...line.slice(0,-1)]);
-  assert.equal(new Set(Object.values(DB).map(t=>t.file)).size,104);
+  assert.equal(new Set(Object.values(DB).map(t=>t.file)).size,Object.keys(DB).length);
   assert.equal(DB.IS.file,'is.mesh.js');assert.equal(DB.IS3.file,'is-3.mesh.js');
   for (const spec of Object.values(DB)) for (const key of ['file','thumbnail'])
     assert.ok(fs.statSync(path.join(root,'models',spec[key])).size > 0);
@@ -45,7 +45,7 @@ test('Germany: ten supplied stat lines, chosen primary loadouts, prices and inde
     ['SPIC',880,220,1,6800,175,15,15,58], ['HWK12',1100,240,1,6800,190,15,15,65],
     ['RU251',1350,250,1,5800,210,25,20,72], ['RHMPZW',1650,320,1,7200,235,30,20,75]
   ]);
-  assert.equal(Object.keys(DB).length,104);
+  assert.equal(Object.keys(DB).length,124);
   for(const [i,t] of rows.entries()){
     assert.ok(t.tier===i+1 && t.nat==='germany' && t.cls==='lt');assert.equal(t.xp,soviet[i].xp);
     assert.equal(researchParent(t.id),rows[i-1]?.id);const u=new Tank(t.id,0,0,'enemy');
@@ -147,7 +147,7 @@ test('two forks, one starter each: all Object 140 and Waffenträger route stats 
   assert.equal(armorLabel(DB.STEMIL),'50 / —');assert.equal(DB.WTE100.alpha,2080);
   for(const [nation,route] of [['ussr',med],['germany',td]]){
     const tree=BRANCHES[nation],old=tree.routes[0];
-    assert.ok(tree.routes.includes(route));assert.equal(old[0],route[0]);assert.equal(tree.tanks.length,nation==='ussr'?30:33);
+    assert.ok(tree.routes.includes(route));assert.equal(old[0],route[0]);assert.equal(tree.tanks.length,nation==='ussr'?37:46);
     assert.equal(new Set(tree.tanks.map(t=>t.id)).size,tree.tanks.length);assert.equal(route.length,10);
     for(const [i,t] of route.entries()){
       assert.equal(DB[t.id],t);assert.equal(t.nat,nation);assert.equal(t.tier,i+1);assert.equal(t.xp,old[i].xp);
@@ -203,7 +203,7 @@ test('each vehicle has its own transparent offline WebP and data-only mesh, neve
     assert.equal(icon.toString('ascii',12,16),'VP8X');assert.ok(icon[20]&16,t.id+' missing alpha');icons.add(require('crypto').createHash('sha256').update(icon).digest('hex'));
     const model=fs.readFileSync(path.join(root,'models',t.file),'utf8');assert.match(model,/^BattleModels\.receive\(\{/);
     const data=JSON.parse(model.slice('BattleModels.receive('.length,-3));assert.equal(data.id,t.id);assert.equal(data.meshes.length,t.id==='TL7OLEN'?10:5);
-  }assert.equal(icons.size,104);
+  }assert.equal(icons.size,Object.keys(DB).length);
   assert.ok(!fs.readdirSync(path.join(root,'models')).some(f=>f.endsWith('.html')));
 });
 
@@ -211,7 +211,7 @@ test('each vehicle has its own transparent offline WebP and data-only mesh, neve
 test('IS-4 shares I–V with IS-7, then uses five independent single-shot heavy tanks and their supplied base stats',()=>{
   const {BRANCHES,USSR_BRANCH:original,DB,Tank,GameState:g,at,researchParent,BATTLE_UNITS_PER_METRE:m}=game();
   const route=BRANCHES.ussr.routes.find(r=>r.at(-1).id==='IS4');
-  assert.equal(BRANCHES.ussr.routes.length,4);assert.equal(route.length,10);
+  assert.equal(BRANCHES.ussr.routes.length,6);assert.equal(route.length,10);
   for(let i=0;i<5;i++)assert.equal(route[i],original[i],'one owned vehicle shared between both routes');
   assert.deepEqual(Array.from(BRANCHES.ussr.tanks).filter(t=>t.parent==='KV1').map(t=>t.id),['KV1S','T150']);
   const rows=[
@@ -239,7 +239,7 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
   const route = (nation, end) => BRANCHES[nation].routes.find(r => r.at(-1).id === end);
   const maus = route('germany', 'MAUS'), e100 = route('germany', 'E100');
   const scout = route('ussr', 'T100LT'), medium = route('ussr', 'OBJ140');
-  assert.equal(Object.values(BRANCHES).reduce((n, tree) => n + tree.routes.length, 0), 11);
+  assert.equal(Object.values(BRANCHES).reduce((n, tree) => n + tree.routes.length, 0), 16);
   assert.equal(maus[0], DB.LTR);
   for (let i = 0; i < 5; i++) assert.equal(e100[i], maus[i]);
   for (let i = 0; i < 4; i++) assert.equal(scout[i], medium[i]);
@@ -287,7 +287,7 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
 
 test('12 special vehicles use the supplied combat stats, nonresearch acquisition and decorated submeshes',()=>{
   const {DB,BRANCHES,Tank,BATTLE_UNITS_PER_METRE:m}=game();
-  assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,92);
+  assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,112);
   const rows=[['M4A3E2',6,880,140,1,4000,138,102,152,35],['T71DA',7,860,150,6,20000,175,25,25,64],
     ['JPANTHERII',8,1200,490,1,10800,246,100,null,55],['T62A',10,1950,320,1,5600,255,102,240,50],
     ['TL7',9,1500,360,4,32000,252,100,200,50],['IS6',8,1550,390,1,10800,196,100,150,35],
@@ -305,4 +305,50 @@ test('12 special vehicles use the supplied combat stats, nonresearch acquisition
     ['body','#ece7dc'],['turret','#ece7dc'],['turret','#b9a87f'],['turret','#b9a87f'],['gun','#c63b2a']]);
   assert.equal(deer.triangles,5175);assert.equal(regular.triangles,4707);
   assert.equal(DB.BT42.nat,'finland');assert.equal(DB.STA2.nat,'japan');assert.equal(DB.T34HEAVY.nat,'usa');
+});
+
+test('five supplied progression tables: one record per shared tier, twenty new single-shot vehicles in both teams', () => {
+  const {BRANCHES, DB, Tank, BATTLE_UNITS_PER_METRE: m} = game();
+  const routes = [ // existing route, shared tiers, followed by columns transcribed from each card
+    ['OBJ140', 8, [
+      ['OBJ430',1750,390,8800,232,120,248,50], ['OBJ430U',2050,440,9000,252,160,300,50]
+    ]],
+    ['OBJ140', 5, [
+      ['A43',780,115,3000,135,75,75,55], ['A44',1100,300,8800,167,75,90,59],
+      ['OBJ416',1200,320,6800,201,75,110,50], ['OBJ430II',1600,320,6200,219,120,248,55], ['K91',1900,320,5200,276,140,220,55]
+    ]],
+    ['WTE100', 9, [['GRILLE15',1800,750,14500,279,30,20,60]]],
+    ['MAUS', 5, [
+      ['VK3002M',840,135,3600,150,60,100,55], ['PANTHER',1200,135,3200,198,85,120,55],
+      ['PANTHERII',1450,240,6000,223,100,120,55], ['E50',1750,390,8200,220,150,185,60], ['E50M',2050,390,7600,270,150,250,60]
+    ]],
+    ['WTE100', 3, [
+      ['HETZER',330,110,3600,110,60,null,42], ['STUG3G',490,135,3600,150,80,null,40],
+      ['JGPZIV',700,220,5200,145,80,null,40], ['JAGDP',980,320,7200,200,80,null,55],
+      ['FERDINAND',1400,490,11000,246,200,null,30], ['JAGDTIGER',1850,560,10500,276,250,null,38], ['JGPZE100',2200,1050,22000,299,250,null,30]
+    ]]
+  ];
+  const traverse = {GRILLE15:10,HETZER:11,STUG3G:11,JGPZIV:12,JAGDP:10,FERDINAND:14,JAGDTIGER:10,JGPZE100:10};
+  const added = new Set();
+  for (const [sibling, shared, rows] of routes) {
+    const tree = BRANCHES[DB[sibling].nat], lookup = end => tree.routes.find(r => r.at(-1).id === end);
+    const old = lookup(sibling), route = lookup(rows.at(-1)[0]);
+    assert.equal(route.length, 10); assert.equal(rows.length + shared, 10);
+    for (let i=0; i<shared; i++) assert.equal(route[i], old[i], 'shared nodes must not be copied');
+    for (const [i,row] of rows.entries()) {
+      const idx = shared+i, t = route[idx], id = row[0];
+      assert.equal(t, DB[id]); assert.equal(t.parent, route[idx-1].id); assert.equal(t.tier, idx+1);
+      assert.equal(t.nat, old[0].nat); assert.equal(t.xp, old[idx].xp); assert.equal(t.source, undefined);
+      assert.ok(!added.has(id) && !old.includes(t)); added.add(id);
+      assert.equal(t.cls, sibling === 'WTE100' ? 'td' : 'mt');
+      for (const team of ['player','enemy']) {
+        const u = new Tank(id,0,0,team), rad = d => d*Math.PI/180;
+        assert.deepEqual([id,u.hp,u.dmg,u.reloadTime,u.pen,u.armor,u.turretArmor,Math.round(u.baseSpeed*60*3.6/m)],row);
+        assert.equal(u.magSize,1); assert.equal(u.minPitch,rad(id === 'STUG3G' ? -6 : -5));
+        assert.equal(u.maxPitch,rad(id === 'STUG3G' ? 14 : 15));
+        assert.equal(u.maxYaw,rad(traverse[id] ?? 180)); assert.equal(u.minYaw,-u.maxYaw);
+      }
+    }
+  }
+  assert.equal(added.size,20); assert.equal(DB.JPANTHERII.source,'collection');
 });

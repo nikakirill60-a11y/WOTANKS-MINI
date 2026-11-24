@@ -137,6 +137,8 @@
 #bay-loading { position:absolute; inset:0; display:grid; place-items:center; background:#222b24ed; font:12px var(--bay-mono); color:var(--bay-muted); }
 
 /* Connected research nodes with the same left-to-right prerequisite graph on touch and desktop. */
+.route-filter { align-self:flex-start; display:flex; align-items:center; gap:8px; max-width:100%; padding:4px 16px 8px; color:var(--bay-muted); font:12px 'Segoe UI',sans-serif; }
+.route-filter select { min-width:0; max-width:100%; padding:6px 8px; border:1px solid var(--bay-line); border-radius:4px; background:#263129; color:var(--bay-ink); font:inherit; }
 .tree-legend { display:flex; gap:18px; flex-wrap:wrap; padding:5px 16px 12px; font:11px 'Segoe UI',sans-serif; color:var(--bay-muted); }
 .tree-legend span { display:inline-flex; align-items:center; gap:5px; }
 .tree-legend i { width:8px; height:8px; border:1px solid #77a481; background:#254632; }

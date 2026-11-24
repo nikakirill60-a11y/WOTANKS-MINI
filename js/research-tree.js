@@ -87,26 +87,54 @@ function updateTreeNav() {
   treeEl('tree-next').disabled = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
 }
 
+// Presentation only: zoom in on one complete I–X route without changing the
+// player's tank, progression or the shared vehicle records at a fork.
+function visibleRoute(branch) {
+  const picker = treeEl('tree-route');
+  if (picker.dataset.nation !== GameState.curNat) {
+    picker.dataset.nation = GameState.curNat;
+    picker.replaceChildren(new Option('Все ветки', ''), ...branch.routes.map(route => {
+      const end = route.at(-1);
+      return new Option(end.n, end.id);
+    }));
+    treeEl('route-filter').hidden = branch.routes.length < 2;
+    picker.onchange = () => {
+      treeCardId = picker.value || GameState.selected;
+      renderTree();
+      revealTreeNode();
+    };
+  }
+  const route = branch.routes.find(r => r.at(-1).id === picker.value);
+  const selected = DB[GameState.selected];
+  if (route && lastTreeSelection !== GameState.selected && branch.tanks.includes(selected) && !route.includes(selected)) {
+    picker.value = ''; // A newly equipped tank from another lane must not be hidden.
+    return;
+  }
+  return route;
+}
+
 function renderTree() {
   renderNatButtons();
   const container = treeEl('tree-container'),
     nodes = treeEl('nodes'),
     canvas = treeEl('tree-canvas');
   const branch = BRANCHES[GameState.curNat],
-    line = branch.tanks;
+    route = visibleRoute(branch),
+    routes = route ? [route] : branch.routes,
+    line = route || branch.tanks;
   treeEl('branch-number').textContent = branch.number;
-  treeEl('branch-title').textContent = branch.title;
+  treeEl('branch-title').textContent = route ? 'Путь к танку: ' + route.at(-1).n : branch.title;
   const height = 84,
     gap = 36,
     inset = 22,
     firstRow = 36,
     rowStep = height + 18,
-    mapHeight = firstRow + (Math.max(2, branch.routes.length) - 1) * rowStep + height + 17;
+    mapHeight = firstRow + (route ? 0 : Math.max(2, routes.length) - 1) * rowStep + height + 17;
   container.style.setProperty('--tree-height', mapHeight + 9 + 'px');
   const ctx = canvas.getContext('2d');
   ctx.font = getComputedStyle(nodes).getPropertyValue('--node-name-font').trim();
   // Long tier VIII–X names should not push tier II off a small phone screen.
-  const columns = branch.routes[0].map((t) => ({
+  const columns = routes[0].map((t) => ({
     width: Math.max(
       137,
       ...line.filter((v) => v.tier === t.tier).map((v) => Math.ceil(ctx.measureText(v.n).width) + 20)
@@ -131,8 +159,8 @@ function renderTree() {
   // node once, centred over the lanes that descend from it, including later forks.
   const pos = new Map();
   for (const t of line) {
-    const lanes = branch.routes.flatMap((route, i) => (route[t.tier - 1] === t ? [i] : []));
-    const y = branch.routes.length === 1
+    const lanes = routes.flatMap((lane, i) => (lane[t.tier - 1] === t ? [i] : []));
+    const y = route ? firstRow : routes.length === 1
       ? ({ lt: 112, mt: 87, ht: 62 }[t.cls] ?? 87)
       : firstRow + (lanes[0] + lanes.at(-1)) * rowStep / 2;
     pos.set(t.id, { ...columns[t.tier - 1], y });

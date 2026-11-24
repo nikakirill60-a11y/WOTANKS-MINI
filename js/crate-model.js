@@ -102,29 +102,32 @@ const CrateModel = (() => {
         const [bx,bz]=pins[(i+1)%pins.length];
         for(let k=0;k<=6;k++){const t=k/6;path.push(new T.Vector3(ax+(bx-ax)*t,y-Math.sin(Math.PI*t)*.075,az+(bz-az)*t));}
         const color=colours[i%colours.length], mat=new T.MeshLambertMaterial({color,emissive:color,flatShading:true});
-        mesh(hinge,bulbShape,mat,(ax+bx)/2,y-.103,(az+bz)/2);bulbs.push(mat);
+        mesh(hinge,bulbShape,mat,(ax+bx)/2,y-.103,(az+bz)/2);bulbs.push({material:mat,base:new T.Color(color)});
       });
       mesh(hinge,new T.TubeGeometry(new T.CatmullRomCurve3(path,true),110,.011,5,true),'#20351f',0,0,0);
       for(const x of [-.66,.66])for(const y of [.87,1.17])mesh(group,new T.CylinderGeometry(.018,.018,.02,6),metal,x,y,D/2+.038).rotation.x=Math.PI/2;
       glow=new T.PointLight('#ffc98a',0,5.2,1.9); glow.position.set(0,top+.62,.1);group.add(glow);
     }
     const sign=plaque(festive);sign.position.set(0,1.02,D/2+.026);group.add(sign);
-    function pose(t){
-      hinge.rotation.x=-2.55*t;
-      if(glow)glow.intensity=14*t;
-      for(const b of bulbs)b.emissiveIntensity=.24+.81*t;
-    }
-    pose(0);return {group,hinge,cargo,pose};
+    const rig={group,hinge,cargo,bulbs,glow};CrateMotion.snap(rig,false);return rig;
   }
   function light(scene){
-    scene.add(new T.HemisphereLight('#f1f5ff','#788384',1.65));
-    const key=new T.DirectionalLight('#ffe9ca',2.8),rim=new T.DirectionalLight('#b0dcff',1.5);
-    key.position.set(-3,6,5);rim.position.set(4,3,-3);scene.add(key,rim);
+    scene.add(new T.HemisphereLight('#eef4ef','#4c5a52',1.7));
+    const sun=new T.DirectionalLight('#ffffff',2.15);sun.position.set(-4,7,5);scene.add(sun);
+  }
+  function studio(scene){
+    light(scene);scene.background=new T.Color('#26353a');
+    const floor=new T.Mesh(new T.PlaneGeometry(40,40),new T.MeshLambertMaterial({color:'#3b5146'}));
+    floor.rotation.x=-Math.PI/2;scene.add(floor);
+    const grid=new T.GridHelper(40,40,'#789180','#637a6b');grid.material.transparent=true;
+    grid.material.opacity=.12;grid.material.depthWrite=false;grid.position.y=.003;scene.add(grid);
+    const shade=new T.Mesh(new T.CircleGeometry(1,28),new T.MeshBasicMaterial({color:'#172422',transparent:true,opacity:.28,depthWrite:false}));
+    shade.rotation.x=-Math.PI/2;shade.position.y=.008;shade.scale.set(1.9,1.45,1);scene.add(shade);
   }
   function dispose(root){
     const geometry=new Set(),materials=new Set(),maps=new Set();
     root.traverse(o=>{if(o.geometry)geometry.add(o.geometry);if(o.material)for(const m of [].concat(o.material))materials.add(m);});
     for(const m of materials){if(m.map)maps.add(m.map);m.dispose();} for(const m of maps)m.dispose();for(const g of geometry)g.dispose();
   }
-  return {build,light,dispose};
+  return {build,light,studio,dispose};
 })();

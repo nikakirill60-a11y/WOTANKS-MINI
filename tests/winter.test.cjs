@@ -99,6 +99,7 @@ test('150 gold each; insufficient funds leave old boxes alone; single and mixed 
   assert.equal(s.SILVER,115000);assert.equal(s.GOLD,274);assert.equal(s.XP,paid.XP);assert.equal(s.charges,paid.charges);
   await click('В ангар');await click('Выбрать для боя: TL-7');await page.reload();assert.equal((await saved()).selected,'TL7');assert.equal(await page.locator('#dispatch-dmg').innerText(),'1440 (4 × 360)');
   await page.evaluate(()=>{researchTank('TL7OLEN');researchTank('LOWE');sellTank('TL7');buyPremium('LOWE','2000-01-01');});
+  assert.ok(await page.locator('#sale-modal').isVisible());await click('Отмена');
   assert.deepEqual((await saved()).owned,s.owned);assert.equal((await saved()).GOLD,s.GOLD);
 });
 

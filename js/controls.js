@@ -1,4 +1,5 @@
 function showControlModal(mode) {
+  if (!GameState.owned.includes(GameState.selected)) return;
   GameState.pendingBattle = mode;
   document.getElementById('control-modal').classList.add('show');
 }

@@ -3,9 +3,15 @@
 const HangarSlots = (() => {
   const free = (g = GameState) => g.garageSlots - g.owned.length;
   const received = id => GameState.owned.includes(id) || GameState.pendingVehicles.includes(id);
+  function selectAvailable(g) {
+    if (g.owned.includes(g.selected)) return;
+    g.selected = g.owned[0] || null;
+    const nat = DB[g.selected]?.nat;
+    if (PLAYABLE_NATIONS.includes(nat)) g.curNat = nat;
+  }
   function park(id) {
     if (received(id) || free() <= 0) return false;
-    GameState.owned.push(id); return true;
+    GameState.owned.push(id); selectAvailable(GameState); return true;
   }
   function award(id) {
     if (!received(id) && !park(id)) GameState.pendingVehicles.push(id);
@@ -13,6 +19,7 @@ const HangarSlots = (() => {
   function deliver(g = GameState) {
     const delivered = g.pendingVehicles.splice(0, Math.max(0, free(g)));
     g.owned.push(...delivered);
+    selectAvailable(g);
     return delivered;
   }
   function restore(g) {

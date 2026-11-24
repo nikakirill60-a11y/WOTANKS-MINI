@@ -20,7 +20,7 @@ test('10 berths including starter: no paid, free-root or premium acquisition ove
   await click('Премиум-магазин');assert.equal(await page.locator('.offer-card button:disabled').count(),3);
   const offer=await page.locator('.offer-card').first().getAttribute('data-id');await page.evaluate(id=>buyPremium(id,WinterSeason.dateKey(WinterSeason.now())),offer);
   assert.match(await page.locator('#premium-status').innerText(),/Ангар заполнен/);assert.equal((await saved()).GOLD,20000);
-  await click('В ангар');page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Выбрать для боя: Т-26',exact:true}).focus();await click('Продать: Т-26');
+  await click('В ангар');await page.getByRole('button',{name:'Выбрать для боя: Т-26',exact:true}).focus();await click('Продать: Т-26');await click('Подтвердить продажу');
   assert.equal(await page.locator('#fleet-count').innerText(),'9 / 10');await click('Премиум-магазин');await page.locator(`.offer-card[data-id="${offer}"] button`).click();
   const after=await saved();assert.equal(after.garageSlots,10);assert.equal(after.owned.length,10);assert.ok(after.owned.includes(offer));assert.ok(after.GOLD<20000);
   await page.reload();assert.deepEqual(await saved(),after);
@@ -66,7 +66,7 @@ test('full garage: Advent and two distinct box wins queue FIFO. Bulk slot, sale 
   assert.match(await page.locator('.crate-poster').getAttribute('src'),/collection-open.webp$/);assert.match(await page.locator('#unpack-hint').innerText(),/WebGL 2/);
   // No collect button is necessary for durability, even on devices with no WebGL.
   await page.reload();assert.deepEqual(await saved(),state);assert.equal(await page.locator('[aria-label="Выбрать для боя: TL-7"]').count(),0);
-  page.once('dialog',d=>d.accept());await page.evaluate(()=>sellTank('T26'));assert.deepEqual((await saved()).pendingVehicles,['T62A']);assert.ok((await saved()).owned.includes('TL7'));
+  await page.evaluate(()=>sellTank('T26'));await click('Подтвердить продажу');assert.deepEqual((await saved()).pendingVehicles,['T62A']);assert.ok((await saved()).owned.includes('TL7'));
   await click('Ожидают слота: 1');await pressWithRolls(inventory('Полевой ящик').getByRole('button',{name:'ОТКРЫТЬ 1'}),[0,0,0]);await click('ЗАБРАТЬ');
   assert.ok(await page.locator('#vehicle-deliveries').isHidden());const done=await saved();assert.equal(done.owned.length,12);assert.equal(done.garageSlots,12);
   assert.deepEqual(done.owned.slice(-3),['BT42','TL7','T62A']);assert.deepEqual(done.pendingVehicles,[]);assert.deepEqual(done.inventory,{});
@@ -87,7 +87,7 @@ test('supplied crate rigs render offline, open on their original hinge, skip/con
   });
   const initial=await saved();await click('Осмотреть модель: Коллекционный контейнер');let closed=await page.evaluate(()=>framesSeen.at(-1));
   assert.deepEqual([closed.pivot,closed.tris,closed.n,closed.parcels],[[0,1.575,-.71],2918,85,3]);assert.equal(Math.abs(closed.angle),0);assert.ok(closed.calls>10);
-  await page.emulateMedia({reducedMotion:'no-preference'});await click('Посмотреть внутри');await page.waitForFunction(()=>framesSeen.at(-1).angle===-2.55);
+  await page.emulateMedia({reducedMotion:'no-preference'});await click('Открыть крышку');await page.waitForFunction(()=>framesSeen.at(-1).angle===-2.55);
   assert.ok(await page.evaluate(()=>framesSeen.some(f=>f.angle<-.1&&f.angle>-2.45)));assert.notDeepEqual(await page.evaluate(()=>framesSeen.at(-1).eye),closed.eye);
   await click('Назад');assert.deepEqual(await saved(),initial,'free inspection cannot roll or consume anything');
   await click('Инвентарь');const card=page.locator('.inv-card').filter({hasText:'Коллекционный контейнер'});

@@ -52,6 +52,14 @@
   </div></section>
 </dialog>
 
+<dialog id="sale-modal" class="winter-dialog" aria-labelledby="sale-title" aria-describedby="sale-terms">
+  <p class="season-kicker">СЕВЕРНОЕ ДЕПО / ПРОДАЖА ТЕХНИКИ</p><h2 id="sale-title">Продать танк?</h2>
+  <div class="sale-vehicle"><img id="sale-photo" alt=""><div><small id="sale-class"></small><h3 id="sale-name"></h3></div></div>
+  <div class="sale-total"><span id="sale-currency"></span><b id="sale-price"></b></div>
+  <p id="sale-terms" class="winter-intro"></p><div class="sale-actions"><button type="button" class="winter-back" id="sale-cancel">Отмена</button>
+    <button type="button" class="winter-action" id="sale-confirm">Подтвердить продажу</button></div>
+</dialog>
+
 <dialog id="calendar-modal" class="winter-dialog" aria-labelledby="calendar-title">
   <header class="winter-dialog-head"><div><p class="season-kicker">СЕВЕРНОЕ ДЕПО / 01—31 ДЕКАБРЯ 2026</p><h2 id="calendar-title">Адвент-календарь</h2></div>
     <button type="button" class="winter-back" onclick="this.closest('dialog').close()">В ангар</button></header>
@@ -105,7 +113,7 @@
   <header class="unpack-head"><div><p class="season-kicker" id="unpack-mode"></p><h2 id="unpack-title"></h2></div>
     <button type="button" class="winter-back" id="unpack-back">Назад</button></header>
   <div id="anim-container"><span class="stage-mark" aria-hidden="true">CT &nbsp;/&nbsp; ПРИЁМКА</span></div>
-  <div class="unpack-foot"><p id="unpack-hint" role="status"></p><button type="button" id="unpack-demo" class="winter-back">Посмотреть внутри</button><button type="button" id="unpack-skip" class="winter-back">Пропустить анимацию</button></div>
+  <div class="unpack-foot"><p id="unpack-hint" role="status"></p><div class="unpack-tools"><button type="button" id="unpack-replay" class="winter-back" hidden>Повторить анимацию</button><button type="button" id="unpack-demo" class="winter-back">Открыть крышку</button><button type="button" id="unpack-skip" class="winter-back">Пропустить анимацию</button></div></div>
   <section id="reward-display" hidden aria-label="Полученные награды"><p class="season-kicker">РЕЗУЛЬТАТ ОТКРЫТИЯ</p><div id="reward-lines"></div>
     <button type="button" class="winter-action" id="unpack-collect">ЗАБРАТЬ</button></section>
 </dialog>
@@ -142,9 +150,9 @@
       <button class="depot-tool" onclick="showPromo()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5h18v3a3 3 0 0 0 0 6v3H3v-3a3 3 0 0 0 0-6ZM15 6v2m0 2v2m0 2v2"/></svg>Код</button>
       <button class="depot-tool" onclick="showContainerShop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-5 9 5v10l-9 5-9-5V7Zm0 0 9 5 9-5m-9 5v10M7 5l9 5"/></svg>Контейнеры</button>
       <button class="depot-tool" onclick="openInventoryTab()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v13H4zM7 8V5h10v3m-8 4h6"/></svg>Инвентарь<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
-      <button class="depot-tool" onclick="showModules()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 7 4v8l-7 4-7-4V6Zm-7 4 7 4 7-4m-7 4v8m-8 1 8 4 8-4"/></svg>Модули</button>
-      <button class="depot-tool" onclick="showUpgrades()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 6-6 4 4 7-7m-6 0h6v6M4 20h16"/></svg>Прокачка</button>
-      <button class="depot-tool" onclick="startTutorial()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5zM6 12v4c3 4 9 4 12 0v-4m4-3v7"/></svg>Обучение</button>
+      <button class="depot-tool" data-needs-tank onclick="showModules()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 7 4v8l-7 4-7-4V6Zm-7 4 7 4 7-4m-7 4v8m-8 1 8 4 8-4"/></svg>Модули</button>
+      <button class="depot-tool" data-needs-tank onclick="showUpgrades()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 6-6 4 4 7-7m-6 0h6v6M4 20h16"/></svg>Прокачка</button>
+      <button class="depot-tool" data-needs-tank onclick="startTutorial()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5zM6 12v4c3 4 9 4 12 0v-4m4-3v7"/></svg>Обучение</button>
     </nav>
   </header>
 
@@ -193,8 +201,10 @@
         <aside class="bay-dispatch" aria-label="Машина для боя">
           <p class="bay-kicker"><i class="bay-led"></i> ВЫБРАНО ДЛЯ БОЯ</p>
           <h2 id="dispatch-name"></h2><p id="dispatch-meta"></p>
-          <div class="dispatch-heading">БАЗОВЫЕ ХАРАКТЕРИСТИКИ</div>
-          <dl class="dispatch-stats" aria-label="Базовые характеристики">
+          <div id="empty-depot" hidden><p>В дереве развития доступны бесплатные машины I уровня. Выберите одну для выезда.</p>
+            <button type="button" id="empty-research" class="winter-action">Открыть дерево развития</button></div>
+          <div id="vehicle-spec-heading" class="dispatch-heading">БАЗОВЫЕ ХАРАКТЕРИСТИКИ</div>
+          <dl class="dispatch-stats" id="vehicle-spec" aria-label="Базовые характеристики">
             <div><dt>Прочность</dt><dd id="dispatch-hp"></dd></div>
             <div><dt id="dispatch-dmg-label">Урон</dt><dd id="dispatch-dmg"></dd></div>
             <div><dt id="dispatch-reload-label">Перезарядка</dt><dd id="dispatch-reload"></dd></div>
@@ -234,6 +244,7 @@
           </div>
         </aside>
       </div>
+      <p id="sale-status" role="status" hidden></p>
       <p id="season-note" role="status" hidden></p>
       <details class="bay-supply">
         <summary>Бустеры снабжения</summary>
@@ -368,6 +379,7 @@
     <script src="models/catalog.js"></script>
     <script src="js/config.js"></script>
     <script src="js/hangar-slots.js"></script>
+    <script src="js/tank-sales.js"></script>
     <script src="js/containers.js"></script>
     <script src="js/winter-season.js"></script>
     <script src="js/premium-shop.js"></script>
@@ -395,6 +407,7 @@
     <script src="js/ui.js"></script>
     <script src="js/controls.js"></script>
     <script src="vendor/three-r180.min.js"></script>
+    <script src="js/crate-motion.js"></script>
     <script src="js/crate-model.js"></script>
     <script src="js/crate-view.js"></script>
     <script src="js/battle-models.js"></script>

@@ -48,3 +48,9 @@
 @media(max-height:470px){#anim-container { height:145px; }.supply-head { padding-block:5px; }.supply-head h2 { font-size:23px; }}
 
 #supply-balance { color:#b8cad6; font:12px/1.4 Consolas,monospace; }
+/* The supplied camera has separate wide/narrow presets at a 700px viewport. */
+#container-opening { width:min(790px,95vw); }
+#anim-container { height:clamp(195px,45svh,425px); background:#26353a; }
+.unpack-tools { display:flex; flex-wrap:wrap; justify-content:end; gap:6px; }
+.crate-film { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#26353a; }
+@media(max-height:470px){#anim-container { height:160px; }}

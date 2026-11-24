@@ -643,7 +643,7 @@ test('Germany is a separate connected mobile tree: stats before unlocking, free 
   for(const [i,name] of nodes.entries()){
     await click('Исследовать: '+name);xp-=costs[i];const s=await saved(page);assert.equal(s.XP,xp);assert.equal(s.selected,germanIds[i]);
     assert.deepEqual(s.owned,prior.concat(germanIds.slice(0,i+1)));
-    if(i===0){await click('Выбрать: Leichttraktor');assert.equal(await page.getByRole('button',{name:'Продать: Leichttraktor'}).count(),0);}
+    if(i===0){await click('Выбрать: Leichttraktor');assert.equal(await page.getByRole('button',{name:'Продать: Leichttraktor'}).count(),1);}
   }
   await click('СССР');assert.equal(await page.locator('#nodes .node.owned').count(),3);assert.equal((await saved(page)).selected,'RHMPZW');
   await page.reload();assert.equal(await page.locator('#dispatch-name').innerText(),'Rhm. Panzerwagen');await click('Дерево развития');
@@ -684,7 +684,7 @@ test('US research from a free T1 Cunningham to M48 Patton, locked stats and loca
   for (const [i,cost] of [0,150,350,1500,4000,8000,25000,60000,120000,195000].entries()) {
     await click('Исследовать: '+names[i]);xp-=cost;const s=await saved(page);
     assert.equal(s.XP,xp);assert.equal(s.selected,usIds[i]);assert.deepEqual(s.owned,prior.concat(usIds.slice(0,i+1)));
-    if(!i){await click('Выбрать: T1 Cunningham');assert.equal(await page.getByRole('button',{name:'Продать: T1 Cunningham'}).count(),0);}
+    if(!i){await click('Выбрать: T1 Cunningham');assert.equal(await page.getByRole('button',{name:'Продать: T1 Cunningham'}).count(),1);}
   }
   await page.reload();const s=await saved(page);assert.equal(s.selected,'M48PATTON');assert.equal(s.curNat,'usa');assert.equal(s.XP,0);
   assert.equal(await page.locator('#dispatch-name').innerText(),'M48 Patton');await click('Дерево развития');
@@ -872,7 +872,7 @@ test('Sweden on mobile: locked nodes load only icons and stats; both research pa
       const save=await saved(page);assert.deepEqual(save.owned,prior.concat(ids));assert.equal(save.selected,id);assert.equal(save.XP,xp);
     }
   }
-  assert.equal(await page.getByRole('button',{name:'Продать: Strv fm/21'}).count(),0);await page.reload();
+  assert.equal(await page.getByRole('button',{name:'Продать: Strv fm/21'}).count(),1);await page.reload();
   assert.equal(await page.locator('#bay-name').innerText(),'Strv 103B');assert.equal((await saved(page)).XP,0);
   await click('Дерево развития');assert.equal(await page.locator('#nodes .node.owned').count(),19);
 });

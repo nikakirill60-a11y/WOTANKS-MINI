@@ -56,12 +56,13 @@ function decodeProgress(data) {
   const defaults = initialProgress();
   const restored = restoreField(defaults, data);
   restored.owned = [...new Set(restored.owned.map(savedTankId).filter(Boolean))];
-  if (!restored.owned.length) restored.owned = defaults.owned;
+  // An explicitly sold last tank is not a new/corrupt profile. Never respawn it on reload.
+  const savedEmpty = Array.isArray(data.owned) && !data.owned.length && data.selected === null;
+  if (!restored.owned.length && !savedEmpty) restored.owned = defaults.owned;
+  restored.selected = savedTankId(data.selected);
   HangarSlots.restore(restored);
-  restored.selected = savedTankId(restored.selected);
-  if (!restored.owned.includes(restored.selected)) restored.selected = restored.owned[0];
   if (!PLAYABLE_NATIONS.includes(data.curNat)) {
-    const nat = DB[restored.selected].nat;
+    const nat = DB[restored.selected]?.nat;
     restored.curNat = PLAYABLE_NATIONS.includes(nat) ? nat : defaults.curNat;
   }
   restored.advent2026.dates = [...new Set(restored.advent2026.dates.filter(d =>

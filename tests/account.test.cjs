@@ -93,3 +93,12 @@ test('berths, pending Advent tank and box receipt belong only to the signed-in p
   await page.reload();await active(page);assert.equal(await page.locator('#fleet-count').innerText(),'11 / 11');await logout(page);
   assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#fleet-count').innerText(),'1 / 12');assert.deepEqual(api.forbidden,[]);
 });
+
+test('a last-vehicle gold sale syncs the empty fleet and its balance, never pays or empties the guest',async t=>{
+  const api=service(),uid=randomUUID(),email='trade_pilot@players.citytanks.invalid';api.time='2026-11-22T10:00:00Z';api.users.set(email,{id:uid,email,password:'trade testing'});
+  api.rows.set(uid,{revision:3,progress:{owned:['T62A'],selected:'T62A',SILVER:7000,GOLD:80,garageSlots:12}});
+  const {page,click,saved}=await openGame(t,{route:api.route,seed:{GOLD:22}});const guest=await saved();await form(page,'trade_pilot','trade testing','Войти');await active(page);await click('В ангар');
+  await click('Продать: Т-62А');await click('Подтвердить продажу');await synced(page);const row=api.rows.get(uid).progress;
+  assert.deepEqual([row.owned,row.selected,row.GOLD,row.SILVER,row.garageSlots],[[],null,1080,7000,12]);assert.deepEqual(await saved(),guest);
+  await page.reload();await active(page);assert.equal(await page.locator('#fleet-count').innerText(),'0 / 12');await logout(page);assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#dispatch-name').innerText(),'МС-1');
+});

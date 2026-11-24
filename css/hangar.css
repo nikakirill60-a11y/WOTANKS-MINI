@@ -207,3 +207,15 @@
 #ui .slot-select .slot-bg { flex:1 1 0; min-height:0; width:100%; padding-bottom:17px; }
 #ui .slot-bg img { width:100%; height:100%; max-height:none; object-fit:contain; padding:2px 6px; box-sizing:border-box; filter:drop-shadow(1px 2px 2px #111810c0); }
 #bay-poster img { padding:5% 9%; box-sizing:border-box; background:radial-gradient(ellipse at center,#495546,#202922 70%); }
+
+/* A real action on each parked vehicle, including free roots and the last one. */
+#ui .sell-btn { inset:3px 3px auto auto; width:auto; height:22px; padding:0 6px; border:1px solid #6f7c7a; border-radius:4px; background:#172b36f0; color:#e9e0cd; font:600 10px 'Segoe UI',sans-serif; }
+#ui .tank-slot.selected .sell-btn { display:flex; }
+@media(hover:none) { #ui .sell-btn { display:flex; min-height:24px; } }
+#ui .depot-tool:disabled { opacity:.5; cursor:default; }
+#empty-depot { padding-block:16px; font:14px/1.5 'Segoe UI',sans-serif; } #empty-depot button { margin-top:12px; white-space:normal; }
+#sale-status { margin-top:8px; padding:8px 12px; border-left:2px solid #8db6a6; background:#20343b; color:#d0e8df; font-size:13px; }
+#sale-modal { max-width:440px; }.sale-vehicle,.sale-total,.sale-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.sale-vehicle { margin-block:16px; padding:10px; justify-content:start; border-radius:6px; background:#1a2c36; }.sale-vehicle img { width:36%; height:66px; object-fit:contain; }
+.sale-vehicle small,.sale-total span { color:#bfd2de; }.sale-vehicle h3 { font-size:21px; line-height:1.2; }.sale-total b { color:#f1cc88; font:700 21px Consolas,monospace; }
+.sale-actions { justify-content:end; flex-wrap:wrap; }.sale-actions button { min-height:39px; }

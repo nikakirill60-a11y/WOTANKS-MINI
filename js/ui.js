@@ -318,28 +318,7 @@ function activatePromo() {
 }
 
 // ========== Продажа танка ==========
-function sellTank(tid) {
-  if (!DB[tid] || !(DB[tid].xp > 0) || !GameState.owned.includes(tid)) return;
-  if (GameState.owned.length <= 1) { alert("⚠️ Нельзя продать последний танк!"); return; }
-  var t = DB[tid];
-  var price = t.tier * 5000;
-  if (confirm('💰 Продать ' + t.n + ' за ' + price + '💰?')) {
-    GameState.SILVER += price;
-    GameState.owned = GameState.owned.filter(function(id) { return id !== tid; });
-    if (GameState.selected === tid) {
-      GameState.selected = GameState.owned[0];
-      if (BRANCHES[DB[GameState.selected].nat]) GameState.curNat = DB[GameState.selected].nat;
-    }
-    HangarSlots.deliver();
-    delete GameState.upgrades[tid];
-    delete GameState.upgradesBought[tid];
-    delete GameState.modules[tid];
-    updateResources();
-    renderCarousel();
-    renderTree();
-    saveProgress();
-  }
-}
+function sellTank(tid) { TankSales.open(tid); }
 
 // ========== Тренировка ==========
 function fillTrainNatSelect() {
@@ -397,11 +376,13 @@ function renderCarousel(fromCarousel = false) {
     var sb = document.createElement('button');
     sb.className = 'sell-btn';
     sb.setAttribute('aria-label', 'Продать: ' + t.n);
-    sb.innerText = '💰';
+    sb.type = 'button';
+    sb.textContent = 'Продать';
+    sb.title = t.n + ' · продать за ' + TankSales.quote(t).label;
     (function(tankId) {
       sb.onclick = function(e) { e.stopPropagation(); sellTank(tankId); };
     })(id);
-    if (GameState.owned.length > 1 && t.xp > 0) slot.appendChild(sb);
+    slot.appendChild(sb);
     var upg = GameState.upgrades[id];
     if (upg) {
       var total = (upg.gun || 0) + (upg.engine || 0) + (upg.turret || 0);

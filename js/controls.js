@@ -168,11 +168,10 @@ const BattleInput = (() => {
     if (!rosterRows.length) {
       rosterRows = g.units.map((u) => {
         const row = document.createElement('li'),
-          icon = document.createElement('img'),
+          icon = vehicleThumbnail(DB[u.id]),
           name = document.createElement('span'),
           hp = document.createElement('b');
-        icon.alt = '';
-        icon.src = 'models/' + DB[u.id].thumbnail;
+        name.className = 'roster-name';
         name.textContent = (u === g.player ? '★ ' : '') + u.name;
         row.append(icon, name, hp);
         el(u.team === 'enemy' ? 'roster-enemies' : 'roster-allies').append(row);

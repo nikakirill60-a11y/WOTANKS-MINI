@@ -26,7 +26,7 @@ const GarageViewer = (() => {
     el('bay-angles').hidden = el('bay-loading').hidden = true;
     const panel = el('bay-poster'),
       img = panel.querySelector('img');
-    img.src = 'models/' + DB[selectedId].thumbnail;
+    setVehicleCardArt(img, DB[selectedId]);
     img.alt = 'Изображение танка: ' + DB[selectedId].n;
     panel.querySelector('span').textContent = 'Статичный вид · ' + reason;
     panel.hidden = false;

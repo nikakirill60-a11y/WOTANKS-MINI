@@ -119,5 +119,5 @@ body[data-battle-input="waiting"] #game { cursor:pointer; }body.rest-mouse #game
 #field-actions kbd { font:10px/1.2 Consolas,monospace; color:#c5c6ae; }#field-actions kbd::before { content:'['; }#field-actions kbd::after { content:']'; }
 .mobile-mode #field-actions kbd { display:none; }@media(max-height:460px) { #touch-radio { top:124px; } }
 
-#battle-roster img { width:clamp(28px,4vw,48px); height:22px; object-fit:contain; flex:none; }
-#battle-roster li span { flex:1; min-width:0; overflow-wrap:anywhere; }
+#battle-roster .vehicle-thumb { width:clamp(28px,4vw,48px); height:22px; flex:none; }
+#battle-roster .roster-name { flex:1; min-width:0; overflow-wrap:anywhere; }

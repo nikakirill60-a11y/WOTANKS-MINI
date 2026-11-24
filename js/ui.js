@@ -361,6 +361,8 @@ function renderCarousel(fromCarousel = false) {
     select.type = 'button';
     select.className = 'slot-select';
     select.setAttribute('aria-label', 'Выбрать для боя: ' + t.n);
+    select.setAttribute('aria-description', CONFIG.NATIONS[t.nat]);
+    select.title = t.n + ' · ' + CONFIG.NATIONS[t.nat];
     select.setAttribute('aria-pressed', String(GameState.selected === id));
     (function(tankId) {
       select.onclick = function() {
@@ -377,7 +379,7 @@ function renderCarousel(fromCarousel = false) {
     sb.className = 'sell-btn';
     sb.setAttribute('aria-label', 'Продать: ' + t.n);
     sb.type = 'button';
-    sb.textContent = 'Продать';
+    sb.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h7l7 7-7 7-7-7Z"/><circle cx="7" cy="7" r="1"/></svg><span>Продать</span>';
     sb.title = t.n + ' · продать за ' + TankSales.quote(t).label;
     (function(tankId) {
       sb.onclick = function(e) { e.stopPropagation(); sellTank(tankId); };
@@ -391,12 +393,8 @@ function renderCarousel(fromCarousel = false) {
     var mods = GameState.modules[id] || [null, null, null];
     var modCount = mods.filter(function(m) { return m; }).length;
     if (modCount > 0) { var mi = document.createElement('div'); mi.className = 'mod-indicator'; mi.innerText = '🔧+' + modCount; slot.appendChild(mi); }
-    var wrap = document.createElement('span');
-    wrap.className = 'slot-bg';
-    const thumbnail = document.createElement('img');
-    thumbnail.src = 'models/' + t.thumbnail;
-    thumbnail.alt = '';
-    wrap.appendChild(thumbnail);
+    var wrap = vehicleThumbnail(t);
+    wrap.classList.add('slot-bg');
     var info = document.createElement('span');
     info.className = 'slot-info';
     var tierEl = document.createElement('span');

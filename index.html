@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/battle.css">
   <link rel="stylesheet" href="css/winter.css">
   <link rel="stylesheet" href="css/supplies.css">
+  <link rel="stylesheet" href="css/vehicle-cards.css">
   <link rel="stylesheet" href="css/entry.css">
 </head>
 <body data-hangar="winter">
@@ -74,7 +75,7 @@
 
 <dialog id="sale-modal" class="winter-dialog" aria-labelledby="sale-title" aria-describedby="sale-terms">
   <p class="season-kicker">СЕВЕРНОЕ ДЕПО / ПРОДАЖА ТЕХНИКИ</p><h2 id="sale-title">Продать танк?</h2>
-  <div class="sale-vehicle"><img id="sale-photo" alt=""><div><small id="sale-class"></small><h3 id="sale-name"></h3></div></div>
+  <div class="sale-vehicle"><span class="vehicle-thumb"><img id="sale-photo" alt=""></span><div><small id="sale-class"></small><h3 id="sale-name"></h3></div></div>
   <div class="sale-total"><span id="sale-currency"></span><b id="sale-price"></b></div>
   <p id="sale-terms" class="winter-intro"></p><div class="sale-actions"><button type="button" class="winter-back" id="sale-cancel">Отмена</button>
     <button type="button" class="winter-action" id="sale-confirm">Подтвердить продажу</button></div>
@@ -85,8 +86,8 @@
     <button type="button" class="winter-back" onclick="this.closest('dialog').close()">В ангар</button></header>
   <p class="winter-intro">Заходите в ангар: подарок начисляется автоматически один раз в сутки. Смена дня — в 00:00 UTC. Пропуски не сбрасывают счётчик.</p>
   <div class="advent-milestones">
-    <article><img src="models/bt-42.webp" alt=""><div><small>15 ВИЗИТОВ · ФИНЛЯНДИЯ</small><h3>БТ-42</h3><span id="milestone-15"></span></div></article>
-    <article><img src="models/tl-7-olen.webp" alt=""><div><small>31 ВИЗИТ · США</small><h3>TL-7 Олень</h3><span id="milestone-31"></span></div></article>
+    <article><span class="vehicle-thumb"><img alt=""></span><div><small>15 ВИЗИТОВ · ФИНЛЯНДИЯ</small><h3>БТ-42</h3><span id="milestone-15"></span></div></article>
+    <article><span class="vehicle-thumb"><img alt=""></span><div><small>31 ВИЗИТ · США</small><h3>TL-7 Олень</h3><span id="milestone-31"></span></div></article>
   </div>
   <div class="winter-subhead"><h3>Декабрь</h3><b id="advent-count"></b></div>
   <div id="calendar-days" aria-label="Дни посещения"></div><p id="advent-status" class="winter-message" role="status"></p>
@@ -215,7 +216,7 @@
             <button type="button" id="tree-prev" aria-label="Предыдущие уровни">←</button>
             <button type="button" id="tree-next" aria-label="Следующие уровни">→</button></div></div>
           <section class="tree-dossier" aria-label="Характеристики узла">
-            <img id="tree-photo" alt="">
+            <span class="vehicle-thumb"><img id="tree-photo" alt=""></span>
             <div><p class="bay-kicker">ХАРАКТЕРИСТИКИ <span>/</span> <b id="tree-tier"></b></p>
               <h3 id="tree-name"></h3><p id="tree-status"></p></div>
             <dl id="tree-stats"></dl>
@@ -401,6 +402,7 @@
 
     <script src="models/catalog.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/vehicle-card-art.js"></script>
     <script src="js/hangar-slots.js"></script>
     <script src="js/tank-sales.js"></script>
     <script src="js/containers.js"></script>

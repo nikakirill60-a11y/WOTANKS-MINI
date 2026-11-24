@@ -161,7 +161,7 @@
 .tree-nav button { min-width:34px; font-size:16px; padding:2px 8px; }
 .tree-nav button:disabled { opacity:.35; cursor:default; }
 .tree-dossier { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:8px 12px; margin-top:auto; padding:12px 16px; border-top:1px solid var(--bay-line); background:#202922; }
-#tree-photo { width:76px; height:48px; object-fit:contain; border-radius:3px; }
+.tree-dossier .vehicle-thumb { width:76px; height:48px; }
 #tree-name { margin-top:3px; font-size:19px; }
 #tree-status { color:#c4cdbd; font-size:11px; }
 #tree-stats { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,1fr); gap:6px 14px; }
@@ -174,7 +174,7 @@
 .calendar-day { min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; padding:8px; border:1px solid #52634d; border-radius:3px; background:#2a382c; color:#e8d6b4; cursor:pointer; }
 .calendar-day small { color:#b6c2b1; } .calendar-day:disabled { opacity:.6; cursor:default; }
 @media(max-width:650px) {
-  .tree-dossier { padding:10px; column-gap:8px; } #tree-photo { width:50px; height:38px; }
+  .tree-dossier { padding:10px; column-gap:8px; } .tree-dossier .vehicle-thumb { width:50px; height:38px; }
   #tree-stats { grid-template-columns:1fr 1fr; }
   .tree-legend,.tree-nav { padding-inline:11px; } .tree-nav { font-size:10px; }
 }
@@ -213,11 +213,16 @@
 /* A real action on each parked vehicle, including free roots and the last one. */
 #ui .sell-btn { inset:3px 3px auto auto; width:auto; height:22px; padding:0 6px; border:1px solid #6f7c7a; border-radius:4px; background:#172b36f0; color:#e9e0cd; font:600 10px 'Segoe UI',sans-serif; }
 #ui .tank-slot.selected .sell-btn { display:flex; }
-@media(hover:none) { #ui .sell-btn { display:flex; min-height:24px; } }
+.sell-btn svg { display:none; width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; }
+/* Every parked tank still has its own sale action on touch, without covering its silhouette. */
+@media(hover:none) {
+  #ui .sell-btn { display:flex; width:27px; height:27px; padding:0; }
+  .sell-btn svg { display:block; } .sell-btn span { display:none; }
+}
 #ui .depot-tool:disabled { opacity:.5; cursor:default; }
 #empty-depot { padding-block:16px; font:14px/1.5 'Segoe UI',sans-serif; } #empty-depot button { margin-top:12px; white-space:normal; }
 #sale-status { margin-top:8px; padding:8px 12px; border-left:2px solid #8db6a6; background:#20343b; color:#d0e8df; font-size:13px; }
 #sale-modal { max-width:440px; }.sale-vehicle,.sale-total,.sale-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.sale-vehicle { margin-block:16px; padding:10px; justify-content:start; border-radius:6px; background:#1a2c36; }.sale-vehicle img { width:36%; height:66px; object-fit:contain; }
+.sale-vehicle { margin-block:16px; padding:10px; justify-content:start; border-radius:6px; background:#1a2c36; }.sale-vehicle .vehicle-thumb { width:36%; height:66px; flex:none; }
 .sale-vehicle small,.sale-total span { color:#bfd2de; }.sale-vehicle h3 { font-size:21px; line-height:1.2; }.sale-total b { color:#f1cc88; font:700 21px Consolas,monospace; }
 .sale-actions { justify-content:end; flex-wrap:wrap; }.sale-actions button { min-height:39px; }

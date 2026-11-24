@@ -22,9 +22,7 @@ function researchState(id) {
 function showTreeCard(id) {
   treeCardId = id;
   const t = DB[id];
-  const photo = treeEl('tree-photo'),
-    src = 'models/' + t.thumbnail;
-  if (photo.getAttribute('src') !== src) photo.src = src;
+  setVehicleCardArt(treeEl('tree-photo'), t);
   treeEl('tree-tier').textContent = CONFIG.TIER_ROMAN[t.tier] + ' · ' + CONFIG.TANK_CLASSES[t.cls];
   treeEl('tree-name').textContent = t.n;
   treeEl('tree-status').textContent = researchState(id).text;
@@ -212,11 +210,11 @@ function renderTree() {
           ? xpLabel(t.xp)
           : 'Бесплатно';
     const img = document.createElement('img');
-    img.src = 'models/' + t.thumbnail;
     img.alt = '';
     img.className = 'node-tank';
     img.draggable = false;
     button.append(tag, img, name, price);
+    setVehicleCardArt(img, t);
     button.onfocus = () => showTreeCard(id);
     button.onpointerenter = (e) => {
       if (e.pointerType === 'mouse') showTreeCard(id);

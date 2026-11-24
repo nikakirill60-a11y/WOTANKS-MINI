@@ -1,0 +1,43 @@
+/* All flag art is local. A plate with no matching flag keeps its plain card colour.
+   Extra/historical flags are art keys, not entries in the playable nation list. */
+[data-card-nation="argentina"]      { --card-flag:url('../assets/flags/argentina.webp'); }
+[data-card-nation="canada"]         { --card-flag:url('../assets/flags/canada.webp'); }
+[data-card-nation="china"]          { --card-flag:url('../assets/flags/china.webp'); }
+[data-card-nation="czechoslovakia"] { --card-flag:url('../assets/flags/czechoslovakia.webp'); }
+[data-card-nation="finland"]        { --card-flag:url('../assets/flags/finland.webp'); }
+[data-card-nation="france"]         { --card-flag:url('../assets/flags/france.webp'); }
+[data-card-nation="german-empire"]  { --card-flag:url('../assets/flags/german-empire.webp'); }
+[data-card-nation="germany"]        { --card-flag:url('../assets/flags/germany.webp'); }
+[data-card-nation="hungary"]        { --card-flag:url('../assets/flags/hungary.webp'); }
+[data-card-nation="israel"]         { --card-flag:url('../assets/flags/israel.webp'); }
+[data-card-nation="italy"]          { --card-flag:url('../assets/flags/italy.webp'); }
+[data-card-nation="japan"]          { --card-flag:url('../assets/flags/japan.webp'); }
+[data-card-nation="poland"]         { --card-flag:url('../assets/flags/poland.webp'); }
+[data-card-nation="romania"]        { --card-flag:url('../assets/flags/romania.webp'); }
+[data-card-nation="russian-empire"] { --card-flag:url('../assets/flags/russian-empire.webp'); }
+[data-card-nation="sweden"]         { --card-flag:url('../assets/flags/sweden.webp'); }
+[data-card-nation="uk"]             { --card-flag:url('../assets/flags/uk.webp'); }
+[data-card-nation="usa"]            { --card-flag:url('../assets/flags/usa.webp'); }
+[data-card-nation="ussr"]           { --card-flag:url('../assets/flags/ussr.webp'); --flag-y:top; }
+[data-card-nation="vietnam"]        { --card-flag:url('../assets/flags/vietnam.webp'); }
+
+/* Zero specificity for position: tree nodes and the no-WebGL poster are already absolute. */
+:where([data-card-nation]) { position:relative; isolation:isolate; }
+[data-card-nation]::before {
+  content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; border-radius:inherit;
+  background:linear-gradient(108deg,transparent 7%,#15232e22 29%,#15232ead 76%,#15232ef2),
+             var(--card-flag,none) left var(--flag-y,center) / cover no-repeat;
+  opacity:.84;
+  mask-image:linear-gradient(#000 22%,#000e 62%,#0006);
+}
+.vehicle-thumb { display:block; border-radius:3px; background-color:#293843; }
+.vehicle-thumb > img { display:block; width:100%; height:100%; object-fit:contain; filter:drop-shadow(1px 2px 2px #0a111ade); }
+
+/* Fit the flag to the art window, not the opaque carousel caption beneath it. */
+#ui .slot-bg::before { bottom:17px; }
+/* Leave the research name, price and state colour on a quiet lower band. */
+#nodes .node::before { bottom:23px; opacity:.76; mask-image:linear-gradient(#000 35%,#000e 70%,transparent); }
+#nodes .node.locked::before { opacity:.58; }
+#nodes .node small { color:#e5ece9; background:#152129c9; border-radius:2px; padding-inline:3px; }
+#bay-poster[data-card-nation]::before { opacity:.52; }
+#bay-poster[data-card-nation] img { background:transparent; }

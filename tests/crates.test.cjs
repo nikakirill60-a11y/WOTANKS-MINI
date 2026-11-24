@@ -59,7 +59,7 @@ test('full garage: Advent and two distinct box wins queue FIFO. Bulk slot, sale 
   await click('Адвент');assert.match(await page.locator('#milestone-15').innerText(),/ожидает слота/);await click('В ангар');await click('Ожидают слота: 1');
   const inventory=id=>page.locator('.inv-card').filter({hasText:id});
   assert.match(await page.locator('#vehicle-deliveries').innerText(),/БТ-42/);
-  await pressWithRolls(inventory('Коллекционный контейнер').getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[0,.9999,.1, 0,.9999,.1, .525,0,.09999]);
+  await pressWithRolls(inventory('Новогодний ящик').getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[0,.9999,.1, 0,.9999,.1, .525,0,.09999]);
   const state=await saved();assert.deepEqual(state.inventory,{basic:1});assert.deepEqual(state.pendingVehicles,['TL7','T62A']);
   assert.deepEqual(state.owned,full.concat('BT42'));assert.equal(state.garageSlots,11);assert.equal(state.GOLD,75); // daily 50 + primary 25
   const text=await page.locator('#reward-lines').innerText();for(const term of [/Слоты ангара: \+1/,/TL-7/,/Т-62А/,/Ожидает слота/,/Доставлено из очереди/])assert.match(text,term);
@@ -85,12 +85,12 @@ test('supplied crate rigs render offline, open on their original hinge, skip/con
       framesSeen.push({angle:h.rotation.x,pivot:h.position.toArray(),tris,n,parcels:scene.getObjectByName('Cargo').children.length,eye:cam.position.toArray(),calls:renderer.info.render.calls});
     };
   });
-  const initial=await saved();await click('Осмотреть модель: Коллекционный контейнер');let closed=await page.evaluate(()=>framesSeen.at(-1));
+  const initial=await saved();await click('Осмотреть модель: Новогодний ящик');let closed=await page.evaluate(()=>framesSeen.at(-1));
   assert.deepEqual([closed.pivot,closed.tris,closed.n,closed.parcels],[[0,1.575,-.71],2918,85,3]);assert.equal(Math.abs(closed.angle),0);assert.ok(closed.calls>10);
   await page.emulateMedia({reducedMotion:'no-preference'});await click('Открыть крышку');await page.waitForFunction(()=>framesSeen.at(-1).angle===-2.55);
   assert.ok(await page.evaluate(()=>framesSeen.some(f=>f.angle<-.1&&f.angle>-2.45)));assert.notDeepEqual(await page.evaluate(()=>framesSeen.at(-1).eye),closed.eye);
   await click('Назад');assert.deepEqual(await saved(),initial,'free inspection cannot roll or consume anything');
-  await click('Инвентарь');const card=page.locator('.inv-card').filter({hasText:'Коллекционный контейнер'});
+  await click('Инвентарь');const card=page.locator('.inv-card').filter({hasText:'Новогодний ящик'});
   const packed=await card.getByRole('button',{name:'ОТКРЫТЬ 1'}).evaluate(button=>{
     button.click();openAllFromInventory('collection');return [GameState.inventory.collection,document.getElementById('reward-display').hidden];
   });assert.deepEqual(packed,[1,true]);const once=await saved();await click('Пропустить анимацию');assert.equal(await page.evaluate(()=>framesSeen.at(-1).angle),-2.55);

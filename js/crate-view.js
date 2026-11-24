@@ -140,10 +140,10 @@ const CrateView = (() => {
     el('unpack-title').textContent = CONTAINERS[id].name;
     el('unpack-demo').hidden = !!count; el('unpack-back').hidden = !!count;
     el('unpack-skip').hidden = !count; el('unpack-replay').hidden = el('reward-display').hidden = true;
-    el('reward-lines').replaceChildren(...rows.map(({title,detail,image,tag}) => {
+    el('reward-lines').replaceChildren(...rows.map(({title,detail,vehicle,tag}) => {
       const row = document.createElement('div'); row.className = 'unpack-row';
-      const symbol = image ? new Image() : document.createElement('i');
-      if (image) { symbol.src = image; symbol.alt = ''; } else symbol.textContent = tag;
+      const symbol = vehicle ? vehicleThumbnail(DB[vehicle]) : document.createElement('i');
+      if (!vehicle) symbol.textContent = tag;
       const copy = document.createElement('span'), strong = document.createElement('strong'), small = document.createElement('small');
       strong.textContent = title; small.textContent = detail; copy.append(strong,small); row.append(symbol,copy); return row;
     }));

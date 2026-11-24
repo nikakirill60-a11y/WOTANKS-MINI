@@ -1,6 +1,6 @@
 // Ordinary supply boxes keep their original resource tables. The collection has its own vehicle pool.
 const CONTAINERS = {
-  collection: { name: 'Коллекционный контейнер', icon: '❄', cost: {gold: 150}, color: '#91c7d4',
+  collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 150}, color: '#91c7d4',
     vehicleChance: 0.05, vehicles: SPECIAL_TANKS.filter(t => t.source === 'collection').map(t => t.id),
     drops: [['silver', 10000, 30000], ['gold', 25, 100]] },
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
@@ -185,7 +185,7 @@ function receipt(results){
     if(r.slot)slots++;for(const id of r.delivered||[])delivered.add(id);
   }
   const rows=[];
-  for(const id of new Set([...vehicles,...delivered])) rows.push({title:DB[id].n,image:'models/'+DB[id].thumbnail,
+  for(const id of new Set([...vehicles,...delivered])) rows.push({title:DB[id].n,vehicle:id,
     detail:GameState.pendingVehicles.includes(id)?'Ожидает слота · сохранено в инвентаре':vehicles.has(id)?'Получено · в ангаре':'Доставлено из очереди в ангар'});
   for(const [type,amount] of Object.entries(totals)){
     const [,label,unit]=SUPPLIES[type];rows.push({title:`${amount} ${unit}`,detail:label,tag:unit});

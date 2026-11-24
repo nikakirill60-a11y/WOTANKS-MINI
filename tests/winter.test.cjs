@@ -76,12 +76,15 @@ test('150 gold each; insufficient funds leave old boxes alone; single and mixed 
   const {page,click,saved}=await openGame(t,{mobile:true,seed:{GOLD:299,SILVER:75000,owned:['MS1','T62A'],inventory:{collection:4,basic:2}}});
   const alerts=[];page.on('dialog',d=>{alerts.push(d.message());return d.dismiss();});
   await click('Контейнеры');
-  const box=page.locator('.c-card').filter({hasText:'Коллекционный контейнер'}),buy=box.getByRole('button',{name:'КУПИТЬ · 150 G'});
+  const box=page.locator('.c-card').filter({hasText:'Новогодний ящик'}),buy=box.getByRole('button',{name:'КУПИТЬ · 150 G'});
   assert.match(await box.locator('.c-desc').innerText(),/5% на танк.*Серебро — 47,5%, золото — 47,5%/);
+  assert.equal(await box.locator('.c-name').innerText(),'Новогодний ящик');
   await buy.click();const paid=await saved();assert.equal(paid.GOLD,149);assert.equal(paid.SILVER,75000);
+  assert.equal(await page.locator('#supply-feedback').innerText(),'Добавлено: Новогодний ящик');
   assert.deepEqual(paid.inventory,{collection:5,basic:2});await buy.click();assert.match(alerts.pop(),/Недостаточно золота/);assert.deepEqual(await saved(),paid);
   await page.reload();await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
-  const old=page.locator('.inv-card').filter({hasText:'Коллекционный контейнер'});
+  const old=page.locator('.inv-card').filter({hasText:'Новогодний ящик'});
+  assert.equal(await old.locator('.inv-name').innerText(),'Новогодний ящик × 5');
   async function open(button,rolls){
     // Limit deterministic random input to this actual inventory button's synchronous click handler.
     const unused=await old.getByRole('button',{name:button}).evaluate((b,values)=>{
@@ -89,12 +92,15 @@ test('150 gold each; insufficient funds leave old boxes alone; single and mixed 
       try{b.click();return values.length;}finally{Math.random=normal;}
     },rolls);
     assert.equal(unused,0);
+    assert.equal(await page.locator('#unpack-title').innerText(),'Новогодний ящик');
     return page.locator('#reward-display').innerText();
   }
   assert.match(await open('ОТКРЫТЬ 1',[.05,0,.5]),/10000 ₽/);await click('ЗАБРАТЬ');
   assert.deepEqual((await saved()).owned,['MS1','T62A']);
   const rewards=await open('ОТКРЫТЬ ВСЕ',[.99,.999999,.5, .049999,.999999,.5, .524999,.999999,.5, .525,0,.5]);
-  assert.match(rewards,/TL-7/);assert.match(rewards,/125 G/);assert.match(rewards,/30000 ₽/);await click('ЗАБРАТЬ');
+  assert.match(rewards,/TL-7/);assert.match(rewards,/125 G/);assert.match(rewards,/30000 ₽/);
+  assert.deepEqual(await page.locator('#reward-lines [data-card-nation]').evaluateAll(frames => frames.map(f => [f.dataset.cardNation,f.querySelector('img').getAttribute('src')])),[['usa','models/tl-7.webp']]);
+  await click('ЗАБРАТЬ');
   const s=await saved();assert.deepEqual(s.inventory,{basic:2});assert.deepEqual(s.owned,['MS1','T62A','TL7']);
   assert.equal(s.SILVER,115000);assert.equal(s.GOLD,274);assert.equal(s.XP,paid.XP);assert.equal(s.charges,paid.charges);
   await click('В ангар');await click('Выбрать для боя: TL-7');await page.reload();assert.equal((await saved()).selected,'TL7');assert.equal(await page.locator('#dispatch-dmg').innerText(),'1440 (4 × 360)');
@@ -105,7 +111,7 @@ test('150 gold each; insufficient funds leave old boxes alone; single and mixed 
 
 test('completed collection shows resource-only odds before purchase; no silver is needed to buy the last affordable box',async t=>{
   const {page,click,saved}=await openGame(t,{seed:{GOLD:150,SILVER:0,owned:['MS1','M4A3E2','T71DA','JPANTHERII','T62A','TL7']}});
-  await click('Контейнеры');const box=page.locator('.c-card').filter({hasText:'Коллекционный контейнер'});
+  await click('Контейнеры');const box=page.locator('.c-card').filter({hasText:'Новогодний ящик'});
   assert.match(await box.locator('.c-desc').innerText(),/Все пять.*Серебро — 50%, золото — 50%/);
   await box.getByRole('button',{name:'КУПИТЬ · 150 G'}).click();assert.equal((await saved()).GOLD,0);assert.equal((await saved()).inventory.collection,1);
   await click('Инвентарь');await click('ОТКРЫТЬ 1');await click('ЗАБРАТЬ');const s=await saved();

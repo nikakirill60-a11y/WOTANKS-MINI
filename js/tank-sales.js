@@ -16,7 +16,7 @@ const TankSales = (() => {
     const t = DB[id], price = quote(t);
     el('sale-class').textContent = CONFIG.TIER_ROMAN[t.tier] + ' · ' + ({premium:'Премиум',collection:'Коллекционная',advent:'Награда Адвента'}[t.source] || 'Исследуемая');
     el('sale-name').textContent = t.n;
-    el('sale-photo').src = 'models/' + t.thumbnail;
+    setVehicleCardArt(el('sale-photo'), t);
     el('sale-currency').textContent = price.field === 'GOLD' ? 'К получению · золото' : 'К получению · серебро';
     el('sale-price').textContent = price.label;
     const notes = ['Установленные модули и улучшения будут сняты без компенсации.'];

@@ -17,7 +17,9 @@ function renderCalendar() {
     cell.append(num,status); return cell;
   }));
   for (const [n,id] of [[15,'BT42'],[31,'TL7OLEN']]) {
-    document.getElementById('milestone-'+n).textContent = dates.length >= n ? (GameState.pendingVehicles.includes(id) ? 'Получено · ожидает слота' : GameState.owned.includes(id) ? 'Получено · в ангаре' : 'Получено · продано') : `Ещё визитов: ${n-dates.length}`;
+    const status = document.getElementById('milestone-'+n);
+    setVehicleCardArt(status.closest('article').querySelector('img'), DB[id]);
+    status.textContent = dates.length >= n ? (GameState.pendingVehicles.includes(id) ? 'Получено · ожидает слота' : GameState.owned.includes(id) ? 'Получено · в ангаре' : 'Получено · продано') : `Ещё визитов: ${n-dates.length}`;
   }
 }
 function openCalendar() {

@@ -20,8 +20,9 @@ function renderPremiumShop() {
     const card = document.createElement('article'); card.className = 'offer-card'; card.dataset.id = t.id;
     // Data is exclusively from the built-in catalogue, never from user profiles.
     card.innerHTML = `<small class="season-kicker">${CONFIG.TIER_ROMAN[t.tier]} · ${CONFIG.TANK_CLASSES[t.cls]} / ${CONFIG.NATIONS[t.nat]}</small>
-      <img alt="" src="models/${t.thumbnail}"><h3>${t.n}</h3><p>${t.hp} HP · ${shotDamage(t)} урона<br>${t.speed} км/ч</p>
+      <h3>${t.n}</h3><p>${t.hp} HP · ${shotDamage(t)} урона<br>${t.speed} км/ч</p>
       <b class="offer-price">${t.price.toLocaleString('ru-RU')} G</b>`;
+    card.querySelector('h3').before(vehicleThumbnail(t));
     const buy = document.createElement('button'); buy.type = 'button'; buy.className = 'winter-action';
     const full = HangarSlots.free() <= 0;
     buy.disabled = GameState.owned.includes(t.id) || full || GameState.GOLD < t.price;

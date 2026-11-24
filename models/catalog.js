@@ -46,6 +46,25 @@ const GERMAN_BRANCH = defineLine('germany', [
   ['RU251','Spähpanzer Ru 251','lt','ru-251',      1350,250,5800,210,25,20,72, .92,390,.33],
   ['RHMPZW','Rhm. Panzerwagen','lt','rheinmetall-panzerwagen',1650,320,7200,235,30,20,75,.99,405,.30]
 ]);
+// The two heavy routes share the original Leichttraktor and one II–V progression.
+const GERMAN_MAUS_BRANCH = defineLine('germany', [
+  ['PZ35T','Pz.Kpfw. 35 (t)','lt','pz-35-t',        175, 45, 2300, 52, 25, 25,35, .75,300,.30,{minPitch:-20,maxPitch:10}],
+  ['PZ38T','Pz.Kpfw. 38 (t)','lt','pz-38-t',        265, 60, 2600, 72, 50, 25,42, .79,310,.29,{minPitch:-20,maxPitch:10}],
+  ['PZIVD','Pz.Kpfw. IV Ausf. D','mt','pz-iv-d',    390,110, 3800, 85, 30, 35,40, .90,330,.25,{minPitch:-20,maxPitch:10}],
+  ['PZIVH','Pz.Kpfw. IV Ausf. H','mt','pz-iv-h',    600,125, 3700,135, 80, 50,40, .96,340,.22,{minPitch:-20,maxPitch:8}],
+  ['VK3001P','VK 30.01 (P)','ht','vk-30-01-p',       920,220, 7000,145, 75, 80,50,1.10,350,.15,{minPitch:-15,maxPitch:8}],
+  ['TIGERP','Tiger (P)','ht','tiger-p',             1450,240, 6600,203,200,120,35,1.12,360,.10,{minPitch:-17,maxPitch:6}],
+  ['VK10001P','VK 100.01 (P)','ht','vk-100-01-p',   1850,440,12200,220,200,230,20,1.30,360,.05,{minPitch:-30,maxPitch:8}],
+  ['MAUSCHEN','Mäuschen','ht','mauschen',          2300,490,12500,246,200,240,20,1.40,370,.04,{minPitch:-24,maxPitch:8}],
+  ['MAUS','Maus','ht','maus',                     3000,490,11800,250,200,260,20,1.50,380,.03,{minPitch:-8,maxPitch:24}]
+], GERMAN_BRANCH.slice(0,1));
+const GERMAN_E100_BRANCH = defineLine('germany', [
+  ['VK3601H','VK 36.01 (H)','ht','vk-36-01-h',1000,220, 6800,148,100,100,40,1.05,350,.15,{minPitch:-15,maxPitch:8}],
+  ['TIGERI','Tiger I','ht','tiger-i',        1500,240, 5800,203,100,100,40,1.15,370,.10,{minPitch:-13,maxPitch:7}],
+  ['TIGERII','Tiger II','ht','tiger-ii',     1650,360, 9200,225,150,185,38,1.20,380,.08,{minPitch:-15,maxPitch:7}],
+  ['E75','E 75','ht','e-75',                2100,490,12500,246,160,252,38,1.30,390,.06,{minPitch:-17,maxPitch:8}],
+  ['E100','E 100','ht','e-100',             2700,680,16500,246,200,250,30,1.50,400,.04,{minPitch:-20,maxPitch:7}]
+], GERMAN_MAUS_BRANCH.slice(0,5));
 const US_BRANCH = defineLine('usa', [
   ['T1C','T1 Cunningham','lt','t1-cunningham',        120, 38,2300, 39,10, 10,32,.68,275,.32],
   ['T2MEDIUM','T2 Medium Tank','mt','t2-medium',      185, 45,2300, 50,22, 22,40,.80,285,.29],
@@ -69,6 +88,15 @@ const USSR_MEDIUM_BRANCH = defineLine('ussr', [
   ['T54','Т-54','mt','t-54',             1650,310,6800,220,120,200,55,1.10,390,.22,{minPitch:-5,maxPitch:20}],
   ['OBJ140','Объект 140','mt','object-140',1950,320,5800,250,100,240,55,1.10,400,.22,{minPitch:-6,maxPitch:17}]
 ], USSR_BRANCH.slice(0,1));
+// The Soviet lights follow the Object 140 route through A-20 (IV), then fork at T-50.
+const USSR_LIGHT_BRANCH = defineLine('ussr', [
+  ['T50','Т-50','lt','t-50',            520, 75,2600,112,45, 45,55, .79,340,.34,{minPitch:-7,maxPitch:25}],
+  ['MT25','МТ-25','lt','mt-25',         670, 90,2700,138,45, 45,62, .85,360,.35,{minPitch:-25,maxPitch:6}],
+  ['LTG','ЛТГ','lt','lt-g',             890,180,5200,155,40,100,65, .86,370,.37,{minPitch:-25,maxPitch:5}],
+  ['LTTB','ЛТТБ','lt','lttb',         1120,190,4800,178,75, 90,68, .95,380,.36,{minPitch:-15,maxPitch:8}],
+  ['T54L','Т-54 обл.','lt','t-54-ltwt',1420,250,6000,200,80,160,69,1.00,390,.36,{minPitch:-17,maxPitch:5}],
+  ['T100LT','Т-100 ЛТ','lt','t-100-lt',1700,300,6200,230,90,180,72,1.04,405,.40,{minPitch:-15,maxPitch:5}]
+], USSR_MEDIUM_BRANCH.slice(0,4));
 // null = no separate turret armour. Yaw limits are in the supplied model's local Y rotation.
 const GERMAN_TD_BRANCH = defineLine('germany', [
   ['PZJAG1','Panzerjäger I','td','panzerjager-i', 145,55,2400,68,15,null,40,.70,280,.34,{yawLimits:[-10,10],minPitch:-8,maxPitch:12}],
@@ -109,8 +137,8 @@ function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});
 }
 const BRANCHES = Object.freeze({
-  ussr: nationTree('01','ИС-7, ИС-4 и Объект 140',USSR_BRANCH,USSR_IS4_BRANCH,USSR_MEDIUM_BRANCH),
-  germany: nationTree('02','Rhm. Panzerwagen и Waffenträger auf E 100',GERMAN_BRANCH,GERMAN_TD_BRANCH),
+  ussr: nationTree('01','ИС-7, ИС-4, Объект 140 и Т-100 ЛТ',USSR_BRANCH,USSR_IS4_BRANCH,USSR_MEDIUM_BRANCH,USSR_LIGHT_BRANCH),
+  germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Maus и E 100',GERMAN_BRANCH,GERMAN_TD_BRANCH,GERMAN_MAUS_BRANCH,GERMAN_E100_BRANCH),
   usa: nationTree('03','Путь к M48 Patton',US_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH)
 });

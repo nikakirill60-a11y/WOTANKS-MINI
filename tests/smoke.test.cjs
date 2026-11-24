@@ -12,6 +12,10 @@ const germanIds = ['LTR','PZII','PZIC','LUCHS','LEOPARD','VK2801','SPIC','HWK12'
 
 const is4Ids = ['T150','KV3','KV4','STI','IS4'];
 const mediumIds = ['BT2','BT7','A20','T34','T3485','T43','T44','T54','OBJ140'];
+const scoutIds = ['T50','MT25','LTG','LTTB','T54L','T100LT'];
+const panzerIds = ['PZ35T','PZ38T','PZIVD','PZIVH'];
+const mausIds = ['VK3001P','TIGERP','VK10001P','MAUSCHEN','MAUS'];
+const e100Ids = ['VK3601H','TIGERI','TIGERII','E75','E100'];
 const tdIds = ['PZJAG1','MARDER2','MARDER38','PZSFL4C','NASHORN','STEMIL','RHMBWT','WTPZ4','WTE100'];
 const usIds = ['T1C','T2MEDIUM','M2MEDIUM','M3LEE','M4SHERMAN','M4A3E8','T20','PERSHING','M46PATTON','M48PATTON'];
 
@@ -19,6 +23,8 @@ const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clan
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
 const meshCounts = {MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
+  PZ35T:2486,PZ38T:2637,PZIVD:3160,PZIVH:3263,VK3001P:2890,TIGERP:3161,VK10001P:2723,MAUSCHEN:3174,MAUS:2760,
+  VK3601H:2659,TIGERI:2972,TIGERII:3394,E75:2944,E100:2986,T50:4700,MT25:2313,LTG:3221,LTTB:3339,T54L:2919,T100LT:3398,
   T150:2514,KV3:2866,KV4:3259,STI:3226,IS4:3284,
   LTR:2253,PZII:2742,PZIC:3451,LUCHS:2466,LEOPARD:2729,VK2801:2120,SPIC:2747,HWK12:2985,RU251:3114,RHMPZW:3422,
   T1C:2015,T2MEDIUM:2391,M2MEDIUM:2737,M3LEE:2400,M4SHERMAN:2514,M4A3E8:2326,T20:2465,PERSHING:3443,M46PATTON:3188,M48PATTON:3360,
@@ -122,7 +128,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
 
 test('one legacy local profile: keep earned progress, exclude credentials and retired services', async t => {
   const oldUsers = JSON.stringify({ Former: { pass: 'obsolete-test-marker', data: {
-    XP: 0, GOLD: 2500, SILVER: 0, owned: ['T26', 'PZ2','T1CUNN','STRV21','ST1','KV2','T2LT','OB140','RHMB','WT_E220','T34_USA','T54O'], modules:{T1CUNN:['optics'],RHMB:['turbo'],ST1:['optics']}, upgrades:{T1CUNN:{engine:1}}, selected: 'PZ2', charges: 4, referralCode: 'old-code'
+    XP: 0, GOLD: 2500, SILVER: 0, owned: ['T26', 'PZ2','T1CUNN','STRV21','ST1','KV2','T2LT','OB140','RHMB','WT_E220','T34_USA','T54O','T54L','PZ4D','VK36H','TIGER1','TIGER2','VK30P','VK100','MAUSCH','OB84','PZ5G','VK45A'], modules:{T1CUNN:['optics'],RHMB:['turbo'],ST1:['optics'],T54O:['rammer']}, upgrades:{T1CUNN:{engine:1},TIGER1:{gun:2}}, selected: 'PZ2', charges: 4, referralCode: 'old-code'
   } } });
   const { page } = await offlineGame(t, { seed: {
     ct_users: oldUsers, ct_mailbox: JSON.stringify([{ id: 'mail_event', claimed: true }]),
@@ -133,8 +139,8 @@ test('one legacy local profile: keep earned progress, exclude credentials and re
   assert.equal(data.SILVER, 0);
   assert.equal(data.charges, 4);
   assert.equal(data.selected, 'PZII');assert.equal(data.curNat,'germany');
-  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT']); // no grants for similarly named tanks or a retired event boss
-  assert.deepEqual(data.modules,{T1C:['optics'],RHMBWT:['turbo'],STI:['optics']});assert.deepEqual(data.upgrades,{T1C:{engine:1}});
+  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN']); // no grants for similarly named tanks or a retired event boss
+  assert.deepEqual(data.modules,{T1C:['optics'],RHMBWT:['turbo'],STI:['optics'],T54L:['rammer']});assert.deepEqual(data.upgrades,{T1C:{engine:1},TIGERI:{gun:2}});
   checkClean(data);assert.equal(data.GOLD,2500);
   assert.doesNotMatch(JSON.stringify(data), /obsolete-test-marker|Former|old-code|mail_event/);
   assert.equal(await page.evaluate(() => localStorage.getItem('ct_users')), oldUsers);
@@ -202,7 +208,7 @@ test('migration keeps earned late tiers, supplies, modules, settings and currenc
   await click('Дерево развития');assert.equal(await page.locator('.n-btn.active-n').innerText(),'ГЕРМАНИЯ');
   await click('СССР');assert.equal(await page.locator('#nodes .node.owned').count(),3);
   await click('Выбрать: Объект 257');assert.equal(await page.locator('#dispatch-name').innerText(),'Объект 257');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietIds.concat(is4Ids,mediumIds));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietIds.concat(is4Ids,mediumIds,scoutIds));
   const rewards=await page.evaluate(()=>{
     for(const id of Object.keys(CONTAINERS))openContainerDirect(id);
     for(const code of ['BETA_TEST','WT220','START2025']){document.getElementById('promo-input').value=code;activatePromo();}
@@ -332,10 +338,14 @@ test('offline team modes use the shared 3D asset; touch driving/firing, replay a
   const touch=await page.context().newCDPSession(page);
   for(const [name,type,count,map] of [['7×7','pc',14,'city'],['В БОЙ 15×15','mobile',30,'desert']]){
     await page.locator('#map-select').selectOption(map);await click(name);await chooseControls(page,type);await ready(page);
-    const units=await page.evaluate(()=>({n:BattleView.stats().units,shared:GameState.units.every(u=>['MS1','T26','BT2','LTR','PZII','PZJAG1','T1C','T2MEDIUM','STRVFM21','PVLVV42','STRVM38'].includes(u.id)&&u.modelAsset===GameState.units.find(t=>t.id===u.id).modelAsset),
-      types:new Set(GameState.units.map(u=>u.id)).size,
-      allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[GameState.units[1].x,GameState.units[1].y]}));
-    assert.equal(units.n,count);assert.ok(units.types===Math.min(11,count/2));assert.ok(units.shared&&units.allFinite);
+    const units=await page.evaluate(()=>{
+      const pool=Object.values(DB).filter(t=>Math.abs(t.tier-GameState.player.tier)<=1).map(t=>t.id);
+      return {n:BattleView.stats().units,poolSize:pool.length,
+        shared:GameState.units.every(u=>pool.includes(u.id)&&u.modelAsset===GameState.units.find(t=>t.id===u.id).modelAsset),
+        types:new Set(GameState.units.map(u=>u.id)).size,
+        allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[GameState.units[1].x,GameState.units[1].y]};
+    });
+    assert.equal(units.n,count);assert.equal(units.types,Math.min(units.poolSize,count/2));assert.ok(units.shared&&units.allFinite);
     await page.waitForFunction(([x,y])=>Math.hypot(GameState.units[1].x-x,GameState.units[1].y-y)>4,units.start);
     if(type==='pc'){
       // Real RAF motion was checked above. On the full-size map walk the remaining
@@ -405,14 +415,14 @@ test('offline team modes use the shared 3D asset; touch driving/firing, replay a
 test('research, icons and offline mesh loading: the complete line is visible; only real vehicles can be unlocked',async t=>{
   const {page,click}=await offlineGame(t);
   await click('Дерево развития');
-  assert.equal(await page.locator('#nodes .node').count(),24);assert.equal(await page.locator('#bay-research table').count(),0);
+  assert.equal(await page.locator('#nodes .node').count(),30);assert.equal(await page.locator('#bay-research table').count(),0);
   const edges=await page.evaluate(()=>{
     const nodes=[...document.querySelectorAll('#nodes .node')], c=document.getElementById('tree-canvas'), ctx=c.getContext('2d'), dpr=c.width/c.offsetWidth;
     return nodes.slice(1).map(n=>{
       const p=nodes.find(b=>b.dataset.tankId===researchParent(n.dataset.tankId)), x=(p.offsetLeft+p.offsetWidth+n.offsetLeft)/2, y=(p.offsetTop+n.offsetTop+n.offsetHeight)/2;
       return ctx.getImageData(Math.round(x*dpr),Math.round(y*dpr),1,1).data[3]>0;
     });
-  });assert.deepEqual(edges,Array(23).fill(true),'each prerequisite has a visible connector');
+  });assert.deepEqual(edges,Array(29).fill(true),'each prerequisite has a visible connector');
   await click('Характеристики: Т-46');assert.deepEqual((await saved(page)).owned,['MS1']);
   assert.equal(await page.locator('#tree-inspect,#depot-canvas,#bay-picker,#bay-open').count(),0);
   assert.equal(await page.locator('#tree-name').innerText(),'Т-46');
@@ -430,6 +440,8 @@ test('research, icons and offline mesh loading: the complete line is visible; on
       if(poster.naturalWidth!==640 || poster.naturalHeight<100)throw Error(id+' icon');
       const a=await BattleModels.load(id,signal);
       if(a!==await BattleModels.load(id,signal)||a.muzzle[2]<=0||!Number.isFinite(a.height))throw new Error(id);
+      const unit=new Tank(id,0,0,'enemy');unit.modelAsset=a;const f=TrackContact.shape(unit);
+      if(f.reach+Math.hypot(f.along,f.left)>BOT_CLEARANCE)throw Error(id+' too large for bot paths');
       result[id]=(a.hull.attributes.position.count+a.turret.attributes.position.count+a.gun.attributes.position.count)/3;
     }
     return result;
@@ -480,14 +492,15 @@ test('the new VII and VIII use their own meshes as player and opponent in a 3D b
 });
 
 test('all six selected plans become playable WebGL arenas with exploration, contact and damage in 7×7, 10×10 and 15×15',async t=>{
-  const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LTR','IS3','RHMPZW','T1C','M3LEE','M48PATTON','OBJ140','WTE100'],selected:'MS1'})}});
+  const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LTR','IS3','RHMPZW','T1C','M3LEE','M48PATTON','OBJ140','WTE100','E100','MAUS','T100LT','MT25','E75','TIGERII'],selected:'MS1'})}});
   const ids=await page.locator('#map-select option').evaluateAll(options=>options.map(o=>o.value));
   assert.deepEqual(ids,['city','field','desert','port','quarry','frost']);
   const plans=new Set();
   for(const size of [7,10,15]) {
     for(const [i,id] of ids.entries()) {
       const playerName=size===7?['T1 Cunningham','Leichttraktor','МС-1'][i%3]:
-        ['ИС-3','Объект 140','Rhm. Panzerwagen','M3 Lee','Waffenträger auf E 100','M48 Patton'][i];
+        size===10?['ИС-3','Объект 140','Rhm. Panzerwagen','M3 Lee','Waffenträger auf E 100','M48 Patton'][i]:
+        ['E 100','Т-100 ЛТ','Maus','E 75','МТ-25','Tiger II'][i];
       await click('Выбрать для боя: '+playerName);
       await page.locator('#map-select').selectOption(id);
       await click(size===15?'В БОЙ 15×15':size+'×'+size);
@@ -549,7 +562,7 @@ test('Germany is a separate connected mobile tree: stats before unlocking, free 
   const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp})}});
   await click('Дерево развития');await click('ГЕРМАНИЯ');
   assert.equal(await page.locator('#branch-number').textContent(),'02');assert.match(await page.locator('#branch-title').innerText(),/Rhm\. Panzerwagen/);
-  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),germanIds.concat(tdIds));
+  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids));
   assert.equal(await page.locator('#tree-name').innerText(),'Leichttraktor');assert.equal(await page.locator('#dispatch-name').innerText(),'ИС-3');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth));
   await click('Характеристики: Spähpanzer Ru 251');assert.match(await page.locator('#tree-status').textContent(),/HWK 12/);
@@ -576,7 +589,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LEOPARD'],selected:'LEOPARD'})}});
   assert.equal(await page.locator('#dispatch-dmg-label').innerText(),'Урон кассеты');assert.equal(await page.locator('#dispatch-dmg').innerText(),'240 (8 × 30)');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('germany');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanIds.concat(tdIds));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids));
   await page.locator('#enemy-select').selectOption('VK2801');await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);
   const units=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -837,7 +850,7 @@ test('IS-4 research on a phone: one KV-1 feeds both heavy routes without cross-u
     return {ids:ns.map(n=>n.dataset.tankId),width:document.documentElement.scrollWidth===innerWidth,
       bottomFits:ns.every(n=>n.offsetTop+n.offsetHeight<=c.clientHeight),scrolls:c.scrollWidth>c.clientWidth,
       forks:y('KV1S')<y('KV1')&&y('KV1')<y('T150')&&y('T150')<y('T3485')};
-  });assert.deepEqual(layout.ids,sovietIds.concat(is4Ids,mediumIds));assert.ok(layout.width && layout.bottomFits && layout.scrolls && layout.forks);
+  });assert.deepEqual(layout.ids,sovietIds.concat(is4Ids,mediumIds,scoutIds));assert.ok(layout.width && layout.bottomFits && layout.scrolls && layout.forks);
   await click('Характеристики: КВ-3');assert.match(await page.locator('#tree-status').innerText(),/Т-150/);
   await click('Характеристики: ИС-4');assert.match(await page.locator('#tree-status').innerText(),/СТ-I/);
   assert.deepEqual((await saved(page)).owned,prior);assert.equal((await saved(page)).selected,'KV1');
@@ -853,16 +866,14 @@ test('IS-4 research on a phone: one KV-1 feeds both heavy routes without cross-u
   assert.equal((await saved(page)).XP,0);assert.equal((await saved(page)).selected,'IS4');
 });
 
-test('all five IS-4 route models mount in the owned depot, deploy as player and opponent, and fire live single rounds',async t=>{
-  const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1',...is4Ids],selected:'T150'})}});
-  for(const [id,name,enemy,dmg,remaining] of [
-    ['T150','Т-150','KV3',300,1120],['KV3','КВ-3','T150',390,660],['KV4','КВ-4','KV4',320,1430],
-    ['STI','СТ-I','IS4',440,2160],['IS4','ИС-4','STI',440,1610]
-  ]){
+async function checkSingleShotSorties(t, cases) {
+  const owned = ['MS1', ...cases.map(row => row[0])];
+  const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned,selected:cases[0][0]})}});
+  for(const [id,name,enemy,dmg,remaining] of cases){
     await click('Выбрать для боя: '+name);await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
     assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts[id]);
     if(!await page.locator('#enemy-select').isVisible())await click('ТРЕНИРОВКА');
-    await page.locator('#train-nat-select').selectOption('ussr');await page.locator('#enemy-select').selectOption(enemy);
+    await page.locator('#train-nat-select').selectOption(await page.evaluate(id=>DB[id].nat,enemy));await page.locator('#enemy-select').selectOption(enemy);
     await click('НАЧАТЬ');const result=await page.evaluate(async()=>{
       if(!await selectControl('mobile'))throw Error(document.getElementById('battle-notice-text').textContent);
       stopBattleLoop();const g=GameState,p=g.player,t=g.units[1];
@@ -873,4 +884,64 @@ test('all five IS-4 route models mount in the owned depot, deploy as player and 
       const state={models,units:BattleView.stats().units,rounds,reloading:p.isReloading,dealt:g.battleDmg,hp:t.hp};backToGarage();return state;
     });assert.deepEqual(result,{models:[[id,meshCounts[id]],[enemy,meshCounts[enemy]]],units:2,rounds:1,reloading:true,dealt:dmg,hp:remaining});
   }
+}
+
+test('all five IS-4 route models mount in the owned depot, deploy as player and opponent, and fire live single rounds', t =>
+  checkSingleShotSorties(t, [
+    ['T150','Т-150','KV3',300,1120], ['KV3','КВ-3','T150',390,660], ['KV4','КВ-4','KV4',320,1430],
+    ['STI','СТ-I','IS4',440,2160], ['IS4','ИС-4','STI',440,1610]
+  ]));
+
+test('the 20 supplied Maus, E 100 and scout models deploy in ten offline 3D practice matches', t =>
+  checkSingleShotSorties(t, [
+    ['PZ35T','Pz.Kpfw. 35 (t)','PZ38T',45,220], ['PZIVD','Pz.Kpfw. IV Ausf. D','PZIVH',110,490],
+    ['VK3001P','VK 30.01 (P)','VK3601H',220,780], ['TIGERP','Tiger (P)','TIGERI',240,1260],
+    ['MAUS','Maus','VK10001P',490,1360], ['E100','E 100','MAUSCHEN',680,1620], ['E75','E 75','TIGERII',490,1160],
+    ['T100LT','Т-100 ЛТ','T54L',300,1120], ['LTG','ЛТГ','T50',180,340], ['LTTB','ЛТТБ','MT25',190,480]
+  ]));
+
+test('four-lane research on a phone: all three new routes charge each distinct node once, then persist', async t => {
+  const owned = ['MS1','BT2','BT7','A20','T34','LTR','IS4','WTE100'];
+  let xp = 1234000;
+  const {page,click} = await offlineGame(t, {mobile:true,seed:{[saveKey]:JSON.stringify({owned,selected:'A20',XP:xp})}});
+  await click('Дерево развития');
+  await click('ГЕРМАНИЯ');
+  const graph = await page.evaluate(() => {
+    const c = document.getElementById('tree-container'), cv = document.getElementById('tree-canvas');
+    const dpr = cv.width / cv.offsetWidth, ctx = cv.getContext('2d');
+    const nodes = [...document.querySelectorAll('#nodes .node')];
+    const node = id => nodes.find(n => n.dataset.tankId === id), y = id => node(id).offsetTop;
+    const links = nodes.slice(1).map(n => {
+      const p = node(researchParent(n.dataset.tankId));
+      const x = (p.offsetLeft + p.offsetWidth + n.offsetLeft) / 2, y = (p.offsetTop + n.offsetTop + n.offsetHeight) / 2;
+      return ctx.getImageData(Math.round(x*dpr), Math.round(y*dpr), 1, 1).data[3];
+    });
+    return {count:nodes.length, edges:links.filter(a => a > 0).length,
+      fits:nodes.every(n => n.offsetTop >= 0 && n.offsetTop + n.offsetHeight <= c.clientHeight) &&
+        document.documentElement.scrollWidth === innerWidth && c.scrollWidth > c.clientWidth,
+      split:y('VK3001P') < y('PZIVH') && y('PZIVH') < y('VK3601H')};
+  });
+  assert.deepEqual(graph,{count:33,edges:32,fits:true,split:true});
+  await click('Характеристики: E 100');
+  assert.match(await page.locator('#tree-status').innerText(),/E 75/);
+  assert.match(await page.locator('#tree-stats').innerText(),/680/);
+  assert.deepEqual((await saved(page)).owned,owned);
+  const costs = [0,150,350,1500,4000,8000,25000,60000,120000,195000];
+  async function buy(ids, names, firstTier) {
+    for(const [i,id] of ids.entries()) {
+      await click('Исследовать: '+names[i]); owned.push(id); xp -= costs[firstTier+i-1];
+      const s = await saved(page); assert.deepEqual(s.owned,owned); assert.equal(s.selected,id); assert.equal(s.XP,xp);
+    }
+  }
+  await buy(panzerIds,['Pz.Kpfw. 35 (t)','Pz.Kpfw. 38 (t)','Pz.Kpfw. IV Ausf. D','Pz.Kpfw. IV Ausf. H'],2);
+  for (const name of ['VK 30.01 (P)','VK 36.01 (H)']) assert.equal(await page.getByRole('button',{name:'Исследовать: '+name,exact:true}).count(),1);
+  await buy(mausIds,['VK 30.01 (P)','Tiger (P)','VK 100.01 (P)','Mäuschen','Maus'],6);
+  await click('Характеристики: Tiger I'); assert.match(await page.locator('#tree-status').innerText(),/VK 36\.01 \(H\)/);
+  await click('Выбрать: Pz.Kpfw. IV Ausf. H'); assert.equal((await saved(page)).XP,xp);
+  await buy(e100Ids,['VK 36.01 (H)','Tiger I','Tiger II','E 75','E 100'],6);
+  await click('СССР'); await click('Характеристики: МТ-25'); assert.match(await page.locator('#tree-status').innerText(),/Т-50/);
+  await buy(scoutIds,['Т-50','МТ-25','ЛТГ','ЛТТБ','Т-54 обл.','Т-100 ЛТ'],5);
+  await page.reload(); const s=await saved(page);
+  assert.deepEqual(s.owned,owned); assert.equal(s.XP,0); assert.equal(s.selected,'T100LT');
+  assert.equal(await page.locator('#dispatch-speed').innerText(),'72 км/ч');
 });

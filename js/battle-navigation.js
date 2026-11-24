@@ -26,10 +26,9 @@ function crossesMapRect(ax, ay, bx, by, r, pad = 0) {
   return lo <= hi;
 }
 
-// Covers the widest hull in the playable branch, including the collision margin (world units).
-// Largest measured model radius is 4.88 m (incl. its offset pivot). This also
-// keeps planned destinations inside the drivetrain's five-metre boundary stop.
-const BOT_CLEARANCE = 5 * BATTLE_UNITS_PER_METRE;
+// The E 100 needs 5.14 m around its pivot to turn at any heading. Plan for
+// the entire hull, including its offset, not just the half-width of the tracks.
+const BOT_CLEARANCE = 5.2 * BATTLE_UNITS_PER_METRE;
 class BattleNavigation {
   constructor(arena) {
     this.arena = arena;

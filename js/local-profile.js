@@ -41,7 +41,11 @@ function setSaveStatus(message, warning) {
 
 // Only these vehicle identities have a different key in the original local saves.
 // Never infer an unlock from a tier, equipment entry or a similarly named vehicle.
-const oldTankKeys = Object.freeze({ST1:'STI', STRV21:'STRVFM21', PZ2:'PZII', SP1C:'SPIC', T1CUNN:'T1C', OB140:'OBJ140', RHMB:'RHMBWT'});
+const oldTankKeys = Object.freeze({
+  ST1:'STI', STRV21:'STRVFM21', PZ2:'PZII', SP1C:'SPIC', T1CUNN:'T1C', OB140:'OBJ140', RHMB:'RHMBWT',
+  PZ4D:'PZIVD', VK30P:'VK3001P', VK36H:'VK3601H', TIGER1:'TIGERI', TIGER2:'TIGERII',
+  VK100:'VK10001P', MAUSCH:'MAUSCHEN', T54O:'T54L'
+});
 function savedTankId(id) {
   if (typeof id !== 'string') return null;
   return Object.hasOwn(DB,id) ? id : Object.hasOwn(oldTankKeys,id) ? oldTankKeys[id] : null;

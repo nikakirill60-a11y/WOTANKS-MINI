@@ -30,7 +30,7 @@ test('branch 01 uses the ten supplied stat lines and ten distinct playable model
   assert.ok(line.every(id => DB[id].nat==='ussr'));
   assert.equal(new Set(line).size,10);
   assert.deepEqual(line.map(researchParent),[undefined,...line.slice(0,-1)]);
-  assert.equal(new Set(Object.values(DB).map(t=>t.file)).size,72);
+  assert.equal(new Set(Object.values(DB).map(t=>t.file)).size,92);
   assert.equal(DB.IS.file,'is.mesh.js');assert.equal(DB.IS3.file,'is-3.mesh.js');
   for (const spec of Object.values(DB)) for (const key of ['file','thumbnail'])
     assert.ok(fs.statSync(path.join(root,'models',spec[key])).size > 0);
@@ -45,7 +45,7 @@ test('Germany: ten supplied stat lines, chosen primary loadouts, prices and inde
     ['SPIC',880,220,1,6800,175,15,15,58], ['HWK12',1100,240,1,6800,190,15,15,65],
     ['RU251',1350,250,1,5800,210,25,20,72], ['RHMPZW',1650,320,1,7200,235,30,20,75]
   ]);
-  assert.equal(Object.keys(DB).length,72);
+  assert.equal(Object.keys(DB).length,92);
   for(const [i,t] of rows.entries()){
     assert.ok(t.tier===i+1 && t.nat==='germany' && t.cls==='lt');assert.equal(t.xp,soviet[i].xp);
     assert.equal(researchParent(t.id),rows[i-1]?.id);const u=new Tank(t.id,0,0,'enemy');
@@ -147,7 +147,7 @@ test('two forks, one starter each: all Object 140 and Waffenträger route stats 
   assert.equal(armorLabel(DB.STEMIL),'50 / —');assert.equal(DB.WTE100.alpha,2080);
   for(const [nation,route] of [['ussr',med],['germany',td]]){
     const tree=BRANCHES[nation],old=tree.routes[0];
-    assert.ok(tree.routes.includes(route));assert.equal(old[0],route[0]);assert.equal(tree.tanks.length,nation==='ussr'?24:19);
+    assert.ok(tree.routes.includes(route));assert.equal(old[0],route[0]);assert.equal(tree.tanks.length,nation==='ussr'?30:33);
     assert.equal(new Set(tree.tanks.map(t=>t.id)).size,tree.tanks.length);assert.equal(route.length,10);
     for(const [i,t] of route.entries()){
       assert.equal(DB[t.id],t);assert.equal(t.nat,nation);assert.equal(t.tier,i+1);assert.equal(t.xp,old[i].xp);
@@ -203,7 +203,7 @@ test('each vehicle has its own transparent offline WebP and data-only mesh, neve
     assert.equal(icon.toString('ascii',12,16),'VP8X');assert.ok(icon[20]&16,t.id+' missing alpha');icons.add(require('crypto').createHash('sha256').update(icon).digest('hex'));
     const model=fs.readFileSync(path.join(root,'models',t.file),'utf8');assert.match(model,/^BattleModels\.receive\(\{/);
     const data=JSON.parse(model.slice('BattleModels.receive('.length,-3));assert.equal(data.id,t.id);assert.equal(data.meshes.length,5);
-  }assert.equal(icons.size,72);
+  }assert.equal(icons.size,92);
   assert.ok(!fs.readdirSync(path.join(root,'models')).some(f=>f.endsWith('.html')));
 });
 
@@ -211,7 +211,7 @@ test('each vehicle has its own transparent offline WebP and data-only mesh, neve
 test('IS-4 shares I–V with IS-7, then uses five independent single-shot heavy tanks and their supplied base stats',()=>{
   const {BRANCHES,USSR_BRANCH:original,DB,Tank,GameState:g,at,researchParent,BATTLE_UNITS_PER_METRE:m}=game();
   const route=BRANCHES.ussr.routes.find(r=>r.at(-1).id==='IS4');
-  assert.equal(BRANCHES.ussr.routes.length,3);assert.equal(route.length,10);
+  assert.equal(BRANCHES.ussr.routes.length,4);assert.equal(route.length,10);
   for(let i=0;i<5;i++)assert.equal(route[i],original[i],'one owned vehicle shared between both routes');
   assert.deepEqual(Array.from(BRANCHES.ussr.tanks).filter(t=>t.parent==='KV1').map(t=>t.id),['KV1S','T150']);
   const rows=[
@@ -230,6 +230,57 @@ test('IS-4 shares I–V with IS-7, then uses five independent single-shot heavy 
       assert.equal(u.magSize,1);u.modelAsset={groundY:0,pivot:[0,1,0],gunPivot:[0,.3,1],muzzle:[0,0,2]};g.bullets=[];
       at(100);assert.ok(u.fire());assert.equal(g.bullets[0].dmg,dmg);assert.equal(g.bullets[0].pen,pen);assert.equal(u.curMag,0);
       at(100+reload-1);assert.equal(u.fire(),false);at(100+reload);assert.ok(u.fire());assert.equal(g.bullets.length,2);
+    }
+  }
+});
+
+test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-shot handling in battle', () => {
+  const { BRANCHES, DB, Tank, GameState, at, BATTLE_UNITS_PER_METRE: m } = game();
+  const route = (nation, end) => BRANCHES[nation].routes.find(r => r.at(-1).id === end);
+  const maus = route('germany', 'MAUS'), e100 = route('germany', 'E100');
+  const scout = route('ussr', 'T100LT'), medium = route('ussr', 'OBJ140');
+  assert.equal(Object.values(BRANCHES).reduce((n, tree) => n + tree.routes.length, 0), 11);
+  assert.equal(maus[0], DB.LTR);
+  for (let i = 0; i < 5; i++) assert.equal(e100[i], maus[i]);
+  for (let i = 0; i < 4; i++) assert.equal(scout[i], medium[i]);
+  assert.notEqual(DB.T54L, DB.T54); assert.notEqual(DB.E100, DB.WTE100);
+  const rows = [
+    [maus, 1, [
+      ['PZ35T',175,45,2300,52,25,25,35], ['PZ38T',265,60,2600,72,50,25,42],
+      ['PZIVD',390,110,3800,85,30,35,40], ['PZIVH',600,125,3700,135,80,50,40],
+      ['VK3001P',920,220,7000,145,75,80,50], ['TIGERP',1450,240,6600,203,200,120,35],
+      ['VK10001P',1850,440,12200,220,200,230,20], ['MAUSCHEN',2300,490,12500,246,200,240,20],
+      ['MAUS',3000,490,11800,250,200,260,20]
+    ]],
+    [e100, 5, [
+      ['VK3601H',1000,220,6800,148,100,100,40], ['TIGERI',1500,240,5800,203,100,100,40],
+      ['TIGERII',1650,360,9200,225,150,185,38], ['E75',2100,490,12500,246,160,252,38],
+      ['E100',2700,680,16500,246,200,250,30]
+    ]],
+    [scout, 4, [
+      ['T50',520,75,2600,112,45,45,55], ['MT25',670,90,2700,138,45,45,62],
+      ['LTG',890,180,5200,155,40,100,65], ['LTTB',1120,190,4800,178,75,90,68],
+      ['T54L',1420,250,6000,200,80,160,69], ['T100LT',1700,300,6200,230,90,180,72]
+    ]]
+  ];
+  for (const [line, start, values] of rows) {
+    assert.equal(line.length, 10);
+    for (const [i, row] of values.entries()) {
+      const idx = start + i, t = line[idx];
+      assert.equal(t, DB[row[0]]); assert.equal(t.parent, line[idx - 1].id);
+      assert.equal(t.xp, BRANCHES.usa.tanks[idx].xp); assert.equal(t.tier, idx + 1);
+      for (const team of ['player', 'enemy']) {
+        const u = new Tank(t.id, 0, 0, team);
+        assert.deepEqual([u.id, u.hp, u.dmg, u.reloadTime, u.pen, u.armor, u.turretArmor,
+          Math.round(u.baseSpeed * 60 * 3.6 / m)], row);
+        assert.equal(u.magSize, 1); assert.ok(u.canTraverseTo(Math.PI));
+        u.modelAsset = {groundY: 0, pivot: [0,1,0], gunPivot: [0,.3,1], muzzle: [0,0,2]};
+        GameState.bullets = []; at(100);
+        assert.ok(u.fire()); assert.equal(GameState.bullets[0].dmg, row[2]);
+        assert.equal(GameState.bullets[0].pen, row[4]); assert.ok(u.isReloading);
+        at(100 + row[3] - 1); assert.equal(u.fire(), false);
+        at(100 + row[3]); assert.ok(u.fire()); assert.equal(GameState.bullets.length, 2);
+      }
     }
   }
 });

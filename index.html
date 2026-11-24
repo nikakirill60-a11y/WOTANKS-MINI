@@ -20,12 +20,12 @@
     <button type="button" class="control-option" onclick="selectControl('pc')">
       <div class="control-icon">🖥️</div>
       <h3>ПК / Ноутбук</h3>
-      <p>WASD — движение и поворот корпуса<br>Мышь — прицел · ЛКМ — огонь<br>Колесо — зум · пробел — тормоз</p>
+      <p>WASD / стрелки — ход и поворот корпуса<br>Мышь — обзор · ЛКМ — огонь · ПКМ — свободный обзор<br>Shift — оптика · колесо — зум · E — автоприцел</p>
     </button>
     <button type="button" class="control-option" onclick="selectControl('mobile')">
       <div class="control-icon">📱</div>
       <h3>Телефон / Планшет</h3>
-      <p>Джойстик — ход и поворот корпуса<br>Коснитесь цели или ведите по полю пальцем<br>Кнопка «Огонь» — выстрел</p>
+      <p>Тяните слева — ход и поворот корпуса<br>Свайп по полю или кнопке огня — обзор<br>«Прицел» — оптика · «Авто» — захват цели</p>
     </button>
   </div>
   <button class="battle-cancel" onclick="document.getElementById('control-modal').classList.remove('show')">Назад в ангар</button>
@@ -120,7 +120,7 @@
       <div class="hangar-heading">
         <div><p class="bay-kicker">ГАРАЖНЫЙ КОМПЛЕКС <span>/</span> 01</p><h1>3D-ангар</h1></div>
         <div class="bay-tabs" role="group" aria-label="Раздел ангара">
-          <button id="bay-inspect-tab" aria-controls="bay-inspection" aria-pressed="true">Осмотр</button>
+          <button id="bay-inspect-tab" aria-controls="bay-inspection" aria-pressed="true">Мой танк</button>
           <button id="bay-research-tab" aria-controls="bay-research" aria-pressed="false">Дерево развития</button>
         </div>
       </div>
@@ -137,14 +137,10 @@
             <div class="bay-caption"><p id="bay-kind" class="bay-kicker"></p><h2 id="bay-name"></h2><p id="bay-meta"></p></div>
             <span class="bay-plate" aria-hidden="true">BOX <b>01</b></span>
           </div>
-          <div class="bay-toolbar">
-            <label for="bay-picker">Осмотреть <select id="bay-picker" title="Осмотр не меняет машину для боя"></select></label>
-            <a id="bay-open" target="_blank" rel="noopener" hidden>Карточка модели ↗</a>
-          </div>
         </section>
         <section id="bay-research" class="bay-panel" aria-label="Дерево развития" hidden>
           <div class="branch-heading">
-            <div><p class="bay-kicker">ВЕТКА <span>/</span> <b id="branch-number"></b></p><h2 id="branch-title"></h2></div>
+            <div><p class="bay-kicker">ДЕРЕВО <span>/</span> <b id="branch-number"></b></p><h2 id="branch-title"></h2></div>
             <div id="nat-buttons" role="group" aria-label="Нация ветки"></div>
           </div>
           <div class="tree-legend"><span><i></i> В ангаре</span><span><i></i> Доступно</span><span><i></i> Закрыто</span></div>
@@ -156,9 +152,8 @@
             <button type="button" id="tree-next" aria-label="Следующие уровни">→</button></div></div>
           <section class="tree-dossier" aria-label="Характеристики узла">
             <img id="tree-photo" alt="">
-            <div><p class="bay-kicker">КАРТОЧКА УЗЛА <span>/</span> <b id="tree-tier"></b></p>
+            <div><p class="bay-kicker">ХАРАКТЕРИСТИКИ <span>/</span> <b id="tree-tier"></b></p>
               <h3 id="tree-name"></h3><p id="tree-status"></p></div>
-            <button type="button" id="tree-inspect">Осмотреть в 3D ↗</button>
             <dl id="tree-stats"></dl>
           </section>
         </section>
@@ -184,12 +179,14 @@
             </div>
             <details class="sector-brief"><summary>План сектора <b id="map-size"></b></summary>
               <canvas id="map-plan" role="img" width="360" height="242" aria-label="Схема выбранной карты"></canvas>
-              <div class="plan-key"><span>◇ Вы</span><span>◇ Противник</span></div>
+              <div class="plan-key"><span>◇ Свои</span><span>◇ Противник</span></div>
               <p id="map-detail"></p>
+              <p class="survey-key"><b>◎ Разведка</b> Кольцом отмечены свои разведчики. Посещённые клетки светлеют.</p>
             </details>
             <div class="btn-group">
-              <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
-              <button class="btn" onclick="showControlModal(10)">10x10</button>
+              <button class="btn main-battle-btn" onclick="showControlModal(15)">В БОЙ 15×15</button>
+              <button class="btn" onclick="showControlModal(7)">7×7</button>
+              <button class="btn" onclick="showControlModal(10)">10×10</button>
               <button class="btn" onclick="toggleTraining()">ТРЕНИРОВКА</button>
             </div>
 
@@ -219,9 +216,15 @@
 
 <!-- ========== HUD (ВО ВРЕМЯ БОЯ) ========== -->
 <div id="hud">
-  <div class="combat-location"><span class="combat-eyebrow" id="combat-sector"></span><strong id="combat-map"></strong></div>
-  <div class="combat-score" aria-label="Оставшиеся машины"><span id="allies-list"></span><i>:</i><span id="enemies-list"></span></div>
-  <button type="button" id="battle-exit" onclick="leaveBattle()">Выйти из боя</button>
+  <header class="combat-top">
+    <div class="combat-location"><span class="combat-eyebrow" id="combat-sector"></span><strong id="combat-map"></strong></div>
+    <button class="combat-score" id="score-toggle" type="button" aria-expanded="false" aria-controls="battle-roster" aria-label="Состав команд"><span id="allies-list"></span><i>:</i><span id="enemies-list"></span></button>
+    <button type="button" id="battle-exit">Меню</button>
+  </header>
+  <div id="scope-mask" aria-hidden="true"></div>
+  <div id="sight-mode" hidden></div><div id="gun-marker" hidden aria-hidden="true"></div>
+  <section id="battle-roster" hidden aria-label="Состав команд"><div><h3>СОЮЗНИКИ</h3><ul id="roster-allies"></ul></div><div><h3>ПРОТИВНИКИ</h3><ul id="roster-enemies"></ul></div></section>
+  <small id="relative-hint" hidden>Обзор без захвата · Alt — переставить мышь</small>
   <div id="battle-reticle" aria-hidden="true"><i></i></div>
 
   <div id="perf-hud"></div>
@@ -230,8 +233,8 @@
   <!-- НИЖНЯЯ ПАНЕЛЬ -->
   <div id="bottom-bar">
     <div id="field-actions">
-      <button class="btn btn-sm" onclick="CombatMechanics.deploySmokeScreen(GameState.player)">💨 Дым [X]</button>
-      <button class="btn btn-sm" onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">🎯 Арта [C]</button>
+      <button class="btn btn-sm" onclick="CombatMechanics.deploySmokeScreen(GameState.player)">Дым <kbd>7</kbd></button>
+      <button class="btn btn-sm" onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">Артподдержка <kbd>8</kbd></button>
     </div>
     <div class="armor-readout"><b id="combat-tank"></b><span id="hp-text"></span></div>
     <div id="hp-ui"><div id="hp-bar"></div></div>
@@ -243,19 +246,22 @@
       <span class="shell-opt" onclick="setShell(2)">3:Подкал</span>
     </div>
     <div id="cons-ui">
-      <span class="cons-btn ready" id="cons1" onclick="useCons(0)">4:Ремкомплект</span>
-      <span class="cons-btn ready" id="cons2" onclick="useCons(1)">5:Аптечка</span>
-      <span class="cons-btn ready" id="cons3" onclick="useCons(2)">6:Адреналин</span>
-      <span class="cons-btn ready" id="cons4" onclick="useCons(3)">7:Огнетушитель</span>
-      <span class="cons-btn ready" id="cons5" onclick="useCons(4)">8:Доп.паёк</span>
-      <span class="cons-btn ready" id="cons6" onclick="useCons(5)">9:Топливо</span>
+      <span class="cons-btn ready" id="cons1" onclick="useCons(0)">5/Q:Ремкомплект</span>
+      <span class="cons-btn ready" id="cons2" onclick="useCons(1)">4:Аптечка</span>
+      <span class="cons-btn ready" id="cons3" onclick="useCons(2)">R:Адреналин</span>
+      <span class="cons-btn ready" id="cons4" onclick="useCons(3)">6/F:Огнетушитель</span>
+      <span class="cons-btn ready" id="cons5" onclick="useCons(4)">9:Доп.паёк</span>
+      <span class="cons-btn ready" id="cons6" onclick="useCons(5)">0:Топливо</span>
     </div>
   </div>
 
   <!-- ЛОГИ И ИНФОРМАЦИЯ -->
   <div id="dmg-log"></div>
   <div id="combat-message"></div>
-  <canvas id="minimap" role="img" aria-label="Мини-карта боя"></canvas>
+  <figure class="map-instrument">
+    <figcaption id="recon-status" hidden></figcaption>
+    <canvas id="minimap" role="img" aria-label="Мини-карта боя: посещённые клетки, союзники и обнаруженные противники"></canvas>
+  </figure>
 </div>
 
 <!-- ========== МОБИЛЬНОЕ УПРАВЛЕНИЕ ========== -->
@@ -266,7 +272,15 @@
     </div>
   </div>
   <div id="fire-zone">
-    <div class="mobile-btn fire" id="fire-btn">ОГОНЬ</div>
+    <button type="button" class="mobile-btn fire" id="fire-btn">ОГОНЬ</button>
+  </div>
+  <div id="touch-radio"><button id="signal-btn" type="button" aria-controls="touch-signals" aria-expanded="false" aria-label="Быстрые сигналы">Связь</button>
+    <div id="touch-signals" hidden aria-label="Быстрые сигналы"></div>
+  </div>
+  <div id="touch-sight">
+    <button id="autoaim-btn" type="button" aria-pressed="false">Авто</button>
+    <button id="scope-btn" type="button" aria-pressed="false">Прицел</button>
+    <button id="zoom-btn" type="button" hidden aria-label="Следующая кратность">×2</button>
   </div>
   <div id="mobile-shells">
     <div class="m-shell active" onclick="setShell(0)">ББ</div>
@@ -282,6 +296,16 @@
     <div class="m-cons" id="mcons6" onclick="useCons(5)">ТОП</div>
   </div>
 </div>
+
+<section id="input-menu" hidden aria-labelledby="input-title">
+  <div class="input-panel"><small class="combat-eyebrow">УПРАВЛЕНИЕ · CITY TANKS</small>
+    <h2 id="input-title">Готовы к выезду</h2>
+    <p class="pc-help">Мышь вращает обзор, башня следует за прицелом. Удерживайте ПКМ, чтобы осмотреться. Shift — оптика, E — автоприцел, Esc — пауза.</p>
+    <p class="touch-help">Слева тяните джойстик, справа ведите пальцем для обзора. Можно наводиться и на самой кнопке огня.</p>
+    <button type="button" id="resume-input" class="btn">Взять управление</button><button type="button" class="battle-cancel" onclick="leaveBattle()">В ангар</button>
+    <button type="button" class="menu-skip battle-cancel" onclick="skipTutorial()">Пропустить обучение</button>
+  </div>
+</section>
 
 <!-- ========== ЭКРАН РЕЗУЛЬТАТОВ ========== -->
 <div id="result-screen">
@@ -313,13 +337,16 @@
     <script src="js/calendar.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/battle-space.js"></script>
+    <script src="js/battle-ground.js"></script>
     <script src="js/battle-maps.js"></script>
     <script src="js/battle-navigation.js"></script>
+    <script src="js/battle-recon.js"></script>
     <script src="js/bot-ai.js"></script>
     <script src="js/map-chart.js"></script>
     <script src="js/tank.js"></script>
     <script src="js/armor-system.js"></script>       <!-- NEW: бронезоны + крит.повреждения -->
     <script src="js/terrain.js"></script>              <!-- NEW: физика ландшафта -->
+    <script src="js/track-contact.js"></script>
     <script src="js/track-drive.js"></script>
     <script src="js/destructible.js"></script>         <!-- NEW: разрушаемые здания -->
     <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
@@ -333,6 +360,7 @@
     <script src="js/depot-room.js"></script>
     <script src="js/depot-view.js"></script>
     <script src="js/battle-world.js"></script>
+    <script src="js/battle-look.js"></script>
     <script src="js/battle-view.js"></script>
     <script src="js/battle.js"></script>
     <script src="js/main.js"></script>

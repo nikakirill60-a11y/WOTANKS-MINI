@@ -7,6 +7,7 @@ class Tank {
     this.id = id;
     this.name = d.n;
     this.team = team;
+    this.stance = d.stance;
     this.x = x;
     this.y = y;
 
@@ -28,7 +29,7 @@ class Tank {
     this.camo = (d.camo || 0.2) * (1 + (mb.camo || 0));
     this.armor = Math.floor((d.armor || 0) * (1 + (mb.armor || 0)));
 
-    this.turretArmor = Math.floor(d.turretArmor * (1 + (mb.armor || 0)));
+    this.turretArmor = d.turretArmor == null ? null : Math.floor(d.turretArmor * (1 + (mb.armor || 0)));
     this.pen = d.pen;
 
     // ✅ Критические повреждения модулей (см. armor-system.js)
@@ -36,7 +37,10 @@ class Tank {
     this.angle = 0;
     // World-space gun bearing; a limited mount is constrained relative to the hull.
     this.tAngle = this.lookYaw = this.lookPitch = 0;
-    this.yawArc = d.yawArc ? (d.yawArc * Math.PI) / 180 : Math.PI;
+    // In the renderer turret.rotation.y = hull bearing − gun bearing.
+    const [modelMin, modelMax] = d.yawLimits || [-180, 180];
+    this.minYaw = (-modelMax * Math.PI) / 180;
+    this.maxYaw = (-modelMin * Math.PI) / 180;
     this.minPitch = d.minPitch == null ? -0.48 : (d.minPitch * Math.PI) / 180;
     this.maxPitch = d.maxPitch == null ? 0.58 : (d.maxPitch * Math.PI) / 180;
     this.lastShot = 0;
@@ -49,11 +53,15 @@ class Tank {
     // km/h → metres/s → world units per 60-Hz simulation step.
     this.baseSpeed = (((d.speed / 3.6) * BATTLE_UNITS_PER_METRE) / 60) * speedMul * (1 + (mb.speed || 0));
     this.vx = this.vy = this.yawRate = this.speedKmh = 0;
+    this.driveSpeed = this.accel = this.rideHeight = this.riseSpeed = 0; // drive/rise speed in m/s, height in world units
+    this.groundPitch = this.groundRoll = this.swayPitch = this.swayRoll = this.pitchVel = this.rollVel = 0;
+    this.airborne = false;
     this.driveBlocked = this.isMoving = false;
     this.currentTerrain = 'normal';
     this.justFired = false;
     this.fireTimer = 0;
     this.trackBroken = false;
+    this.trackRepairAt = this.engineRestartAt = 0;
     this.visible = true;
     this.engineTick = 0;
     this.shotDelay = this.usesMagazine ? 120 : 0; // arcade spacing inside a clip, never the full reload
@@ -74,7 +82,7 @@ class Tank {
   }
 
   fire(shellType = 0) {
-    const now = performance.now();
+    const now = BattleClock.now();
     this.updateReload(now);
     if (this.dead || this.isReloading || now < this.nextShot || !this.modelAsset) return false;
     if (this.usesMagazine) shellType = 0; // One clip type, including for AI and touch input.
@@ -84,7 +92,7 @@ class Tank {
     const damage = this.dmg * sh.dMul * getCritMultiplier(this, 'dmg');
     GameState.bullets.push({
       ...ray,
-      a: this.tAngle,
+      a: Math.atan2(ray.dy, ray.dx),
       team: this.team,
       shooter: this,
       speed,
@@ -94,7 +102,11 @@ class Tank {
       pen: this.pen * sh.penMul,
       st: shellType
     });
-    this.lastShot = Date.now();
+    const yaw = this.tAngle - this.angle,
+      kick = Math.min(0.16, 0.035 + this.dmg * 0.0002);
+    this.pitchVel += kick * Math.cos(yaw);
+    this.rollVel -= kick * Math.sin(yaw);
+    this.lastShot = BattleClock.date();
     this.justFired = true;
     this.fireTimer = this.lastShot + 3000;
     this.curMag--;
@@ -109,12 +121,17 @@ class Tank {
   }
 
   get aimHeight() {
-    return this.modelAsset.aimHeight * this.modelScale;
+    return this.rideHeight + bodyAxes(this).uh * this.modelAsset.aimHeight * this.modelScale;
+  }
+  get suspensionPitch() {
+    if (!this.modelAsset?.suspension) return 0;
+    return this.stance === 'hull' ? this.aimPitch : Math.min(this.aimPitch, 0);
+  }
+  gunPivotWorld() {
+    return this.gunPoint(false);
   }
   get gunHeight() {
-    return (
-      (this.modelAsset.groundY + this.modelAsset.pivot[1] + this.modelAsset.gunPivot[1]) * this.modelScale
-    );
+    return this.gunPivotWorld().h;
   }
 
   setLook(yaw, pitch) {
@@ -122,10 +139,14 @@ class Tank {
     this.lookPitch = bounded(pitch, this.minPitch, this.maxPitch);
     this.constrainTraverse();
   }
+  canTraverseTo(bearing) {
+    const delta = wrapAngle(bearing - this.angle);
+    return delta >= this.minYaw && delta <= this.maxYaw;
+  }
   constrainTraverse() {
-    if (this.yawArc === Math.PI) return;
+    if (this.minYaw === -Math.PI && this.maxYaw === Math.PI) return;
     // Limited mount: neither the mesh nor the stored input can wind up past its stops.
-    const stop = (a) => wrapAngle(this.angle + bounded(wrapAngle(a - this.angle), -this.yawArc, this.yawArc));
+    const stop = (a) => wrapAngle(this.angle + bounded(wrapAngle(a - this.angle), this.minYaw, this.maxYaw));
     this.tAngle = stop(this.tAngle);
     this.lookYaw = stop(this.lookYaw);
   }
@@ -139,62 +160,64 @@ class Tank {
   lookAtPoint(x, y, h) {
     const { pivot, gunPivot, muzzle } = this.modelAsset,
       s = this.modelScale;
-    const cs = Math.cos(this.angle),
-      sn = Math.sin(this.angle);
-    const dx = x - this.x - s * (pivot[2] * cs + pivot[0] * sn),
-      dy = y - this.y - s * (pivot[2] * sn - pivot[0] * cs);
-    const side = (gunPivot[0] + muzzle[0]) * s;
+    const local = bodyLocal(bodyAxes(this), x - this.x, y - this.y, h - this.rideHeight);
+    const dx = local.z - pivot[2] * s,
+      dy = -local.x + pivot[0] * s,
+      side = (gunPivot[0] + muzzle[0]) * s;
     const yaw = Math.atan2(dy, dx) + Math.asin(bounded(side / Math.max(1, Math.hypot(dx, dy)), -1, 1));
     const forward = Math.max(1, dx * Math.cos(yaw) + dy * Math.sin(yaw) - gunPivot[2] * s),
-      dh = h - this.gunHeight;
-    this.setLook(
-      yaw,
-      Math.atan2(dh, forward) - Math.asin(bounded((muzzle[1] * s) / Math.hypot(forward, dh), -1, 1))
-    );
+      dh = local.h - (this.modelAsset.groundY + pivot[1] + gunPivot[1]) * s;
+    let pitch =
+      Math.atan2(dh, forward) - Math.asin(bounded((muzzle[1] * s) / Math.hypot(forward, dh), -1, 1));
+    const origin = this.modelAsset.suspension;
+    if (origin && (this.stance === 'hull' || pitch < 0)) {
+      const forward = local.z - origin[2] * s,
+        up = local.h - (this.modelAsset.groundY + origin[1]) * s;
+      const offset = (pivot[1] + gunPivot[1] + muzzle[1] - origin[1]) * s;
+      pitch =
+        Math.atan2(up, forward) -
+        Math.asin(bounded(offset / Math.max(0.001, Math.hypot(forward, up)), -1, 1));
+    }
+    this.setLook(this.angle + yaw, pitch);
+    return wrapAngle(this.angle + yaw); // bearing before any mount stop; a fixed gun turns with the hull
   }
   barrelRay() {
-    const flat = Math.cos(this.aimPitch);
-    return {
-      ...this.muzzle(),
-      dx: Math.cos(this.tAngle) * flat,
-      dy: Math.sin(this.tAngle) * flat,
-      dh: Math.sin(this.aimPitch)
-    };
+    const flat = Math.cos(this.aimPitch),
+      yaw = this.tAngle - this.angle;
+    const d = bodyVector(this, -Math.sin(yaw) * flat, Math.sin(this.aimPitch), Math.cos(yaw) * flat);
+    return { ...this.muzzle(), dx: d.x, dy: d.y, dh: d.h };
   }
-  sightHit(range = BATTLE_RANGE, includeAllies = false) {
+  sightHit(range = BATTLE_RANGE, includeAllies = false, visibleOnly = false) {
     const r = this.barrelRay();
-    return traceBattleRay(r.x, r.y, r.h, r.dx, r.dy, r.dh, range, this, false, includeAllies);
+    return traceBattleRay(r.x, r.y, r.h, r.dx, r.dy, r.dh, range, this, false, includeAllies, visibleOnly);
   }
 
   // Same hull → turret → gun transforms as the renderer, in simulation coordinates (x,y,height).
-  muzzle() {
-    const { pivot, gunPivot, muzzle } = this.modelAsset,
+  gunPoint(atMuzzle) {
+    const { pivot, gunPivot, muzzle, groundY } = this.modelAsset,
       s = this.modelScale;
-    const side = gunPivot[0] + muzzle[0];
-    const forward = gunPivot[2] + muzzle[2] * Math.cos(this.aimPitch) - muzzle[1] * Math.sin(this.aimPitch);
-    return {
-      x:
-        this.x +
-        s *
-          (pivot[2] * Math.cos(this.angle) +
-            pivot[0] * Math.sin(this.angle) +
-            forward * Math.cos(this.tAngle) +
-            side * Math.sin(this.tAngle)),
-      y:
-        this.y +
-        s *
-          (pivot[2] * Math.sin(this.angle) -
-            pivot[0] * Math.cos(this.angle) +
-            forward * Math.sin(this.tAngle) -
-            side * Math.cos(this.tAngle)),
-      h:
-        s *
-        (this.modelAsset.groundY +
-          pivot[1] +
-          gunPivot[1] +
-          muzzle[1] * Math.cos(this.aimPitch) +
-          muzzle[2] * Math.sin(this.aimPitch))
-    };
+    const yaw = this.tAngle - this.angle,
+      c = Math.cos(yaw),
+      sn = Math.sin(yaw),
+      tilt = this.suspensionPitch,
+      p = this.aimPitch - tilt;
+    const side = gunPivot[0] + (atMuzzle ? muzzle[0] : 0),
+      forward = gunPivot[2] + (atMuzzle ? muzzle[2] * Math.cos(p) - muzzle[1] * Math.sin(p) : 0);
+    let up = pivot[1] + gunPivot[1] + (atMuzzle ? muzzle[1] * Math.cos(p) + muzzle[2] * Math.sin(p) : 0);
+    let z = pivot[2] + sn * side + c * forward;
+    if (tilt) {
+      const [, hy, hz] = this.modelAsset.suspension,
+        y0 = up - hy,
+        z0 = z - hz,
+        ct = Math.cos(tilt),
+        st = Math.sin(tilt);
+      up = hy + ct * y0 + st * z0;
+      z = hz + ct * z0 - st * y0;
+    }
+    return bodyPoint(this, (pivot[0] + c * side - sn * forward) * s, (groundY + up) * s, z * s);
+  }
+  muzzle() {
+    return this.gunPoint(true);
   }
 }
 
@@ -209,28 +232,19 @@ function canSee(obs, tgt) {
 }
 
 function clearBattleSight(obs, tgt) {
-  const dx = tgt.x - obs.x,
-    dy = tgt.y - obs.y,
+  const eye = obs.gunPivotWorld(),
+    dx = tgt.x - eye.x,
+    dy = tgt.y - eye.y,
     d = Math.hypot(dx, dy);
   if (d < 1) return true;
   for (const cloud of CombatMechanics.smokeClouds) {
-    const k = Math.max(0, Math.min(1, ((cloud.x - obs.x) * dx + (cloud.y - obs.y) * dy) / (d * d)));
-    if (Math.hypot(obs.x + k * dx - cloud.x, obs.y + k * dy - cloud.y) < cloud.radius) return false;
+    const k = Math.max(0, Math.min(1, ((cloud.x - eye.x) * dx + (cloud.y - eye.y) * dy) / (d * d)));
+    if (Math.hypot(eye.x + k * dx - cloud.x, eye.y + k * dy - cloud.y) < cloud.radius) return false;
   }
-  const h = obs.gunHeight,
+  const h = eye.h,
     dz = tgt.aimHeight - h,
     length = Math.hypot(d, dz);
-  return !traceBattleRay(
-    obs.x,
-    obs.y,
-    h,
-    (tgt.x - obs.x) / length,
-    (tgt.y - obs.y) / length,
-    dz / length,
-    length,
-    obs,
-    true
-  ).hit;
+  return !traceBattleRay(eye.x, eye.y, h, dx / length, dy / length, dz / length, length, obs, true).hit;
 }
 
 function teamSees(tgt, team) {
@@ -239,23 +253,6 @@ function teamSees(tgt, team) {
     if (u.dead) continue;
     var st = team === 'enemy' ? u.team === 'enemy' : u.team !== 'enemy';
     if (st && canSee(u, tgt)) return true;
-  }
-  return false;
-}
-
-// ========== ПРОВЕРКА СТОЛКНОВЕНИЙ ==========
-function tankCollides(x, y, size, self) {
-  const bounds = GameState.arena.bounds;
-  if (Math.abs(x) + size > bounds.x || Math.abs(y) + size > bounds.y) return true;
-  for (const u of GameState.units) {
-    if (u !== self && !u.dead && (x - u.x) ** 2 + (y - u.y) ** 2 < ((u.s * 25 + size) * 0.78) ** 2)
-      return true;
-  }
-  for (const w of GameState.walls) {
-    if (!w.solid) continue;
-    const dx = Math.max(w.x - x, 0, x - w.x - w.w),
-      dy = Math.max(w.y - y, 0, y - w.y - w.h);
-    if (dx * dx + dy * dy < (size + 3) ** 2) return true;
   }
   return false;
 }

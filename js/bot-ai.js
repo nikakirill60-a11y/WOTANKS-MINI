@@ -6,29 +6,28 @@ const BotAI = (() => {
   const turn = (to, from) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
   const limit = (v, n) => Math.max(-n, Math.min(n, v));
   function attach(u, slot, nav) {
-    const { arena } = nav,
-      other = arena.bases[1 - slot.side],
-      hub = arena.hubs[slot.lane];
-    const jitter = (Math.floor(slot.index / 3) - 1) * 32;
-    const goals = [
-      { x: hub.x + jitter, y: hub.y + jitter * 0.55 },
-      { x: other.x, y: other.y + jitter },
-      arena.hubs[(slot.lane + 1) % 3]
-    ];
-    // If contact never comes (or is lost), search beyond the original meeting lanes.
-    // These are public map locations, never unspotted opposing spawn occupants.
-    const { x: W, y: H } = arena.bounds;
-    for (let i = 0; i < 7; i++) {
-      const row = (i + slot.lane * 2 + slot.side) % 7,
-        y = (row - 3) * H * 0.28;
-      const x = W * 0.86 * (i % 2 === slot.side ? 1 : -1);
-      goals.push({ x, y }, { x: -x, y });
-    }
+    if (!nav.recon) nav.recon = new BattleRecon(nav);
+    const hub = nav.arena.hubs[slot.lane];
+    // Supporters open in the same five corridors, but not at a scout's exact
+    // destination or at each other's parking spot. Then they also survey sectors.
+    const offset = ((slot.index % 3) - 1) * 76,
+      side = slot.side ? 1 : -1;
+    const opening = nav.point(
+      nav.nearest(hub.x + offset * side, hub.y + side * ((slot.index % 4) - 1.5) * 54)
+    );
     u.bot = {
-      order: slot.index + slot.side * 10,
+      order: slot.index * 2 + slot.side,
+      side: slot.side,
+      scout: !!slot.scout,
+      hub,
+      opening: slot.scout ? null : opening,
+      openingDistance: Infinity,
+      openingUntil: 0,
+      firstSurvey: !!slot.scout,
+      sector: -1,
+      skipSector: -1,
+      radio: null,
       mode: 'advance',
-      patrol: goals.map((p) => nav.point(nav.nearest(p.x, p.y))),
-      leg: 0,
       ideal: 155 + (DB[u.id].cls === 'ht' ? 70 : 25) + (slot.index % 3) * 12,
       target: null,
       memory: null,
@@ -51,9 +50,14 @@ const BotAI = (() => {
       shell: 0
     };
   }
-  function beginTick(nav) {
+  function beginTick(nav, now) {
     plansLeft = 2;
-    if (nav && nav.revision !== nav.arena.revision) nav.rebuild();
+    if (!nav) return;
+    if (nav.revision !== nav.arena.revision) {
+      nav.rebuild();
+      nav.recon?.rebuild();
+    }
+    if (now === 1 || now % 12 === 0) nav.recon?.sample(GameState.units, now);
   }
   function observe(u, b, now) {
     const previous = b.target;
@@ -81,7 +85,8 @@ const BotAI = (() => {
     b.target = best;
     b.open = line;
     b.nextLook = now + 16;
-    if (best) b.memory = { x: best.x, y: best.y, until: now + 300 };
+    b.radio = !best && !b.scout ? GameState.navigation.recon.report(u, now) : null;
+    if (best) b.memory = { x: best.x, y: best.y, until: now + BattleRecon.reportLife };
   }
   function friendInWay(u, t) {
     const dx = t.x - u.x,
@@ -94,7 +99,7 @@ const BotAI = (() => {
     });
   }
   function sidestep(u, b, dx, dy, nav) {
-    const preferred = b.order % 2 ? 1 : -1;
+    const preferred = (b.order >> 1) % 2 ? 1 : -1;
     for (const sign of [preferred, -preferred]) {
       const x = u.x - dy * sign * 94,
         y = u.y + dx * sign * 94;
@@ -108,12 +113,6 @@ const BotAI = (() => {
     if (b?.target !== t || !t.spotted) return;
     b.shell = u.usesMagazine ? 0 : 2;
     b.shift = true;
-  }
-  function nextLeg(b) {
-    if (++b.leg >= b.patrol.length) b.leg = 3;
-    b.path = [];
-    b.goal = null;
-    b.at = 0;
   }
   function steer(u, b, p, nav, now) {
     const dist = Math.hypot(p.x - u.x, p.y - u.y),
@@ -149,10 +148,19 @@ const BotAI = (() => {
     }
     const delta = turn(b.heading, u.angle);
     b.steer = limit(delta / 0.12, 1);
-    b.brake = Math.abs(delta) > 1.02;
+    const stoppingDistance = (u.driveSpeed ** 2 / (2 * 5.5)) * BATTLE_UNITS_PER_METRE;
+    b.brake = Math.abs(delta) > 1.02 || stoppingDistance > dist;
     // Approach a corner at a speed that leaves room to brake. Do not bypass
     // inertia by writing positions, including during traffic recovery.
-    if (!b.brake) b.throttle = Math.min(0.95, 0.32 + dist / 95) * (1 - 0.37 * Math.abs(delta));
+    if (!b.brake) {
+      b.throttle = Math.min(0.95, 0.32 + dist / 95) * (1 - 0.37 * Math.abs(delta));
+      // Don't try to creep up a grade on too little throttle to move at all.
+      if (u.driveSpeed < 2 && u.groundPitch > 0) {
+        const grade = 9.81 * 0.85 * Math.sin(u.groundPitch),
+          drag = 0.045 * 9.81 * CONFIG.TERRAIN[u.currentTerrain].resistance;
+        b.throttle = Math.max(b.throttle, Math.min(1, (grade + drag + 0.3) / 2.6));
+      }
+    }
   }
   function follow(u, b, goal, nav, now) {
     if (b.backup > 0) {
@@ -182,7 +190,7 @@ const BotAI = (() => {
     }
     if (b.at >= b.path.length) {
       if (b.path.length && !changed) {
-        if (b.mode === 'advance') nextLeg(b);
+        if (b.mode === 'advance') b.opening = null;
         else if (b.mode === 'search') b.memory = null;
       }
       b.path = [];
@@ -212,13 +220,15 @@ const BotAI = (() => {
     let dest = null,
       mode = 'advance';
     if (t) {
+      b.opening = null;
+      b.firstSurvey = false;
       const dx = t.x - u.x,
         dy = t.y - u.y,
-        d = Math.max(1, Math.hypot(dx, dy)),
-        a = Math.atan2(dy, dx);
-      u.lookAtPoint(t.x, t.y, t.aimHeight);
+        d = Math.max(1, Math.hypot(dx, dy));
+      const bearing = u.lookAtPoint(t.x, t.y, t.aimHeight);
       u.slewSight(0.042);
-      const outOfArc = Math.abs(turn(a, u.angle)) > u.yawArc;
+      const outOfArc =
+        u.minYaw === u.maxYaw ? Math.abs(turn(bearing, u.angle)) > 0.007 : !u.canTraverseTo(bearing);
       const ready = b.open && !outOfArc && Math.abs(turn(u.lookYaw, u.tAngle)) < 0.035;
       b.aimTicks = ready ? b.aimTicks + 1 : 0;
       const closeAlly = b.open && friendInWay(u, t);
@@ -239,14 +249,14 @@ const BotAI = (() => {
         dest = t;
       } else {
         mode = 'engage';
-        if (outOfArc) b.steer = limit(turn(a, u.angle) / 0.12, 1);
+        if (outOfArc) b.steer = limit(turn(bearing, u.angle) / 0.12, 1);
       }
       // Recheck the shot now; a sighting/clear segment from the last decision isn't a firing permit.
       if (
         b.aimTicks >= 18 + (b.order % 9) &&
         !closeAlly &&
         !u.isReloading &&
-        performance.now() >= u.nextShot &&
+        BattleClock.now() >= u.nextShot &&
         clearBattleSight(u, t)
       ) {
         // Same model muzzle as the player's reticle and projectile. Friends block a bot's shot.
@@ -255,18 +265,43 @@ const BotAI = (() => {
         else if (b.mode === 'engage') b.shift = true;
       }
     } else {
+      if (b.opening) {
+        const d = Math.hypot(u.x - b.opening.x, u.y - b.opening.y);
+        if (d < b.openingDistance - 18) {
+          b.openingDistance = d;
+          b.openingUntil = now + 540;
+        }
+        if (d < 17 || now >= b.openingUntil) b.opening = null;
+      }
       const seen = b.memory;
       if (seen && now < seen.until && Math.hypot(u.x - seen.x, u.y - seen.y) > 26) {
         mode = 'search';
         dest = seen;
       } else {
         b.memory = null;
-        dest = b.patrol[b.leg];
+        if (b.radio && b.radio.until > now && Math.hypot(u.x - b.radio.x, u.y - b.radio.y) > 50) {
+          mode = 'investigate';
+          dest = b.radio;
+          b.opening = null;
+        } else if (b.opening) {
+          dest = b.opening;
+        } else {
+          mode = 'survey';
+          dest = nav.recon.destination(u, now);
+        }
       }
-      const look = mode === 'search' ? Math.atan2(dest.y - u.y, dest.x - u.x) : u.angle;
+      // Sweep the in-game turret on survey runs. Detection itself still uses
+      // the normal view range and occlusion tests, not the sector overlay.
+      const look =
+        mode === 'search' || mode === 'investigate'
+          ? Math.atan2(dest.y - u.y, dest.x - u.x)
+          : mode === 'survey'
+            ? u.angle + 0.7 * Math.sin(now * 0.013 + b.order)
+            : u.angle;
       u.setLook(look, 0);
       u.slewSight(0.035);
     }
+    if (mode !== 'survey' && b.sector >= 0) nav.recon.release(u);
     if (b.mode !== mode) {
       b.goal = null;
       b.path = [];
@@ -281,7 +316,7 @@ const BotAI = (() => {
       b.steerAt = 0;
       if (++b.blocked >= 35) {
         b.crowded = true;
-        b.backup = 30;
+        b.backup = 96;
         b.blocked = 0;
         b.planAfter = now + b.backup;
       }

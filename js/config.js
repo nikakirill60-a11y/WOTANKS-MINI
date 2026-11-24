@@ -16,7 +16,7 @@ const CONFIG = {
     japan: 'Япония',
     china: 'Китай',
     france: 'Франция',
-    european: 'Сборная Европы'
+    sweden: 'Швеция'
   },
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
   PROMOCODES: {
@@ -36,12 +36,12 @@ const CONFIG = {
     armor_plate: { name: "Допброня", desc: "Броня +20%", icon: "🪨", cost: 8000, stat: 'armor', value: 0.2 }
   },
   CONSUMABLES: [
-    { name: "Ремкомплект", shortName: "РЕМ", key: "4", icon: "🔧", cost: 500, desc: "Чинит гусеницу" },
-    { name: "Аптечка", shortName: "АПТ", key: "5", icon: "💊", cost: 500, desc: "+15% ХП" },
-    { name: "Адреналин", shortName: "АДР", key: "6", icon: "💉", cost: 500, desc: "Ускорение перезарядки 10сек" },
-    { name: "Огнетушитель", shortName: "ОГН", key: "7", icon: "🧯", cost: 600, desc: "Снимает горение, +5% ХП" },
-    { name: "Доп.паёк", shortName: "ПАЁ", key: "8", icon: "🍫", cost: 800, desc: "+5% урон на весь бой" },
-    { name: "Топливо 105", shortName: "ТОП", key: "9", icon: "⛽", cost: 700, desc: "+15% скорость на 15сек" }
+    { name: "Ремкомплект", shortName: "РЕМ", key: "5/Q", icon: "🔧", cost: 500, desc: "Чинит гусеницу и двигатель" },
+    { name: "Аптечка", shortName: "АПТ", key: "4", icon: "💊", cost: 500, desc: "+15% ХП" },
+    { name: "Адреналин", shortName: "АДР", key: "R", icon: "💉", cost: 500, desc: "Ускорение перезарядки 10сек" },
+    { name: "Огнетушитель", shortName: "ОГН", key: "6/F", icon: "🧯", cost: 600, desc: "Снимает горение, +5% ХП" },
+    { name: "Доп.паёк", shortName: "ПАЁ", key: "9", icon: "🍫", cost: 800, desc: "+5% урон на весь бой" },
+    { name: "Топливо 105", shortName: "ТОП", key: "0", icon: "⛽", cost: 700, desc: "+15% скорость на 15сек" }
   ],
   BOOSTERS: {
     xp: { name: "Бустер опыта x2", icon: "⭐", color: "#3498db", multiplier: 2, costGold: 100 },
@@ -71,17 +71,16 @@ const CONFIG = {
   },
 
   // ========== ФИЗИКА ЛАНДШАФТА ==========
-  // traction: drive/steering response; grip: fraction of lateral slip removed
-  // each 60 Hz tick; drag: rolling resistance after releasing the controls.
+  // Rolling/steering resistance and the fraction of lateral slip removed per 60 Hz step.
   TERRAIN: {
-    normal:  { name: 'Грунт',        speedMul: 1,    turnMul: 1,    traction: 1,   grip: .29,  drag: 1 },
-    trail:   { name: 'Просёлок',     speedMul: 1,    turnMul: 1,    traction: 1,   grip: .30,  drag: .94 },
-    sand:    { name: 'Рыхлый песок', speedMul: .85,  turnMul: .92,  traction: .72, grip: .22,  drag: 1.55 },
-    gravel:  { name: 'Щебень',       speedMul: .96,  turnMul: .98,  traction: .89, grip: .24,  drag: 1.15 },
-    stubble: { name: 'Стерня',       speedMul: .94,  turnMul: 1,    traction: .91, grip: .27,  drag: 1.12 },
-    mud:     { name: 'Грязь',        speedMul: .55,  turnMul: .70,  traction: .54, grip: .33,  drag: 1.9 },
-    ice:     { name: 'Лёд',          speedMul: 1.05, turnMul: 1.05, traction: .28, grip: .026, drag: .24 },
-    asphalt: { name: 'Асфальт',      speedMul: 1,    turnMul: 1.10, traction: 1.2, grip: .52,  drag: .88 }
+    normal:  { name: 'Грунт',        speedMul: 1,    resistance: 1,    grip: .29 },
+    trail:   { name: 'Просёлок',     speedMul: 1,    resistance: .92,  grip: .30 },
+    sand:    { name: 'Рыхлый песок', speedMul: .85,  resistance: 1.5,  grip: .22 },
+    gravel:  { name: 'Щебень',       speedMul: .96,  resistance: 1.1,  grip: .24 },
+    stubble: { name: 'Стерня',       speedMul: .94,  resistance: 1.18, grip: .27 },
+    mud:     { name: 'Грязь',        speedMul: .55,  resistance: 1.85, grip: .33 },
+    ice:     { name: 'Лёд',          speedMul: 1.05, resistance: 1.12, grip: .026 },
+    asphalt: { name: 'Асфальт',      speedMul: 1,    resistance: .78,  grip: .52 }
   },
 
   // ========== КРИТИЧЕСКИЕ ПОВРЕЖДЕНИЯ МОДУЛЕЙ ==========
@@ -108,9 +107,32 @@ function initialProgress() {
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,
-    loginCalendar: { claimedDays: [] }, tutorialDone: false, settings: { volume: 1, showTracks: true, lang: 'ru' }
+    loginCalendar: { claimedDays: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
   };
 }
+
+// Only battle timers stop in the controls menu. Calendar, saves, FPS and the
+// hangar still use real time. Preserve the two original deadline time bases.
+const BattleClock = {
+  reset() {
+    this.at = this.dateAt = null;
+    this.skip = this.dateSkip = 0;
+  },
+  pause() {
+    if (this.at !== null) return;
+    this.at = performance.now();
+    this.dateAt = Date.now();
+  },
+  resume() {
+    if (this.at === null) return;
+    this.skip += performance.now() - this.at;
+    this.dateSkip += Date.now() - this.dateAt;
+    this.at = this.dateAt = null;
+  },
+  now() { return (this.at ?? performance.now()) - this.skip; },
+  date() { return (this.dateAt ?? Date.now()) - this.dateSkip; }
+};
+BattleClock.reset();
 
 const GameState = {
   ...initialProgress(),
@@ -148,8 +170,8 @@ const GameState = {
 
   // Управление
   keys: {},
-  mouseDown: false,
-  joystickData: { active: false, dx: 0, dy: 0, angle: 0, mag: 0 },
+  mouseDown: false, holdTurret: false,
+  joystickData: { active: false, dx: 0, dy: 0, mag: 0 },
   mobileFireActive: false
 };
 
@@ -159,7 +181,8 @@ function updateScale() {
 
   const mm = document.getElementById('minimap');
   if (mm) {
-    const sz = Math.round(Math.min(Math.max(w * 0.12, 86), 180));
+    const large = GameState.units.length === 30;
+    const sz = Math.round(large ? Math.min(208, Math.max(112, w * .14)) : Math.min(180, Math.max(86, w * .12)));
     const b = GameState.arena?.bounds;
     mm.width = sz;
     mm.height = Math.round(8 + (sz-8)*(b ? b.y/b.x : .72));

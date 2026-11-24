@@ -49,17 +49,6 @@ function exchangeXP() {
 }
 
 // ========== Выбор нации ==========
-var NAT_BUTTON_LABELS = {
-  ussr: 'СССР',
-  germany: 'ГЕРМАНИЯ',
-  usa: 'США',
-  uk: 'БРИТАНИЯ',
-  japan: 'ЯПОНИЯ',
-  china: 'КИТАЙ',
-  france: 'ФРАНЦИЯ',
-  european: 'ЕВРОПА'
-};
-
 function renderNatButtons() {
   const host = document.getElementById('nat-buttons');
   host.replaceChildren(...PLAYABLE_NATIONS.map(nat => {
@@ -68,7 +57,7 @@ function renderNatButtons() {
     button.dataset.nation = nat;
     button.setAttribute('aria-pressed',String(nat === GameState.curNat));
     button.className = 'n-btn' + (nat === GameState.curNat ? ' active-n' : '');
-    button.textContent = NAT_BUTTON_LABELS[nat] || CONFIG.NATIONS[nat];
+    button.textContent = CONFIG.NATIONS[nat].toLocaleUpperCase('ru-RU');
     button.onclick = () => setNat(nat);
     return button;
   }));
@@ -105,12 +94,12 @@ function useCons(i) {
   var mel = document.getElementById('mcons' + (i + 1));
   if (mel) mel.classList.add('used');
   switch (i) {
-    case 0: GameState.player.trackBroken = false; combatMessage("🔧 Починено!", "#2ecc71"); snd('hit'); break;
+    case 0: GameState.player.trackBroken = false; GameState.player.engineRestartAt = GameState.player.critTimers.engine = 0; combatMessage("🔧 Починено!", "#2ecc71"); snd('hit'); break;
     case 1: GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.15); combatMessage("+15% HP", "#2ecc71"); snd('hit'); break;
-    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = Date.now() + 10000; combatMessage("💉 Адреналин!", "#f39c12"); snd('hit'); break;
+    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = BattleClock.date() + 10000; combatMessage("💉 Адреналин!", "#f39c12"); snd('hit'); break;
     case 3: GameState.player.onFire = false; GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.05); combatMessage("🧯 Огонь потушен!", "#2ecc71"); snd('hit'); break;
     case 4: GameState.paiokActive = true; combatMessage("⛽ Доп.бачок! +5% урон", "#f39c12"); snd('hit'); break;
-    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = Date.now() + 15000; combatMessage("⛽ Топливо 105!", "#f39c12"); snd('hit'); break;
+    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = BattleClock.date() + 15000; combatMessage("⛽ Топливо 105!", "#f39c12"); snd('hit'); break;
   }
   saveProgress();
 }
@@ -237,7 +226,7 @@ function showUpgrades() {
   var cats = [
     { key: 'gun', icon: '🔫', title: 'Орудие', items: CONFIG.UPGRADES.gun },
     { key: 'engine', icon: '⚙️', title: 'Двигатель', items: CONFIG.UPGRADES.engine },
-    { key: 'turret', icon: '🛡️', title: 'Башня', items: CONFIG.UPGRADES.turret }
+    { key: 'turret', icon: '🛡️', title: t.turretArmor == null ? 'Рубка' : 'Башня', items: CONFIG.UPGRADES.turret }
   ];
   var html = '<div class="upgrade-panel"><h3>📈 Прокачка: ' + t.n + ' [' + (CONFIG.TIER_ROMAN[tier] || 'XI') + ']</h3><div class="upgrade-columns">';
   for (var ci = 0; ci < cats.length; ci++) {
@@ -245,6 +234,7 @@ function showUpgrades() {
     html += '<div class="upgrade-col"><div class="upgrade-col-title">' + cat.icon + ' ' + cat.title + '</div>';
     for (var lvl = 0; lvl < cat.items.length; lvl++) {
       var item = cat.items[lvl];
+      var name = cat.key === 'turret' && t.turretArmor == null ? item.name.replace('башня','рубка') : item.name;
       var isBought = bought[cat.key][lvl];
       var isEquipped = u[cat.key] === lvl;
       var canBuy = !isBought && lvl > 0 && bought[cat.key][lvl - 1];
@@ -254,7 +244,7 @@ function showUpgrades() {
       if (isEquipped) cardClass += ' equipped';
       else if (isBought) cardClass += ' bought';
       else if (!canBuy) cardClass += ' locked';
-      html += '<div class="' + cardClass + '"><div class="upg-name">' + item.name + '</div><div class="upg-desc">' + item.desc + '</div>';
+      html += '<div class="' + cardClass + '"><div class="upg-name">' + name + '</div><div class="upg-desc">' + item.desc + '</div>';
       if (isEquipped) { html += '<div class="upg-btn installed">✅ Установлено</div>'; }
       else if (isBought) { html += '<div class="upg-btn equip" onclick="equipUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ')">⚙️ Установить</div>'; }
       else if (canBuy && canAfford) { html += '<div class="upg-btn buy" onclick="buyUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ',' + cost + ')">💰 Купить ' + cost + '💰</div>'; }
@@ -384,7 +374,7 @@ function renderCarousel(fromCarousel = false) {
     var t = DB[id];
     if (!t) continue;
     var slot = document.createElement('div');
-    slot.className = 'tank-slot has-model' + (GameState.selected === id ? ' selected' : '');
+    slot.className = 'tank-slot' + (GameState.selected === id ? ' selected' : '');
     slot.dataset.tankId = id;
     var select = document.createElement('button');
     select.type = 'button';

@@ -2,6 +2,7 @@
 #game { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:none; outline:0; }
 #game[hidden], #battle-notice[hidden] { display:none; }
 #hud { z-index:2; font-family:'Segoe UI',Arial,sans-serif; color:#f2f4e9; background:linear-gradient(180deg,#0c191d59,transparent 15%,transparent 84%,#10171048); }
+.combat-top { display:contents; }
 .combat-eyebrow { color:#d8c69f; font:600 10px/1.4 Consolas,monospace; letter-spacing:.16em; text-transform:uppercase; }
 .combat-location { position:absolute; top:19px; left:22px; padding:8px 13px; border-left:2px solid #dfbd7d; background:linear-gradient(90deg,#18221fea,#18221f8c); }
 .combat-location strong { display:block; font:600 clamp(16px,2.2vw,25px)/1.25 'Segoe UI',Arial,sans-serif; letter-spacing:-.025em; }
@@ -13,7 +14,7 @@
 #battle-exit { position:absolute; right:22px; top:19px; }
 #battle-exit:hover,.battle-cancel:hover { background:#344037; }
 #hud #perf-hud { position:absolute; top:58px; left:auto; right:22px; background:#18221fab; font:10px Consolas,monospace; padding:3px 5px; border:0; }
-#battle-reticle { position:absolute; width:27px; height:27px; transform:translate(-50%,-50%); border:1.5px solid currentColor; border-radius:50%; color:#ffffe9; filter:drop-shadow(0 1px 2px #121810); }
+#battle-reticle { position:absolute; top:44%; left:50%; width:27px; height:27px; transform:translate(-50%,-50%); border:1.5px solid currentColor; border-radius:50%; color:#ffffe9; filter:drop-shadow(0 1px 2px #121810); }
 #battle-reticle i { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:3px; height:3px; border-radius:50%; background:currentColor; }
 #battle-reticle::before,#battle-reticle::after { content:''; position:absolute; top:50%; width:8px; height:1.5px; background:currentColor; }#battle-reticle::before{right:100%}#battle-reticle::after{left:100%}
 #battle-reticle.locked { color:#ff967e; } #battle-reticle.loading { border-style:dashed; }
@@ -25,7 +26,9 @@
 #hud #field-actions { order:1; padding-top:4px; border-top:1px solid #99aa962c; }
 #hud .cons-btn,#hud .shell-opt,#hud #field-actions button { color:#d1d9ca; background:#d7e2ce0b; border:1px solid #99aa9645; border-radius:2px; font:10px/1.3 'Segoe UI',Arial,sans-serif; padding:3px 5px; }
 #hud .shell-opt.active { border-color:#d6b675; color:#f2d194; }#hud .cons-btn.used { opacity:.4; }
-#hud #minimap { right:22px; bottom:20px; border:1px solid #b7c6ab; box-shadow:0 2px 12px #19222055; border-radius:3px; }
+.map-instrument { position:absolute; right:22px; bottom:20px; margin:0; display:grid; justify-items:end; }
+#recon-status { background:#192420eb; color:#b5dece; border:1px solid #889a84; border-bottom:0; padding:2px 5px; font:10px/1.3 Consolas,monospace; border-radius:3px 3px 0 0; }
+#hud #minimap { position:static; display:block; border:1px solid #b7c6ab; box-shadow:0 2px 12px #19222055; border-radius:3px; }
 #hud #combat-message { top:23%; font:600 18px 'Segoe UI',sans-serif; }#hud #dmg-log { bottom:23%; font-size:14px; }
 #battle-notice, #control-modal.show, #result-screen.show { background:radial-gradient(ellipse at center,#303b32f7,#101713fa 70%); color:#eeeede; font-family:'Segoe UI',Arial,sans-serif; text-align:center; }
 #battle-notice { position:fixed; inset:0; z-index:500; display:grid; place-items:center; padding:18px; }
@@ -45,7 +48,8 @@
 .mobile-mode #mobile-controls #joystick-zone { width:clamp(86px,19vmin,126px); height:clamp(86px,19vmin,126px); bottom:15px; left:13px; }
 .mobile-mode #fire-zone { bottom:20px; right:14px; } .mobile-mode .mobile-btn.fire { width:72px; height:72px; background:#4f382cd1; border:2px solid #dfa887; color:#f2d3af; }
 .mobile-mode #mobile-shells { right:12px; bottom:102px; flex-direction:row; }.mobile-mode .m-shell { width:33px; height:30px; border-width:1px; border-radius:4px; }
-.mobile-mode #hud #minimap { bottom:auto; top:83px; right:12px; max-width:108px; max-height:108px; }
+.mobile-mode .map-instrument { bottom:auto; top:83px; right:12px; }
+.mobile-mode #hud #minimap { max-width:108px; max-height:108px; }
 @media(max-width:640px),(max-height:520px) {
   .combat-location { top:9px; left:10px; padding:6px 8px; }.combat-location strong { font-size:15px; }.combat-eyebrow { font-size:8px; }
   .combat-score { top:10px; gap:7px; padding:5px 8px; font-size:17px; }
@@ -56,7 +60,7 @@
 }
 @media(max-height:460px) {
   .mobile-mode #hud #bottom-bar { left:125px; bottom:8px; max-width:164px; }
-  .mobile-mode #hud #minimap { top:61px; max-width:72px; max-height:72px; }.mobile-mode #mobile-controls #mobile-cons { top:58px; }
+  .mobile-mode .map-instrument { top:61px; }.mobile-mode #hud #minimap { max-width:72px; max-height:72px; }.mobile-mode #mobile-controls #mobile-cons { top:58px; }
 }
 @media(min-width:740px) {
   .combat-score #allies-list::before, .combat-score #enemies-list::after { font:600 9px Consolas,monospace; letter-spacing:.13em; vertical-align:middle; }
@@ -69,3 +73,51 @@ body.drum-equipped #shell-ui, body.drum-equipped #mobile-shells { display: none;
 
 .drive-readout { display:flex; justify-content:space-between; gap:8px; color:#b9c7b4; font:10px/1.3 Consolas,monospace; }
 #drive-speed { color:#dce9d5; font-variant-numeric:tabular-nums; }
+
+@media(max-width:480px) {
+  .combat-top { position:absolute; top:9px; left:10px; right:10px; display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:start; gap:6px; }
+  .combat-top .combat-location, .combat-top .combat-score, .combat-top #battle-exit { position:static; transform:none; }
+  .combat-top .combat-location { min-width:0; }
+  .combat-top .combat-eyebrow { display:block; white-space:nowrap; letter-spacing:.09em; overflow:hidden; }
+  .combat-location strong { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  #recon-status { font-size:9px; padding:2px 3px; }
+}
+@media(max-width:480px) and (min-height:521px) {
+  .combat-top .combat-location strong { white-space:normal; font-size:14px; line-height:1.15; }
+}
+
+/* Reference battle sight: stationary crosshair plus the independently slewing barrel. */
+#gun-marker { position:absolute; transform:translate(-50%,-50%); width:13px; height:13px; border-radius:50%; border:2px solid #f7d494; box-shadow:0 0 2px #202920; }
+#gun-marker.on-target { border-color:#ff9c80; }
+#sight-mode { position:absolute; left:50%; top:calc(44% + 22px); transform:translateX(-50%); color:#fff0c0; background:#17221ddc; border-radius:2px; padding:3px 7px; font:600 10px/1.2 Consolas,monospace; }
+#scope-mask { display:none; position:absolute; inset:0; background:radial-gradient(circle at 50% 44%,transparent 25vmin,#151e171f 43vmin,#08120cd6 78vmin); z-index:-1; }
+#hud.scoped #scope-mask { display:block; }
+#hud #score-toggle { pointer-events:auto; cursor:pointer; }
+#battle-roster { position:absolute; top:56px; left:50%; transform:translateX(-50%); width:min(94vw,590px); max-height:72vh; overflow:auto; pointer-events:auto; display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px; border:1px solid #86947e; background:#17201df5; z-index:3; }
+#battle-roster[hidden], #input-menu[hidden], #touch-sight button[hidden] { display:none; }
+#battle-roster h3 { font:600 11px Consolas,monospace; color:#8bd3c3; }#battle-roster div+div h3 { color:#f7a488; }
+#battle-roster ul { list-style:none; padding:0; margin:5px 0 0; }#battle-roster li { display:flex; justify-content:space-between; align-items:center; gap:3px; border-top:1px solid #66776940; padding:3px 0; font-size:11px; }#battle-roster b { font:10px Consolas,monospace; white-space:nowrap; }#battle-roster li.out { opacity:.52; }
+#relative-hint { position:absolute; right:16px; top:78px; padding:3px 6px; background:#19221be6; font:10px Consolas,monospace; }
+#input-menu { position:fixed; inset:0; z-index:120; display:grid; place-items:center; background:#09110ebd; }
+#input-menu.waiting { background:transparent; pointer-events:none; align-items:end; padding-bottom:clamp(12px,8vh,80px); }
+.input-panel { pointer-events:auto; width:min(90vw,390px); padding:17px; background:#1e2924f7; border:1px solid #788870; border-radius:5px; color:#f2f1e5; text-align:center; font-family:'Segoe UI',Arial,sans-serif; }
+.input-panel h2 { margin:4px 0 6px; font-size:21px; }.input-panel p { margin:6px 0 13px; font:12px/1.4 'Segoe UI',Arial,sans-serif; color:#cfdbcc; }
+#resume-input { background:#dfb878; color:#20271f; font-weight:700; border-radius:3px; margin:0 5px 0 0; }
+.touch-help,.mobile-mode .pc-help { display:none; }.mobile-mode .touch-help { display:block; }
+#touch-sight { position:absolute; right:12px; bottom:140px; display:flex; gap:4px; pointer-events:auto; }
+#touch-sight button,#signal-btn { cursor:pointer; min-height:34px; padding:6px 8px; border:1px solid #99aa96; border-radius:3px; background:#202b24e8; color:#d9e8ce; font:600 11px 'Segoe UI',sans-serif; }#touch-sight button[aria-pressed=true] { border-color:#e3bd78; color:#ffe3a8; }
+.mobile-mode #mobile-controls #joystick-zone { pointer-events:none; }
+.mobile-mode #mobile-controls #joystick-zone.floating { width:116px; height:116px; bottom:auto; transform:translate(-50%,-50%); }
+
+body[data-battle-input="waiting"] #game { cursor:pointer; }body.rest-mouse #game { cursor:default; }
+#touch-radio { position:absolute; left:12px; top:143px; pointer-events:auto; z-index:1; }
+#touch-signals { position:absolute; left:0; top:calc(100% + 3px); width:max-content; display:grid; gap:3px; pointer-events:auto; }
+#touch-signals button { padding:6px 10px; text-align:left; background:#18241ef2; border:1px solid #80937e; border-radius:3px; color:#dbedda; font:600 12px 'Segoe UI',sans-serif; }
+#touch-signals[hidden],.menu-skip,.input-gated #tutorial-overlay { display:none !important; }.in-tutorial .menu-skip { display:inline-block !important; margin-top:6px; }
+#tutorial-overlay { pointer-events:none; }#tutorial-skip { pointer-events:auto; }
+
+#field-actions kbd { font:10px/1.2 Consolas,monospace; color:#c5c6ae; }#field-actions kbd::before { content:'['; }#field-actions kbd::after { content:']'; }
+.mobile-mode #field-actions kbd { display:none; }@media(max-height:460px) { #touch-radio { top:124px; } }
+
+#battle-roster img { width:clamp(28px,4vw,48px); height:22px; object-fit:contain; flex:none; }
+#battle-roster li span { flex:1; min-width:0; overflow-wrap:anywhere; }

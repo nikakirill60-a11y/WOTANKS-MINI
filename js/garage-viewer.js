@@ -1,9 +1,8 @@
-// The inspection stand is read-only. Only the carousel/research tree selects a tank for battle.
+// The depot displays only the equipped, owned vehicle. Research shows stats and an icon, not a second 3D viewer.
 const GarageViewer = (() => {
   const el = (id) => document.getElementById(id);
   const classNames = { lt: 'Лёгкий танк', mt: 'Средний танк', ht: 'Тяжёлый танк', td: 'ПТ-САУ' };
   let selectedId = null,
-    inspectedId = null,
     request = null,
     showingId = null;
   let inspecting = true;
@@ -27,9 +26,9 @@ const GarageViewer = (() => {
     el('bay-angles').hidden = el('bay-loading').hidden = true;
     const panel = el('bay-poster'),
       img = panel.querySelector('img');
-    img.src = 'models/' + DB[inspectedId].thumbnail;
-    img.alt = 'Снимок 3D-модели: ' + DB[inspectedId].n;
-    panel.querySelector('span').textContent = 'Снимок модели · ' + reason;
+    img.src = 'models/' + DB[selectedId].thumbnail;
+    img.alt = 'Изображение танка: ' + DB[selectedId].n;
+    panel.querySelector('span').textContent = 'Статичный вид · ' + reason;
     panel.hidden = false;
   }
 
@@ -38,20 +37,20 @@ const GarageViewer = (() => {
       suspend();
       return;
     }
-    const tank = DB[inspectedId];
-    el('bay-kind').textContent = inspectedId === selectedId ? 'БОЕВАЯ МАШИНА' : 'ВЫСТАВОЧНЫЙ ОБРАЗЕЦ';
+    if (!GameState.owned.includes(selectedId)) {
+      suspend();
+      return;
+    }
+    const tank = DB[selectedId];
+    el('bay-kind').textContent = 'БОЕВАЯ МАШИНА';
     el('bay-name').textContent = tank.n;
     el('bay-meta').textContent =
       description(tank) + (tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');
-    el('bay-picker').value = inspectedId;
-    const open = el('bay-open');
-    open.hidden = false;
-    open.href = 'models/' + tank.file;
-    if (showingId === inspectedId) return;
+    if (showingId === selectedId) return;
     request?.abort();
     const ticket = new AbortController();
     request = ticket;
-    showingId = inspectedId;
+    showingId = selectedId;
     el('bay-poster').hidden = el('bay-angles').hidden = true;
     el('bay-loading').hidden = false;
     let asset;
@@ -82,29 +81,8 @@ const GarageViewer = (() => {
     showStand();
   }
 
-  function inspect(id) {
-    if (!DB[id]) return;
-    inspectedId = id;
-    setPane(true);
-  }
-
-  function updatePicker() {
-    const picker = el('bay-picker');
-    picker.replaceChildren(new Option('Для боя: ' + DB[selectedId].n, selectedId));
-    for (const nat of PLAYABLE_NATIONS) {
-      const group = document.createElement('optgroup');
-      group.label = CONFIG.NATIONS[nat] + ' · осмотр без разблокировки';
-      for (const t of BRANCHES[nat].tanks) {
-        if (t.id !== selectedId) group.appendChild(new Option(CONFIG.TIER_ROMAN[t.tier]+' · '+t.n, t.id));
-      }
-      picker.appendChild(group);
-    }
-  }
-
   function syncSelection(fromCarousel = false) {
     const id = GameState.selected;
-    if (selectedId === null) inspectedId = id;
-    else if (selectedId !== id || fromCarousel) inspectedId = id;
     if (selectedId !== id) {
       selectedId = id;
       const tank = DB[id];
@@ -121,7 +99,6 @@ const GarageViewer = (() => {
       el('dispatch-armor').textContent = armorLabel(tank) + ' мм';
       el('dispatch-speed').textContent = speedLabel(tank) + ' км/ч';
       el('dispatch-view').textContent = Math.round(tank.vr / BATTLE_UNITS_PER_METRE) + ' м';
-      updatePicker();
     }
     el('fleet-count').textContent = String(GameState.owned.length).padStart(2, '0');
     if (fromCarousel && !inspecting) setPane(true);
@@ -133,11 +110,7 @@ const GarageViewer = (() => {
     el('bay-research-tab').addEventListener('click', () => setPane(false));
     for (const button of el('bay-angles').querySelectorAll('button'))
       button.addEventListener('click', () => DepotView.view(button.dataset.view));
-    el('bay-picker').addEventListener('change', (event) => {
-      inspectedId = event.target.value;
-      showStand();
-    });
   }
 
-  return { init, syncSelection, suspend, inspect };
+  return { init, syncSelection, suspend };
 })();

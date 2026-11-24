@@ -1,0 +1,87 @@
+"""Rebuild the offline ZIP from the assets the game actually uses, not the source tree."""
+from html.parser import HTMLParser
+from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
+
+ROOT = Path(__file__).resolve().parents[1]
+START = '''CITY TANKS — СССР, Германия, США и Швеция
+
+Распакуйте архив целиком и откройте index.html в браузере.
+При обновлении используйте прежнюю папку и тот же браузер, чтобы сохранить доступ к прогрессу.
+Интернет и регистрация не нужны. Для 3D-боя нужен WebGL 2.
+
+Вкладка «Мой танк» — депо выбранной открытой машины. У закрытого узла доступны иконка и ТТХ.
+Отдельных страниц моделей больше нет. В игре 72 машины, у каждой своя иконка.
+Швеция: в дереве нажмите бесплатный Strv fm/21. С него начинаются два пути:
+через Strv m/38 к Kranvagn или через Pvlvv fm/42 к Strv 103B.
+Emil I: 3 × 320, Emil II и Kranvagn: 3 × 400. Полная перезарядка: 22 / 25 / 22 с.
+У UDES 03, Strv 103-0 и Strv 103B горизонтальная наводка — поворотом корпуса.
+«Дерево развития»: нажмите связанный узел, чтобы исследовать или выбрать танк для боя.
+Чтобы начать американскую ветку: «Дерево развития» → «США» → T1 Cunningham (бесплатно).
+У СССР от МС-1 путь через БТ-2 ведёт к Объекту 140, а через Т-26 — к КВ-1.
+От КВ-1 доступны два узла VI уровня: КВ-1С (к ИС-7) и Т-150 (к ИС-4).
+Новые тяжёлые танки: Т-150 → КВ-3 → КВ-4 → СТ-I → ИС-4. Если КВ-1 уже в ангаре, повторно исследовать его не нужно.
+От немецкого Leichttraktor есть два пути: через Pz.Kpfw. II к Rhm. Panzerwagen и через
+Panzerjäger I к Waffenträger auf E 100. На VIII уровне ПТ — Rhm.-Borsig Waffenträger.
+WT auf E 100: 4 снаряда по 520 урона, полная перезарядка 40 с после четвёртого.
+В новом профиле 500 XP: этого хватит на II и III уровни одной ветки.
+У Leopard кассета 8 × 30 с перезарядкой 9 с; у VK 28.01 выстрел на 115 и КД 3,6 с.
+
+Выберите одну из шести карт. В «Плане сектора» видны её размер, укрытия и старты команд.
+«В БОЙ 15×15» — вы и 14 союзников против 15 ботов. Остались «7×7», «10×10» и «ТРЕНИРОВКА».
+В командном бою кольцом на мини-карте отмечены союзные разведчики. Клетка светлеет,
+когда туда заехал кто-то из своих. Подсветка не раскрывает скрытые машины.
+Боты разбирают разные участки и проверяют последнее сообщение о пропавшем противнике.
+ПК: первый щелчок на поле берёт управление без выстрела. WASD / стрелки — корпус,
+мышь — обзор, ЛКМ — огонь. ПКМ удерживает башню относительно корпуса для свободного обзора.
+Крест — прицел камеры; золотое кольцо — куда сейчас бьёт ствол. Башне нужно время на поворот.
+Shift — оптика; колесо — дистанция и кратность ×2 / ×4 / ×8. E — захват видимой цели.
+1–3 — снаряды; 5/Q — ремонт, 6/F — огнетушитель, 7 — дым, 8 — артподдержка.
+Tab — состав, Esc — пауза. «Продолжить» возвращает в бой. Настройка чувствительности — в ангаре.
+Телефон: потяните слева для движения, другим пальцем поверните обзор. Кнопку «Огонь»
+можно удерживать и вести пальцем. «Прицел», кратность и «Авто» — справа.
+Игровая сторона квадрата: Литейный квартал — 700 м, Грузовой порт — 800 м,
+Зелёная долина, Песчаный рубеж, Медный карьер и Ледовая переправа — по 1000 м.
+На всех шести картах есть проезжие возвышенности — от складских террас до дюн и лесных сопок.
+На подъёме и в повороте танк теряет скорость. Задний ход сначала тормозит;
+когда танк едет назад, корпус поворачивает в обратную сторону. Пробел — тормоз.
+Холм закрывает цель, как и стена. Уклон виден рядом со скоростью и покрытием.
+'''
+
+
+class EntryAssets(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.paths = set()
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == 'script' and 'src' in attrs:
+            self.paths.add(attrs['src'])
+        if tag == 'link' and attrs.get('rel') == 'stylesheet':
+            self.paths.add(attrs['href'])
+
+
+def runtime_files():
+    assets = EntryAssets()
+    assets.feed((ROOT / 'index.html').read_text(encoding='utf-8'))
+    files = {'index.html', 'README.md', 'vendor/three.LICENSE'} | assets.paths
+    for model in (ROOT / 'models').glob('*.mesh.js'):
+        files.add('models/' + model.name)
+        files.add('models/' + model.name.removesuffix('.mesh.js') + '.webp')
+    return sorted(files)
+
+
+if __name__ == '__main__':
+    files = runtime_files()
+    for name in files:
+        if not (ROOT / name).is_file() or not (ROOT / name).resolve().is_relative_to(ROOT):
+            raise ValueError(f'Invalid runtime asset: {name}')
+    output = ROOT / 'CITY-TANKS.zip'
+    with ZipFile(output, 'w', compression=ZIP_DEFLATED, compresslevel=9) as z:
+        for name in files:
+            z.write(ROOT / name, name)
+        z.writestr('СТАРТ.txt', START)
+    with ZipFile(output) as z:
+        assert z.testzip() is None
+    print(f'{output.name}: {len(files)+1} files · {output.stat().st_size:,} bytes')

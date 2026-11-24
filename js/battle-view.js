@@ -1,17 +1,18 @@
-// One WebGL scene per match. Models, projectiles, cover, sights and the chase camera
+// One WebGL scene per match. Models, projectiles, cover, sights and the orbit camera
 // share world coordinates; Canvas2D is only used for small textures and the minimap.
 const BattleView = (() => {
   const T = THREE,
     el = (id) => document.getElementById(id);
-  const pointer = new T.Vector2(),
+  const sight = new T.Vector2(0, ArcadeLook.sightY),
     picker = new T.Raycaster(),
-    temp = new T.Vector3();
+    temp = new T.Vector3(),
+    viewDirection = new T.Vector3();
   const transform = new T.Object3D(),
     tint = new T.Color();
   let renderer, scene, camera, world, avatars, layers, noticeLoss, canvas;
   let weatherSeeds = [];
-  let hasAim = false,
-    zoom = 1,
+  let look,
+    autoTarget,
     width = 0,
     height = 0,
     slowFrames = 0;
@@ -19,8 +20,7 @@ const BattleView = (() => {
   function open(onContextLost) {
     canvas = el('game');
     width = height = slowFrames = 0;
-    hasAim = false;
-    zoom = 1;
+    autoTarget = null;
     try {
       renderer = new T.WebGLRenderer({
         canvas,
@@ -76,13 +76,24 @@ const BattleView = (() => {
       const root = new T.Group(),
         asset = u.modelAsset,
         mat = u === GameState.player ? ownMat : u.team === 'enemy' ? enemyMat : allyMat;
-      const hull = new T.Mesh(asset.hull, mat),
+      const hull = new T.Mesh(asset.body || asset.hull, mat),
         turret = new T.Mesh(asset.turret, mat),
         gun = new T.Mesh(asset.gun, mat);
       turret.position.fromArray(asset.pivot);
       gun.position.fromArray(asset.gunPivot);
       root.scale.setScalar(u.modelScale);
-      root.add(hull, turret);
+      let cradle = null,
+        treads = null;
+      if (asset.suspension) {
+        // Around the authored suspension pivot, not the gun trunnion. Tracks stay on the ground.
+        cradle = new T.Group();
+        cradle.position.fromArray(asset.suspension);
+        hull.position.copy(cradle.position).multiplyScalar(-1);
+        turret.position.sub(cradle.position);
+        cradle.add(hull, turret);
+        treads = new T.Mesh(asset.treads, mat);
+        root.add(treads, cradle);
+      } else root.add(hull, turret);
       turret.add(gun);
       scene.add(root);
       const shade = new T.Mesh(quad, world.shadowMat);
@@ -107,7 +118,7 @@ const BattleView = (() => {
       flag.rotation.z = Math.PI / 4;
       marker.add(flag);
       scene.add(marker);
-      avatars.set(u, { root, hull, turret, gun, shade, marker, hp, wreck });
+      avatars.set(u, { root, hull, cradle, treads, turret, gun, shade, marker, hp, wreck });
     }
     bodyMat.dispose();
     const cube = new T.BoxGeometry(),
@@ -151,40 +162,58 @@ const BattleView = (() => {
         count
       );
     }
+    look = new ArcadeLook(GameState.player.angle);
     canvas.hidden = false;
     syncCamera();
     aim();
     draw();
   }
-  function focusDistance(delta) {
-    zoom = Math.max(0.72, Math.min(1.85, zoom * Math.exp(delta * 0.001)));
+  function rotate(dx, dy) {
+    look?.rotate(dx, dy, GameState.settings.lookSensitivity || 1);
   }
-  function syncCamera() {
+  function syncCamera(dt = 0) {
+    if (!look || !camera) return;
     const w = canvas.clientWidth,
-      h = canvas.clientHeight;
-    if (w > 0 && h > 0 && (w !== width || h !== height)) {
+      h = canvas.clientHeight,
+      resized = w > 0 && h > 0 && (w !== width || h !== height);
+    if (resized) {
       width = w;
       height = h;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
-      camera.fov = w < h ? 65 : 53;
+    }
+    if (resized || camera.fov !== look.fov) {
+      camera.fov = look.fov;
       camera.updateProjectionMatrix();
     }
-    // The first 3D chase rig is attached to the hull, never to the sight or barrel.
     const p = GameState.player,
-      cs = Math.cos(p.angle),
-      sn = Math.sin(p.angle);
-    const arm = (width < height ? 87 : 85) * zoom,
-      side = (width < height ? 9 : 19) * zoom,
-      rise = 31 * zoom;
-    const anchor = Math.max(13, p.gunHeight),
-      length = Math.hypot(arm, side, rise);
-    const dx = (-cs * arm - sn * side) / length,
-      dy = (-sn * arm + cs * side) / length,
-      dh = rise / length;
-    const reach = Math.max(2, traceBattleRay(p.x, p.y, anchor, dx, dy, dh, length, p, true).distance - 1);
-    camera.position.set(p.x + dx * reach, anchor + dh * reach, p.y + dy * reach);
-    camera.lookAt(p.x + cs * 78, 5, p.y + sn * 78);
+      m = BATTLE_UNITS_PER_METRE,
+      dx = Math.cos(look.yaw) * Math.cos(look.pitch),
+      dy = Math.sin(look.yaw) * Math.cos(look.pitch),
+      dh = -Math.sin(look.pitch);
+    look.distance += (look.targetDistance - look.distance) * Math.min(1, dt * 8);
+    if (look.scoped) {
+      const base = p.gunPivotWorld(),
+        x = base.x + 1.2 * m * dx,
+        y = base.y + 1.2 * m * dy;
+      camera.position.set(x, Math.max(surfaceHeight(x, y) + 0.2 * m, base.h + m * (0.35 + 1.2 * dh)), y);
+    } else {
+      const anchor = p.rideHeight + p.modelAsset.height * p.modelScale + 0.9 * m;
+      const wall = nearestBattleWall(p.x, p.y, anchor, -dx, -dy, -dh, look.distance * m);
+      const hitMetres = wall.distance / m;
+      const safe = wall.hit
+        ? Math.max(0.1, Math.min(hitMetres - 0.05, Math.max(2.5, hitMetres - 0.6)))
+        : look.distance;
+      look.wallDistance =
+        safe < look.wallDistance
+          ? safe
+          : look.wallDistance + (safe - look.wallDistance) * Math.min(1, dt * 3);
+      const back = Math.min(look.wallDistance, look.distance) * m;
+      const x = p.x - back * dx,
+        y = p.y - back * dy;
+      camera.position.set(x, Math.max(surfaceHeight(x, y) + 0.8 * m, anchor - back * dh), y);
+    }
+    camera.lookAt(temp.copy(camera.position).add(viewDirection.set(dx, dh, dy)));
     camera.updateMatrixWorld();
   }
   // Back off fill rate on integrated/mobile GPUs; never change CSS/input coordinates.
@@ -195,51 +224,123 @@ const BattleView = (() => {
       slowFrames = 0;
     }
   }
-  function pointAt(clientX, clientY) {
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    // Absolute canvas coordinates, independent of drawing-buffer resolution.
-    pointer.set(
-      bounded((2 * (clientX - rect.left)) / rect.width - 1, -1, 1),
-      bounded(1 - (2 * (clientY - rect.top)) / rect.height, -1, 1)
-    );
-    hasAim = true;
-  }
   function screenPoint(x, y, h) {
     temp.set(x, h, y).project(camera);
     return { x: (temp.x + 1) / 2, y: (1 - temp.y) / 2 };
   }
-  function aim() {
+  function pickSight() {
+    picker.setFromCamera(sight, camera);
+    const { origin: o, direction: d } = picker.ray,
+      m = BATTLE_UNITS_PER_METRE,
+      p = GameState.player;
+    const near = look.scoped ? 0 : Math.max(0, Math.min(look.distance, look.wallDistance) - 2) * m;
+    return (GameState.aim = traceBattleRay(
+      o.x + near * d.x,
+      o.z + near * d.z,
+      o.y + near * d.y,
+      d.x,
+      d.z,
+      d.y,
+      720 * m - near,
+      p,
+      false,
+      true,
+      true
+    ));
+  }
+  function lockable(u) {
+    const p = GameState.player;
+    return (
+      u &&
+      u.team === 'enemy' &&
+      u.visible &&
+      !u.dead &&
+      Math.hypot(u.x - p.x, u.y - p.y) <= 520 * BATTLE_UNITS_PER_METRE &&
+      clearBattleSight(p, u)
+    );
+  }
+  function toggleAutoAim() {
+    if (!look || !GameState.gameActive) return;
+    if (autoTarget) {
+      autoTarget = null;
+      combatMessage('Автоприцел снят', '#ded2b6');
+      return;
+    }
+    syncCamera();
+    let best = 0.25;
+    for (const u of GameState.units) {
+      if (u.team !== 'enemy' || !u.visible || u.dead) continue;
+      temp.set(u.x, u.aimHeight, u.y).project(camera);
+      const d = Math.hypot(temp.x, temp.y - sight.y);
+      if (temp.z >= -1 && temp.z <= 1 && d < best && lockable(u)) {
+        best = d;
+        autoTarget = u;
+      }
+    }
+    combatMessage(
+      autoTarget ? 'Автоприцел: ' + autoTarget.name : 'Нет видимой цели у прицела',
+      autoTarget ? '#bce4d3' : '#ded2b6'
+    );
+  }
+  // Advance the mount only on simulation ticks. A click or a slow/fast display
+  // must never add an extra slew step or snap a shot to the camera ray.
+  const traverseDegrees = { lt: 52, mt: 42, ht: 30, td: 34 }; // class defaults for the local vehicle catalogue
+  function stepPlayer(dt, mountYaw) {
+    if (!look || !camera) return; // non-rendered battle simulation
     const g = GameState,
       p = g.player;
-    if (!hasAim) {
-      const target = g.training && g.units[1];
-      if (target) temp.set(target.x, target.aimHeight, target.y).project(camera);
-      // Before the first input, show the practice target if on screen, otherwise look ahead.
-      if (!target || Math.abs(temp.x) > 1 || Math.abs(temp.y) > 1 || Math.abs(temp.z) > 1)
-        temp.set(p.x + Math.cos(p.angle) * 320, p.aimHeight, p.y + Math.sin(p.angle) * 320).project(camera);
-      pointer.set(temp.x, temp.y);
-    }
-    // Keep the selected SCREEN point when driving, turning the hull or zooming.
-    // Re-picking cannot steer the camera because the boom only reads p.angle.
-    picker.setFromCamera(pointer, camera);
-    const { origin: o, direction: d } = picker.ray;
-    const picked = (g.aim = traceBattleRay(o.x, o.z, o.y, d.x, d.z, d.y, BATTLE_RANGE, p));
-    p.lookAtPoint(picked.x, picked.y, picked.h);
-    p.slewSight(Math.PI, Math.PI); // direct aim, with the actual model pivots and mount stops
-    const reticle = el('battle-reticle');
-    reticle.style.left = (pointer.x + 1) * 50 + '%';
-    reticle.style.top = (1 - pointer.y) * 50 + '%';
+    p.tAngle = wrapAngle(p.angle + mountYaw);
+    p.constrainTraverse();
+    syncCamera(dt);
+    const q = pickSight();
+    if (autoTarget && !lockable(autoTarget)) autoTarget = null;
+    if (g.holdTurret) return;
+    if (autoTarget) {
+      const u = autoTarget,
+        flight = Math.hypot(u.x - p.x, u.y - p.y) / (14 * CONFIG.SHELLS[g.curShell].sMul * p.shellSpeedMul);
+      p.lookAtPoint(u.x + u.vx * flight, u.y + u.vy * flight, u.aimHeight);
+    } else p.lookAtPoint(q.x, q.y, q.h);
+    const rate = traverseDegrees[DB[p.id].cls] || traverseDegrees.mt;
+    p.slewSight(((rate * Math.PI) / 180) * dt, ((28 * Math.PI) / 180) * dt);
+  }
+  function aim() {
+    const g = GameState,
+      p = g.player,
+      picked = pickSight(),
+      reticle = el('battle-reticle');
     reticle.classList.toggle('locked', picked.hit?.team === 'enemy');
     reticle.classList.toggle('loading', p.isReloading);
+    const actual = p.sightHit(BATTLE_RANGE, false, true),
+      marker = el('gun-marker');
+    temp.set(actual.x, actual.h, actual.y).project(camera);
+    marker.hidden = temp.z < -1 || temp.z > 1 || Math.abs(temp.x) > 1 || Math.abs(temp.y) > 1;
+    if (!marker.hidden) {
+      marker.style.left = (temp.x + 1) * 50 + '%';
+      marker.style.top = (1 - temp.y) * 50 + '%';
+    }
+    marker.classList.toggle('on-target', actual.hit?.team === 'enemy' && actual.hit.visible);
+    el('hud').classList.toggle('scoped', look.scoped);
+    const info = el('sight-mode'),
+      text = [look.scoped ? 'ОПТИКА ×' + look.zoom : '', g.holdTurret ? 'ОБЗОР' : autoTarget ? 'АВТО' : '']
+        .filter(Boolean)
+        .join(' · ');
+    if (info.textContent !== text) info.textContent = text;
+    info.hidden = !text;
+    el('scope-btn').setAttribute('aria-pressed', String(look.scoped));
+    el('autoaim-btn').setAttribute('aria-pressed', String(!!autoTarget));
+    el('zoom-btn').hidden = !look.scoped;
+    el('zoom-btn').textContent = '×' + look.zoom;
   }
-  function stamp(layer, x, h, z, w, sy, depth, yaw = 0, pitch = 0, color = null) {
+  function stamp(layer, x, h, z, w, sy, depth, yaw = 0, pitch = 0, color = null, trail = null) {
     const m = layer.mesh,
       i = m.count;
     if (i >= layer.max) return;
     transform.position.set(x, h, z);
     transform.scale.set(w, sy, depth);
-    transform.rotation.set(pitch, yaw, 0, 'YXZ');
+    if (trail) {
+      transform.rotation.set(-trail.pitch, yaw, trail.roll, 'YXZ');
+      transform.rotateX(-Math.PI / 2);
+    } else transform.rotation.set(pitch, yaw, 0, 'YXZ');
     transform.updateMatrix();
     m.setMatrixAt(i, transform.matrix);
     if (color) m.setColorAt(i, tint.set(color));
@@ -247,44 +348,72 @@ const BattleView = (() => {
   }
   function draw() {
     const g = GameState,
-      now = Date.now();
+      now = BattleClock.date();
     for (const [u, v] of avatars) {
       const distant =
-        u !== g.player && u.modelAsset.far && Math.hypot(u.x - g.player.x, u.y - g.player.y) > 87 / zoom;
+        u !== g.player && u.modelAsset.far && Math.hypot(u.x - g.player.x, u.y - g.player.y) > 87 * look.zoom;
       const lod = distant ? u.modelAsset.far : u.modelAsset;
-      v.hull.geometry = lod.hull;
+      v.root.visible = v.shade.visible = !(u === g.player && look.scoped);
+      v.hull.geometry = lod.body || lod.hull;
       v.turret.geometry = lod.turret;
       v.gun.geometry = lod.gun;
-      v.root.position.set(u.x, u.modelAsset.groundY * u.modelScale, u.y);
-      v.root.rotation.y = Math.PI / 2 - u.angle;
+      const base = bodyPoint(u, 0, u.modelAsset.groundY * u.modelScale, 0),
+        frame = bodyAxes(u);
+      v.root.position.set(base.x, base.h, base.y);
+      v.root.rotation.set(-frame.p, Math.PI / 2 - u.angle, frame.r, 'YXZ');
       v.turret.rotation.y = u.angle - u.tAngle;
-      v.gun.rotation.x = -u.aimPitch;
+      const tilt = u.suspensionPitch;
+      if (v.cradle) v.cradle.rotation.x = -tilt;
+      v.gun.rotation.x = tilt - u.aimPitch;
       const recoil = Math.max(0, 1 - (now - u.lastShot) / 140);
-      v.gun.position.z = u.modelAsset.gunPivot[2] - 0.12 * recoil;
-      v.shade.position.set(u.x - 1, 0.13, u.y + 1);
-      v.shade.rotation.y = v.root.rotation.y;
+      v.gun.position.z =
+        u.modelAsset.gunPivot[2] - (u.modelAsset.suspension || u.modelAsset.upperBox ? 0 : 0.12 * recoil);
+      v.shade.position.set(u.x, surfaceHeight(u.x, u.y) + 0.22, u.y);
+      v.shade.rotation.set(-u.groundPitch, v.root.rotation.y, u.groundRoll, 'YXZ');
+      v.shade.rotateX(-Math.PI / 2);
       if (u.dead && v.hull.material !== v.wreck) {
         v.hull.material = v.turret.material = v.gun.material = v.wreck;
+        if (v.treads) v.treads.material = v.wreck;
       }
       v.marker.visible = !u.dead && u !== g.player && (u.team !== 'enemy' || u.visible);
       if (v.marker.visible) {
-        v.marker.position.set(u.x, u.modelScale * u.modelAsset.height + 3, u.y);
+        v.marker.position.set(u.x, u.rideHeight + u.modelScale * u.modelAsset.height + 3, u.y);
         v.marker.quaternion.copy(camera.quaternion);
         v.hp.scale.set(14 * Math.max(0, u.hp / u.maxHp), 1.05, 1);
         v.hp.position.x = (v.hp.scale.x - 14) / 2;
       }
     }
-    for (const [w, obj] of world.wallViews) obj.visible = !w.destroyed;
+    world.syncBuildings();
     for (const { mesh } of Object.values(layers)) mesh.count = 0;
     for (const b of g.bullets)
       stamp(layers.shells, b.x, b.h, b.y, 1.1, 1.1, 8, Math.PI / 2 - b.a, -Math.asin(b.dh), b.color);
     for (const p of g.particles) {
       const age = 1 - p.life / p.ml,
         size = p.sz * (0.8 - age * 0.45);
-      stamp(layers.sparks, p.x, (p.h ?? 3) + age * 9, p.y, size, size * 1.1, size, 0, 0, p.color);
+      stamp(
+        layers.sparks,
+        p.x,
+        (p.h ?? surfaceHeight(p.x, p.y) + 3) + age * 9,
+        p.y,
+        size,
+        size * 1.1,
+        size,
+        0,
+        0,
+        p.color
+      );
     }
     for (const c of g.casings)
-      stamp(layers.casings, c.x, 1 + Math.sin((c.life / c.ml) * Math.PI) * 8, c.y, 1, 1, 2.3, c.rot);
+      stamp(
+        layers.casings,
+        c.x,
+        surfaceHeight(c.x, c.y) + 1 + Math.sin((c.life / c.ml) * Math.PI) * 8,
+        c.y,
+        1,
+        1,
+        2.3,
+        c.rot
+      );
     if (g.settings.showTracks)
       for (const tr of g.tracks)
         for (const sign of [-1, 1]) {
@@ -292,13 +421,15 @@ const BattleView = (() => {
           stamp(
             layers.tracks,
             tr.x - Math.sin(tr.a) * d,
-            0.16,
+            tr.h + 0.23 - Math.sin(tr.roll) * d,
             tr.y + Math.cos(tr.a) * d,
             3,
             4.3,
             1,
             Math.PI / 2 - tr.a,
-            -Math.PI / 2
+            -Math.PI / 2,
+            null,
+            tr
           );
         }
     for (const s of CombatMechanics.smokeClouds)
@@ -309,7 +440,7 @@ const BattleView = (() => {
         stamp(
           layers.clouds,
           s.x + Math.cos(a) * 18,
-          7 + age * 15 + (i % 3) * 6,
+          surfaceHeight(s.x, s.y) + 7 + age * 15 + (i % 3) * 6,
           s.y + Math.sin(a) * 18,
           43 * k,
           33 * k,
@@ -318,18 +449,29 @@ const BattleView = (() => {
         );
       }
     for (const a of CombatMechanics.artilleryStrikes)
-      if (!a.exploded) stamp(layers.strikes, a.x, 0.4, a.y, a.radius, a.radius, 1, 0, -Math.PI / 2);
+      if (!a.exploded)
+        stamp(
+          layers.strikes,
+          a.x,
+          surfaceHeight(a.x, a.y) + 0.4,
+          a.y,
+          a.radius,
+          a.radius,
+          1,
+          0,
+          -Math.PI / 2
+        );
     if (layers.weather) {
       const weather = WeatherEngine.currentWeather,
         rain = weather === 'rain',
         dust = weather === 'sandstorm';
-      const t = performance.now() * 0.001,
+      const t = BattleClock.now() * 0.001,
         plane = camera.position,
         mod = (v, n) => ((v % n) + n) % n;
       for (const [a, b, c] of weatherSeeds) {
         const x = plane.x + mod(a - plane.x + t * (dust ? 24 : rain ? -8 : 2), 330) - 165;
         const z = plane.z + mod(c - plane.z, 330) - 165,
-          h = mod(b - t * (dust ? 3 : rain ? 100 : 12), 130);
+          h = Math.max(0, g.player.rideHeight) + mod(b - t * (dust ? 3 : rain ? 100 : 12), 130);
         stamp(layers.weather, x, h, z, rain ? 0.19 : 0.65, rain ? 5 : 0.62, 0.45, 0, rain ? 0.14 : 0);
       }
     }
@@ -374,12 +516,21 @@ const BattleView = (() => {
       canvas.replaceWith(fresh);
     }
     weatherSeeds = [];
+    look = autoTarget = null;
     canvas = renderer = scene = camera = world = avatars = layers = noticeLoss = null;
   }
   // Also useful for checking a hardware/driver issue without exposing saved progress.
   function stats() {
     return renderer && avatars
       ? {
+          mode: look?.mode,
+          zoom: look?.zoom,
+          fov: camera.fov,
+          yaw: look?.yaw,
+          pitch: look?.pitch,
+          distance: look?.distance,
+          wallDistance: look?.wallDistance,
+          autoTarget: autoTarget?.id || null,
           units: avatars.size,
           triangles: renderer.info.render.triangles,
           calls: renderer.info.render.calls,
@@ -395,11 +546,15 @@ const BattleView = (() => {
     build,
     budget,
     syncCamera,
-    pointAt,
+    rotate,
+    stepPlayer,
+    toggleAutoAim,
+    toggleScope: () => look?.toggleScope(),
+    cycleZoom: () => look?.cycleZoom(),
     screenPoint,
     aim,
     draw,
-    focusDistance,
+    focusDistance: (delta) => look?.wheel(delta),
     dispose,
     stats
   };

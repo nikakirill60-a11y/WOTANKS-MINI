@@ -5,7 +5,7 @@ console.log('✨ effects.js загружен');
 GameState.casings = GameState.casings || [];
 
 // ========== НАПРАВЛЕННЫЕ ИСКРЫ ОТ ПОПАДАНИЯ/РИКОШЕТА ==========
-function sparksAdvanced(x, y, impactAngle) {
+function sparksAdvanced(x, y, impactAngle, h) {
   // Основной сноп искр летит "от брони", т.е. навстречу выстрелу
   var back = impactAngle + Math.PI;
   for (var i = 0; i < 10; i++) {
@@ -13,11 +13,11 @@ function sparksAdvanced(x, y, impactAngle) {
     var a = back + spread;
     var sp = 2 + Math.random() * 5;
     GameState.particles.push({
-      x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      x: x, y: y, h, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
       life: 12 + Math.random() * 10, ml: 20, color: Math.random() < 0.5 ? '#ffcc00' : '#fff', sz: 1.5 + Math.random() * 2
     });
   }
-  spawnParticles(x, y, '#ff8800', 3, 2, 12);
+  spawnParticles(x, y, '#ff8800', 3, 2, 12, h);
 }
 
 // ========== ЛЕТЯЩИЕ ГИЛЬЗЫ ==========

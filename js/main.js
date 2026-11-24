@@ -7,25 +7,23 @@ let battleFrame = 0,
   ticks = 0;
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-// A click (or a held round during a multi-tick frame) may precede the next draw.
-// Resolve the screen sight against this hull pose before emitting the real projectile.
+// A tap fires immediately from the current rendered barrel, not from the camera.
 function firePlayer() {
   const g = GameState,
     p = g.player;
-  if (!g.gameActive || !p || p.dead || performance.now() < p.nextShot) return;
-  BattleView.syncCamera();
-  BattleView.aim();
-  p.fire(g.curShell);
+  if (g.gameActive && BattleInput.running && p && !p.dead) p.fire(g.curShell);
 }
 function updatePlayer() {
   const g = GameState,
     p = g.player,
-    joy = g.joystickData,
-    pc = g.controlMode === 'pc';
-  const key = (code) => (g.keys[code] ? 1 : 0);
-  const forward = pc ? key('KeyW') - key('KeyS') : Math.abs(joy.dy) > 0.12 ? -joy.dy : 0;
-  const turn = pc ? key('KeyD') - key('KeyA') : Math.abs(joy.dx) > 0.12 ? joy.dx : 0;
-  TrackDrive.step(p, forward, turn, pc && (g.keys.Space || (g.keys.KeyW && g.keys.KeyS)));
+    j = g.joystickData,
+    k = g.keys,
+    mountYaw = wrapAngle(p.tAngle - p.angle);
+  const forward = Number(!!(k.KeyW || k.ArrowUp)) - Number(!!(k.KeyS || k.ArrowDown)) || -j.dy;
+  const turn = Number(!!(k.KeyD || k.ArrowRight)) - Number(!!(k.KeyA || k.ArrowLeft)) || j.dx;
+  TrackDrive.step(p, forward, turn, k.Space || ((k.KeyW || k.ArrowUp) && (k.KeyS || k.ArrowDown)));
+  BattleInput.consumeLook();
+  BattleView.stepPlayer(1 / 60, mountYaw);
   if (g.mouseDown || g.mobileFireActive) firePlayer();
   if (p.isMoving && ++p.engineTick % 8 === 0) {
     smoke(p.x - 14 * Math.cos(p.angle), p.y - 14 * Math.sin(p.angle));
@@ -36,7 +34,7 @@ function damageUnit(b, u, part) {
   const { dmg, zone } = resolveHit(b, u, part);
   if (!dmg) {
     BotAI.onBlockedHit(b.shooter, u);
-    sparks(b.x, b.y);
+    sparks(b.x, b.y, b.h);
     snd('rico');
     if (b.shooter === GameState.player) {
       combatMessage('Не пробито: ' + (part === 'turret' ? 'башня' : 'корпус'), '#eabb70');
@@ -45,11 +43,12 @@ function damageUnit(b, u, part) {
   }
   const dealt = Math.min(u.hp, dmg);
   u.hp = Math.max(0, u.hp - dmg);
-  sparksAdvanced(b.x, b.y, b.a);
+  sparksAdvanced(b.x, b.y, b.a, b.h);
   snd('hit');
   if (!u.trackBroken && Math.random() < 0.1) {
     u.trackBroken = true;
-    if (u === GameState.player) combatMessage('Повреждена гусеница', '#f28b68');
+    u.trackRepairAt = BattleClock.date() + 7000;
+    if (u === GameState.player) combatMessage('Сбита гусеница · ремонт 7 с', '#f28b68');
   }
   if (b.shooter === GameState.player) {
     GameState.battleDmg += dealt;
@@ -59,16 +58,38 @@ function damageUnit(b, u, part) {
     dmgLog('−' + Math.ceil(dealt), '#ffa78b');
     onPlayerHit(b.a, dealt);
   }
-  if (u.hp > 0) return;
+  const hitAngle = b.a - u.angle;
+  u.pitchVel += 0.06 * Math.cos(hitAngle);
+  u.rollVel -= 0.06 * Math.sin(hitAngle);
+  finishUnit(u, b.shooter);
+}
+function finishUnit(u, source) {
+  if (u.hp > 0 || u.dead) return;
   u.dead = true;
   boom(u.x, u.y);
   snd('boom');
-  if (b.shooter === GameState.player) {
+  if (source === GameState.player && u.team === 'enemy') {
     GameState.XP += u.tier * 500;
     GameState.battleKills++;
     combatMessage('Цель уничтожена', '#ffe3ae');
   }
   updateScoreboard();
+}
+function motionDamage(u, amount, source) {
+  if (u.dead || amount <= 0) return;
+  const lost = Math.min(amount, u.hp);
+  u.hp -= lost;
+  if (source === GameState.player && u.team === 'enemy') {
+    GameState.battleDmg += lost;
+    dmgLog('Таран · −' + Math.ceil(lost), '#ffd38a');
+  }
+  if (u === GameState.player)
+    dmgLog((source ? 'Столкновение' : 'Падение') + ' · −' + Math.ceil(lost), '#ffa78b');
+  finishUnit(u, source);
+}
+function ramContact(a, b, lossA, lossB) {
+  motionDamage(a, lossA, b);
+  motionDamage(b, lossB, a);
 }
 function updateBullets() {
   for (let i = GameState.bullets.length - 1; i >= 0; i--) {
@@ -91,26 +112,38 @@ function updateBullets() {
 function update() {
   const g = GameState,
     p = g.player,
-    now = Date.now();
+    now = BattleClock.date();
   ticks++;
-  BotAI.beginTick(g.navigation);
   if (g.adrenalineActive && now > g.adrenalineTimer) g.adrenalineActive = false;
   if (g.fuelBoostActive && now > g.fuelBoostTimer) g.fuelBoostActive = false;
-  // Spot once per team, not again inside every bot's target search (20 units at 60 Hz).
+  // Spot once per team, not again inside every bot's target search (up to 30 units at 60 Hz).
   if (ticks === 1 || ticks % 6 === 0)
     for (const u of g.units) {
       u.spotted = g.training || teamSees(u, u.team === 'enemy' ? 'player' : 'enemy');
       u.visible = u.team !== 'enemy' || u.spotted;
     }
+  BotAI.beginTick(g.navigation, ticks);
   for (const u of g.units) {
     if (u.dead) continue;
-    u.updateReload(performance.now());
+    u.updateReload(BattleClock.now());
     u.justFired = now < u.fireTimer;
     if (u === p) updatePlayer();
     else BotAI.step(u, ticks);
+    if (u.landingSpeed > 7)
+      motionDamage(u, Math.round((u.landingSpeed - 7) ** 2 * TrackDrive.profile(u).mass * 0.35), null);
+    u.landingSpeed = 0;
     WeatherEngine.updateWaterPhysics(u, TICK / 1000);
-    if (u.isMoving && ticks % 5 === 0 && g.settings.showTracks)
-      g.tracks.push({ x: u.x, y: u.y, a: u.angle, s: u.s, life: 130 });
+    if (u.isMoving && !u.airborne && ticks % 5 === 0 && g.settings.showTracks)
+      g.tracks.push({
+        x: u.x,
+        y: u.y,
+        h: surfaceHeight(u.x, u.y),
+        pitch: u.groundPitch,
+        roll: u.groundRoll,
+        a: u.angle,
+        s: u.s,
+        life: 130
+      });
     if (u.onFire && now - u.fireDmgTimer >= 1000) {
       u.hp = Math.max(0, u.hp - Math.floor(u.maxHp * 0.02));
       u.fireDmgTimer = now;
@@ -122,6 +155,7 @@ function update() {
       }
     }
   }
+  TrackContact.pairs(g.units, ticks, ramContact);
   updateBullets();
   CombatMechanics.update(TICK / 1000);
   for (const x of g.particles) {
@@ -142,33 +176,39 @@ function updateHUD() {
   document.getElementById('hp-text').textContent = `${hp} / ${p.maxHp} HP`;
   document.getElementById('hp-bar').style.width = clamp((p.hp / p.maxHp) * 100, 0, 100) + '%';
   document.getElementById('drive-speed').textContent = `${Math.round(p.speedKmh)} км/ч`;
-  document.getElementById('drive-surface').textContent = CONFIG.TERRAIN[p.currentTerrain].name;
+  const grade = Math.round(Math.tan(p.groundPitch) * 100);
+  document.getElementById('drive-surface').textContent =
+    CONFIG.TERRAIN[p.currentTerrain].name +
+    (p.airborne ? ' · в воздухе' : Math.abs(grade) >= 2 ? ' · ' + (grade > 0 ? '+' : '') + grade + '%' : '');
   ammo.textContent =
     (p.usesMagazine
       ? `${magazineName(DB[p.id]).toUpperCase()} ${p.curMag}/${p.magSize}`
       : CONFIG.SHELLS[g.curShell].name) +
     '  /  ' +
     (p.isReloading
-      ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - performance.now()) / 1000).toFixed(1)} с`
+      ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - BattleClock.now()) / 1000).toFixed(1)} с`
       : 'ГОТОВ');
   const water = document.getElementById('water-warning');
   water.hidden = p.drownTimer == null || p.dead;
   if (!water.hidden) water.textContent = `Глубокая вода · до затопления ${Math.ceil(p.drownTimer)} с`;
   MapChart.drawHUD(minimap, mCtx, g);
 }
-function startBattleLoop() {
-  stopBattleLoop();
+function resetFrameTime() {
   lastFrame = null;
   accumulated = 0;
+}
+function startBattleLoop() {
+  stopBattleLoop();
+  resetFrameTime();
   ticks = 0;
   function frame(now) {
     if (!GameState.gameActive) return;
     if (!document.hidden) {
       // Use RAF timestamps for both ends. The first callback can belong to the frame
       // that started a long WebGL upload and predate performance.now() at launch.
-      const dt = lastFrame === null ? TICK : clamp(now - lastFrame, 0, 150);
+      const dt = lastFrame === null ? TICK : clamp(now - lastFrame, 0, 100);
       BattleView.budget(dt);
-      accumulated += dt;
+      accumulated = BattleInput.running ? accumulated + dt : 0;
       while (accumulated >= TICK && GameState.gameActive) {
         update();
         accumulated -= TICK;
@@ -177,6 +217,7 @@ function startBattleLoop() {
       BattleView.aim();
       BattleView.draw();
       updateHUD();
+      BattleInput.refreshRoster();
       countPerfFrame();
     }
     lastFrame = now;
@@ -194,8 +235,7 @@ function init() {
   GarageViewer.init();
   MapChart.initPicker();
   updateScale();
-  setupPCControls();
-  setupMobileControls();
+  BattleInput.init();
   fillTrainNatSelect();
   fillEnemySelect();
   renderTree();

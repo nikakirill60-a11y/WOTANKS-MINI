@@ -27,7 +27,9 @@ function crossesMapRect(ax, ay, bx, by, r, pad = 0) {
 }
 
 // Covers the widest hull in the playable branch, including the collision margin (world units).
-const BOT_CLEARANCE = 32;
+// Largest measured model radius is 4.88 m (incl. its offset pivot). This also
+// keeps planned destinations inside the drivetrain's five-metre boundary stop.
+const BOT_CLEARANCE = 5 * BATTLE_UNITS_PER_METRE;
 class BattleNavigation {
   constructor(arena) {
     this.arena = arena;
@@ -39,6 +41,11 @@ class BattleNavigation {
     this.dy = (2 * this.H) / this.rows;
     this.size = this.cols * this.rows;
     this.terrain = new Float32Array(this.size);
+    this.elevation = new Float32Array(this.size);
+    for (let n = 0; n < this.size; n++) {
+      const p = this.point(n);
+      this.elevation[n] = arena.ground?.at(p.x, p.y) || 0;
+    }
     this.blocked = new Uint8Array(this.size);
     this.cost = new Float32Array(this.size);
     this.parent = new Int32Array(this.size);
@@ -52,31 +59,37 @@ class BattleNavigation {
     this.slow = this.arena.zones.filter((z) => z.type === 'mud');
     this.terrain.fill(1);
     this.blocked.fill(0);
-    for (let n = 0; n < this.size; n++) {
-      const { x, y } = this.point(n);
-      // Mark the entire cell, not just its centre: a route cannot cut through a thin wall.
-      this.blocked[n] =
-        !this.inside(x, y) ||
-        this.obstacles.some(
-          (r) =>
-            x >= r.x - BOT_CLEARANCE - this.dx / 2 &&
-            x <= r.x + r.w + BOT_CLEARANCE + this.dx / 2 &&
-            y >= r.y - BOT_CLEARANCE - this.dy / 2 &&
-            y <= r.y + r.h + BOT_CLEARANCE + this.dy / 2
+    // Rasterise each footprint once, rather than scanning every wall at every cell.
+    // An obstacle clips the WHOLE cell (half-cell margin); mud costs use its centre.
+    for (let j = 0; j < this.rows; j++)
+      for (let i = 0; i < this.cols; i++)
+        this.blocked[j * this.cols + i] = !this.inside(
+          (i + 0.5) * this.dx - this.W,
+          (j + 0.5) * this.dy - this.H
         );
-      if (this.slow.some((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h))
-        this.terrain[n] = 1.8;
-    }
+    const fill = (r, px, py, grid, value) => {
+      const left = Math.max(0, Math.ceil((r.x - px + this.W) / this.dx - 0.5));
+      const right = Math.min(this.cols - 1, Math.floor((r.x + r.w + px + this.W) / this.dx - 0.5));
+      const top = Math.max(0, Math.ceil((r.y - py + this.H) / this.dy - 0.5));
+      const bottom = Math.min(this.rows - 1, Math.floor((r.y + r.h + py + this.H) / this.dy - 0.5));
+      for (let j = top; j <= bottom; j++) grid.fill(value, j * this.cols + left, j * this.cols + right + 1);
+    };
+    for (const r of this.obstacles)
+      fill(r, BOT_CLEARANCE + this.dx / 2, BOT_CLEARANCE + this.dy / 2, this.blocked, 1);
+    for (const r of this.slow) fill(r, 0, 0, this.terrain, 1.8);
   }
+
   inside(x, y) {
     return Math.abs(x) <= this.W - BOT_CLEARANCE && Math.abs(y) <= this.H - BOT_CLEARANCE;
   }
   clear(ax, ay, bx, by) {
-    return (
-      this.inside(ax, ay) &&
-      this.inside(bx, by) &&
-      !this.obstacles.some((r) => crossesMapRect(ax, ay, bx, by, r, BOT_CLEARANCE))
-    );
+    if (!this.inside(ax, ay) || !this.inside(bx, by)) return false;
+    const a = this.cell(ax, ay),
+      b = this.cell(bx, by);
+    // A segment inside one completely walkable cell cannot intersect an inflated
+    // obstacle. This is the usual case for 29 moving NPCs' short track steps.
+    if (a === b && !this.blocked[a]) return true;
+    return !this.obstacles.some((r) => crossesMapRect(ax, ay, bx, by, r, BOT_CLEARANCE));
   }
   point(n) {
     return {
@@ -188,7 +201,8 @@ class BattleNavigation {
             (i && j && (this.blocked[n + i] || this.blocked[n + j * cols]))
           )
             continue;
-          const d = cost[n] + (i && j ? 1.4143 : 1) * this.terrain[next] + congestion[next];
+          const climb = Math.max(0, this.elevation[next] - this.elevation[n]) / this.dx;
+          const d = cost[n] + (i && j ? 1.4143 : 1) * this.terrain[next] + climb * 2.5 + congestion[next];
           if (d + 0.0001 >= cost[next]) continue;
           parent[next] = n;
           cost[next] = d;
@@ -223,17 +237,28 @@ function battleFormation(arena, nav, roster, practiceEnemy) {
     angle = Math.atan2(away.y - home.y, away.x - home.x);
   const ahead = { x: Math.cos(angle), y: Math.sin(angle) },
     across = { x: -ahead.y, y: ahead.x };
-  // Keep each spawn file on the same side as its lane, including N/S deployments.
-  const orientation =
-    Math.sign(
-      (arena.hubs[2].x - arena.hubs[0].x) * across.x + (arena.hubs[2].y - arena.hubs[0].y) * across.y
-    ) || 1;
+  // Five files of three in 15×15. Smaller teams keep their three centre lanes.
+  const middle = Math.floor(arena.hubs.length / 2),
+    lanes = [middle, middle - 1, middle + 1];
+  if (roster.length >= 15) lanes.push(0, arena.hubs.length - 1);
+  const first = arena.hubs[0],
+    last = arena.hubs.at(-1);
+  const orientation = Math.sign((last.x - first.x) * across.x + (last.y - first.y) * across.y) || 1;
+  // Give a mobile bot in each file the survey job. Same roles on mirrored sides;
+  // slot zero is the player's counterpart, never a mandatory scout.
+  const scouts = new Map();
+  const mobility = (id) => DB[id].speed + (DB[id].cls === 'lt' ? 14 : DB[id].cls === 'mt' ? 5 : 0);
+  for (let i = 1; i < roster.length; i++) {
+    const lane = lanes[i % lanes.length],
+      prior = scouts.get(lane);
+    if (prior === undefined || mobility(roster[i]) > mobility(roster[prior])) scouts.set(lane, i);
+  }
   for (let side = 0; side < 2; side++)
     for (let i = 0; i < roster.length; i++) {
-      const lane = [1, 0, 2][i % 3],
-        row = Math.floor(i / 3),
-        back = (side ? 1 : -1) * row * 83;
-      const offset = orientation * (lane - 1) * arena.spread + (row % 2 ? 37 : 0);
+      const lane = lanes[i % lanes.length],
+        row = Math.floor(i / lanes.length);
+      const back = (side ? 1 : -1) * row * 96;
+      const offset = orientation * (lane - middle) * arena.spread + (row % 2 ? 38 : 0);
       const x = arena.bases[side].x + back * ahead.x + offset * across.x,
         y = arena.bases[side].y + back * ahead.y + offset * across.y;
       const n = nav.nearest(x, y, (p) => units.every((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 >= 73 ** 2));
@@ -245,6 +270,7 @@ function battleFormation(arena, nav, roster, practiceEnemy) {
         angle: angle + side * Math.PI,
         lane,
         index: i,
+        scout: scouts.get(lane) === i,
         side
       });
     }

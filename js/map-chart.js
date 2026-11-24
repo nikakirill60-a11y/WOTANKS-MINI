@@ -26,6 +26,34 @@ const MapChart = (() => {
     c.globalAlpha = 0.68;
     c.fillRect(l.left, l.top, l.width, l.height);
     c.globalAlpha = 1;
+    // The relief tint is baked only when the static plan changes. Its bands are
+    // sampled from the same playable triangles, underneath roads and cover.
+    const f = arena.ground;
+    if (f.max > 0) {
+      const topo = document.createElement('canvas');
+      topo.width = f.cols;
+      topo.height = f.rows;
+      const ctx = topo.getContext('2d'),
+        pixels = ctx.createImageData(f.cols, f.rows),
+        out = pixels.data;
+      for (let j = 0; j < f.rows; j++)
+        for (let i = 0; i < f.cols; i++) {
+          const k = j * (f.cols + 1) + i,
+            d = (j * f.cols + i) * 4,
+            h = f.value(k, 0.5, 0.5) / BATTLE_UNITS_PER_METRE;
+          if (h <= 0) continue;
+          const sun =
+            (f.samples[k + 1] - f.samples[k]) / f.dx +
+            (0.6 * (f.samples[k + f.cols + 1] - f.samples[k])) / f.dy;
+          const band = Math.floor(h / 3) % 2;
+          out[d] = 219;
+          out[d + 1] = 214;
+          out[d + 2] = 172;
+          out[d + 3] = bounded(9 + (60 * h) / (f.max / BATTLE_UNITS_PER_METRE) + sun * 125 + band * 9, 0, 95);
+        }
+      ctx.putImageData(pixels, 0, 0);
+      c.drawImage(topo, l.left, l.top, l.width, l.height);
+    }
     function rect(r, color) {
       c.fillStyle = color;
       c.fillRect(w / 2 + r.x * l.scale, h / 2 + r.y * l.scale, r.w * l.scale, r.h * l.scale);
@@ -48,13 +76,13 @@ const MapChart = (() => {
     c.strokeStyle = '#c2cfb52b';
     c.lineWidth = 1;
     c.beginPath();
-    for (let i = 0; i <= 6; i++) {
-      const x = l.left + (i * l.width) / 6;
+    for (let i = 0; i <= BattleRecon.cols; i++) {
+      const x = l.left + (i * l.width) / BattleRecon.cols;
       c.moveTo(x, l.top);
       c.lineTo(x, l.top + l.height);
     }
-    for (let i = 0; i <= 4; i++) {
-      const y = l.top + (i * l.height) / 4;
+    for (let i = 0; i <= BattleRecon.rows; i++) {
+      const y = l.top + (i * l.height) / BattleRecon.rows;
       c.moveTo(l.left, y);
       c.lineTo(l.left + l.width, y);
     }
@@ -85,7 +113,7 @@ const MapChart = (() => {
         s = arena.spec;
       document.getElementById('map-size').textContent = s.size.join(' × ') + ' м';
       document.getElementById('map-detail').textContent = s.detail;
-      canvas.setAttribute('aria-label', 'План: ' + s.name + '. ' + s.detail);
+      canvas.setAttribute('aria-label', 'План: ' + s.name + ', ' + s.size.join(' × ') + ' м. ' + s.detail);
       paint(canvas, arena, true);
     }
     select.addEventListener('change', refresh);
@@ -108,13 +136,35 @@ const MapChart = (() => {
       cached = { img, arena: a, rev: a.revision, layout: paint(img, a, false) };
     }
     c.drawImage(cached.img, 0, 0);
-    const s = cached.layout.scale;
+    const { scale: s, left, top, width, height } = cached.layout;
+    const recon = g.navigation?.recon,
+      label = document.getElementById('recon-status');
+    label.hidden = !recon;
+    if (recon) {
+      const team = recon.teams[0],
+        dw = width / BattleRecon.cols,
+        dh = height / BattleRecon.rows;
+      const text = `Разведано: ${team.count}/${recon.total}`;
+      if (label.textContent !== text) label.textContent = text;
+      c.fillStyle = '#09151378';
+      for (let i = 0; i < team.visited.length; i++)
+        if (recon.anchors[i] && team.visited[i] < 0)
+          c.fillRect(left + (i % BattleRecon.cols) * dw, top + Math.floor(i / BattleRecon.cols) * dh, dw, dh);
+    }
+    const dot = g.units.length >= 20 && width < 140 ? 1.65 : 2.25;
     for (const u of g.units) {
       if (u === g.player || u.dead || (u.team === 'enemy' && !u.visible)) continue;
       c.fillStyle = u.team === 'enemy' ? '#ff846f' : '#81e0ca';
       c.beginPath();
-      c.arc(w / 2 + u.x * s, h / 2 + u.y * s, 2.25, 0, Math.PI * 2);
+      c.arc(w / 2 + u.x * s, h / 2 + u.y * s, dot, 0, Math.PI * 2);
       c.fill();
+      if (u.team !== 'enemy' && u.bot?.scout) {
+        c.strokeStyle = '#d6f8db';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.arc(w / 2 + u.x * s, h / 2 + u.y * s, dot + 1.2, 0, 2 * Math.PI);
+        c.stroke();
+      }
     }
     const p = g.player;
     c.save();

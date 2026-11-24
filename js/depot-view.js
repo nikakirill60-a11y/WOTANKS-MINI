@@ -1,5 +1,5 @@
-// One room for every vehicle, rendered on demand. Only mesh data crosses the
-// sandbox boundary; the original standalone model viewers never run in the depot.
+// The owned vehicle and the battlefield share the same local mesh data. The
+// depot renders on demand; standalone showcase pages are not part of the game.
 const DepotView = (() => {
   const T = THREE;
   const directions = {
@@ -154,6 +154,7 @@ const DepotView = (() => {
     for (const g of geometries) g.dispose();
   }
   function mount(host, id, asset, onLoss) {
+    if (GameState.selected !== id || !GameState.owned.includes(id)) throw new Error('Машина не выбрана в ангаре.');
     if (!renderer) open(host, onLoss);
     if (model) {
       scene.remove(model);

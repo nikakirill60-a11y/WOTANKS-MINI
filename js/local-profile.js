@@ -41,7 +41,7 @@ function setSaveStatus(message, warning) {
 
 // Only these vehicle identities have a different key in the original local saves.
 // Never infer an unlock from a tier, equipment entry or a similarly named vehicle.
-const oldTankKeys = Object.freeze({PZ2:'PZII', SP1C:'SPIC', T1CUNN:'T1C'});
+const oldTankKeys = Object.freeze({ST1:'STI', STRV21:'STRVFM21', PZ2:'PZII', SP1C:'SPIC', T1CUNN:'T1C', OB140:'OBJ140', RHMB:'RHMBWT'});
 function savedTankId(id) {
   if (typeof id !== 'string') return null;
   return Object.hasOwn(DB,id) ? id : Object.hasOwn(oldTankKeys,id) ? oldTankKeys[id] : null;
@@ -68,6 +68,7 @@ function loadProgress() {
         return canonical && (id === canonical || !Object.hasOwn(entries,canonical)) ? [[canonical,v]] : [];
       }));
     }
+    restored.settings.lookSensitivity = Math.max(.3, Math.min(2.5, restored.settings.lookSensitivity));
     restored.inventory = migrateSupplyBoxes(restored.inventory);
     Object.assign(GameState, restored);
     canSaveProgress = true;

@@ -11,6 +11,7 @@ const WeatherEngine = {
     const list = arena.spec.weather;
     this.currentWeather = list[Math.floor(Math.random() * list.length)];
     this.waterBodies = arena.water;
+    this.ground = arena.ground;
   },
 
   // 30. ЗАТОПЛЕНИЕ В ВОДЕ (Drowning Timer)
@@ -23,17 +24,15 @@ const WeatherEngine = {
         break;
       }
     }
-    if (inWater) {
-      if (tank.drownTimer == null) tank.drownTimer = 10.0;
-      tank.drownTimer -= dt;
-      if (tank.drownTimer <= 0) {
-        tank.hp = 0; // затонул
-        tank.dead = true;
-        snd('boom');
-        updateScoreboard();
-      }
-    } else {
-      tank.drownTimer = null;
+    const h = tank._placed ? tank.rideHeight : (this.ground?.at(tank.x, tank.y) ?? 0);
+    const deep = inWater && -h > (tank.modelAsset?.height ?? 2) * BATTLE_UNITS_PER_METRE * 0.62;
+    tank.submersion = deep ? (tank.submersion || 0) + dt : Math.max(0, (tank.submersion || 0) - 2 * dt);
+    tank.drownTimer = deep ? Math.max(0, 10 - tank.submersion) : null;
+    if (deep && tank.submersion >= 10) {
+      tank.hp = 0;
+      tank.dead = true;
+      snd('boom');
+      updateScoreboard();
     }
   }
 };

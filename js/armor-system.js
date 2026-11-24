@@ -16,7 +16,7 @@ function getArmorZone(bullet, target, part) {
 // прямо сейчас, с учётом активных критов.
 function getCritMultiplier(tank, type) {
   if (!tank || !tank.critTimers) return 1;
-  var now = Date.now();
+  var now = BattleClock.date();
   if (type === 'speed') {
     if (tank.critTimers.engine > now) return 1 - CONFIG.CRITICALS.engine.value;
     return 1;
@@ -34,7 +34,7 @@ function getCritMultiplier(tank, type) {
 
 function isCritActive(tank, type) {
   if (!tank || !tank.critTimers) return false;
-  return tank.critTimers[type] > Date.now();
+  return tank.critTimers[type] > BattleClock.date();
 }
 
 // ========== БРОСОК НА КРИТ ==========
@@ -47,9 +47,12 @@ function rollCritical(shooter, target) {
     var t = types[i];
     var cfg = CONFIG.CRITICALS[t];
     if (Math.random() < cfg.chance) {
-      target.critTimers[t] = Date.now() + cfg.duration;
+      // A second engine critical before the first one is repaired stalls the vehicle.
+      const stalled = t === 'engine' && isCritActive(target, 'engine');
+      if (stalled) target.engineRestartAt = BattleClock.date() + cfg.duration;
+      target.critTimers[t] = BattleClock.date() + cfg.duration;
       if (target === GameState.player) {
-        combatMessage(cfg.icon + ' ' + cfg.name + '!', '#ff4444');
+        combatMessage(cfg.icon + ' ' + (stalled ? 'Двигатель заглох' : cfg.name) + '!', '#ff4444');
       } else if (shooter === GameState.player) {
         combatMessage(cfg.icon + ' Критическое попадание!', '#f1c40f');
       }

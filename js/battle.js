@@ -45,10 +45,30 @@ function battleFailed(message) {
   battleNotice('3D-бой недоступен', message);
 }
 function startBattle(mode) {
-  return launchBattle(mode === 10 ? 10 : 7);
+  return launchBattle(mode === 15 || mode === 10 ? mode : 7);
 }
 function startTraining() {
   return launchBattle(1);
+}
+// Draw different vehicles before repeats. Deal one per nation per pass so a
+// fork with twice as many vehicles can't crowd another nation out of a 7×7.
+function makeRoster(playerId, size) {
+  const start = Math.floor(Math.random() * PLAYABLE_NATIONS.length),
+    deck = [playerId];
+  const groups = PLAYABLE_NATIONS.map((_, i) =>
+    BRANCHES[PLAYABLE_NATIONS[(start + i) % PLAYABLE_NATIONS.length]].tanks
+      .filter((t) => t.id !== playerId && Math.abs(t.tier - DB[playerId].tier) <= 1)
+      .map((t) => t.id)
+  );
+  for (let more = true; more; ) {
+    more = false;
+    for (const g of groups)
+      if (g.length) {
+        deck.push(g.splice(Math.floor(Math.random() * g.length), 1)[0]);
+        more = true;
+      }
+  }
+  return Array.from({ length: size }, (_, i) => deck[i % deck.length]);
 }
 async function launchBattle(teamSize) {
   if (GameState.gameActive || battleLaunch) return false;
@@ -65,30 +85,23 @@ async function launchBattle(teamSize) {
     const arena = BattleMaps.create(map),
       navigation = new BattleNavigation(arena);
     const playerId = g.selected;
-    // Interleave nations by tier so even a seven-vehicle side includes all three lines.
-    const pool = Object.values(DB)
-      .filter((t) => Math.abs(t.tier - DB[playerId].tier) <= 1)
-      .sort((a, b) => a.tier - b.tier)
-      .map((t) => t.id);
-    // Mirror the line-up, not the paint/position: both teams get the same models and tiers.
-    const offset = Math.floor(Math.random() * pool.length);
-    const roster = Array.from({ length: teamSize }, (_, i) =>
-      i ? pool[(offset + i - 1) % pool.length] : playerId
-    );
+    const roster = makeRoster(playerId, teamSize);
     const formation = battleFormation(
       arena,
       navigation,
       roster,
       training ? document.getElementById('enemy-select').value : null
     );
-    const assets = new Map(
+    // A large roster may need 15 different mesh files. Bound peak
+    // memory on phones; duplicate tanks still share one set of geometries.
+    const assets = new Map(),
+      ids = [...new Set(formation.map((slot) => slot.id))];
+    for (let i = 0; i < ids.length; i += 4) {
+      if (ticket.signal.aborted) return false;
       await Promise.all(
-        [...new Set(formation.map((slot) => slot.id))].map(async (id) => [
-          id,
-          await BattleModels.load(id, ticket.signal)
-        ])
-      )
-    );
+        ids.slice(i, i + 4).map(async (id) => assets.set(id, await BattleModels.load(id, ticket.signal)))
+      );
+    }
     if (ticket.signal.aborted) return false;
     g.training = training;
     g.battleDmg = g.battleKills = 0;
@@ -99,7 +112,7 @@ async function launchBattle(teamSize) {
     g.consumables = Array(6).fill(false);
     g.adrenalineActive = g.fuelBoostActive = g.paiokActive = false;
     g.shakeTimer = 0;
-    resetBattleInput();
+    BattleClock.reset();
     CombatMechanics.smokeClouds = [];
     CombatMechanics.artilleryStrikes = [];
     g.arena = arena;
@@ -107,7 +120,6 @@ async function launchBattle(teamSize) {
     g.walls = arena.walls;
     g.terrainZones = arena.zones;
     WeatherEngine.initWeatherForBattle(arena);
-    updateScale();
     g.units = formation.map((slot) => {
       const u = new Tank(
         slot.id,
@@ -118,11 +130,15 @@ async function launchBattle(teamSize) {
       );
       u.angle = u.tAngle = u.lookYaw = slot.angle;
       u.modelAsset = assets.get(slot.id);
+      TrackDrive.place(u);
       u.practiceTarget = !!slot.practice;
+      u.visible = slot.team !== 'enemy' || training;
       if (slot.team !== 'player' && !u.practiceTarget) BotAI.attach(u, slot, navigation);
       return u;
     });
     g.player = g.units[0];
+    navigation.recon?.sample(g.units, 0);
+    updateScale();
     const drum = g.player.usesMagazine;
     document.body.classList.toggle('drum-equipped', drum);
     setShell(drum ? 0 : g.curShell);
@@ -145,8 +161,8 @@ async function launchBattle(teamSize) {
     updateScoreboard();
     updateHUD();
     startPerfMonitor();
+    BattleInput.begin();
     startBattleLoop();
-    document.getElementById('game').focus({ preventScroll: true });
     return true;
   } catch (error) {
     if (!ticket.signal.aborted) battleFailed(error.message || 'Не удалось открыть поле боя.');
@@ -160,7 +176,8 @@ async function launchBattle(teamSize) {
 function endBattle(won) {
   if (!GameState.gameActive) return;
   GameState.gameActive = false;
-  resetBattleInput();
+  BattleInput.end();
+  if (tutorialPollHandle !== null) closeTutorial();
   stopPerfMonitor();
   document.getElementById('mobile-controls').classList.remove('show');
   GameState.totalBattles = (GameState.totalBattles || 0) + 1;
@@ -234,7 +251,8 @@ function backToGarage() {
   }
   GameState.gameActive = false;
   stopBattleLoop();
-  resetBattleInput();
+  BattleInput.end();
+  if (tutorialPollHandle !== null) closeTutorial();
   stopPerfMonitor();
   BattleView.dispose();
   GameState.aim = { x: 0, y: 0, h: 0 };
@@ -244,6 +262,7 @@ function backToGarage() {
   GameState.walls = [];
   GameState.terrainZones = [];
   WeatherEngine.waterBodies = [];
+  WeatherEngine.ground = null;
   MapChart.reset();
   GameState.bullets = [];
   GameState.particles = [];
@@ -269,7 +288,7 @@ function leaveBattle() {
 }
 
 // ========== ЭФФЕКТЫ ==========
-function spawnParticles(x, y, color, count, speed, life, h = 4) {
+function spawnParticles(x, y, color, count, speed, life, h = surfaceHeight(x, y) + 4) {
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2,
       s = Math.random() * speed;
@@ -294,9 +313,9 @@ function boom(x, y) {
   spawnParticles(x, y, '#333', 8, 2, 50);
 }
 
-function sparks(x, y) {
-  spawnParticles(x, y, '#ffcc00', 6, 4, 15);
-  spawnParticles(x, y, '#fff', 3, 3, 10);
+function sparks(x, y, h) {
+  spawnParticles(x, y, '#ffcc00', 6, 4, 15, h);
+  spawnParticles(x, y, '#fff', 3, 3, 10, h);
 }
 
 function smoke(x, y) {

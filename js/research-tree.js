@@ -12,7 +12,8 @@ function researchState(id) {
     return { kind: 'owned', text: id === GameState.selected ? 'Выбран для боя' : 'В ангаре' };
   if (parent && !GameState.owned.includes(parent))
     return { kind: 'locked', text: 'Сначала исследуйте ' + DB[parent].n };
-  if (t.xp === 0) return { kind: 'available', text: 'Стартовая машина · нажмите узел, чтобы получить бесплатно' };
+  if (t.xp === 0)
+    return { kind: 'available', text: 'Стартовая машина · нажмите узел, чтобы получить бесплатно' };
   if (GameState.XP < t.xp) return { kind: 'locked', text: 'Не хватает ' + xpLabel(t.xp - GameState.XP) };
   return { kind: 'available', text: 'Доступно исследование за ' + xpLabel(t.xp) };
 }
@@ -20,7 +21,8 @@ function researchState(id) {
 function showTreeCard(id) {
   treeCardId = id;
   const t = DB[id];
-  const photo = treeEl('tree-photo'), src = 'models/' + t.thumbnail;
+  const photo = treeEl('tree-photo'),
+    src = 'models/' + t.thumbnail;
   if (photo.getAttribute('src') !== src) photo.src = src;
   treeEl('tree-tier').textContent = CONFIG.TIER_ROMAN[t.tier] + ' · ' + CONFIG.TANK_CLASSES[t.cls];
   treeEl('tree-name').textContent = t.n;
@@ -33,7 +35,17 @@ function showTreeCard(id) {
     ['Лоб корпуса / башни', armorLabel(t) + ' мм'],
     ['Скорость', speedLabel(t) + ' км/ч']
   ];
-  if (t.yawArc) stats.push(['Поворот орудия', '±' + t.yawArc + '° от корпуса']);
+  if (t.yawLimits) {
+    const [right, left] = t.yawLimits;
+    stats.push([
+      'Поворот орудия',
+      !left && !right
+        ? 'Вместе с корпусом'
+        : left === -right
+          ? `±${left}° от корпуса`
+          : `${left}° влево · ${-right}° вправо`
+    ]);
+  }
   treeEl('tree-stats').replaceChildren(
     ...stats.map(([label, value]) => {
       const cell = document.createElement('div'),
@@ -45,9 +57,6 @@ function showTreeCard(id) {
       return cell;
     })
   );
-  const inspect = treeEl('tree-inspect');
-  inspect.setAttribute('aria-label', 'Осмотреть в 3D: ' + t.n);
-  inspect.onclick = () => GarageViewer.inspect(id);
 }
 
 function researchTank(id) {
@@ -82,15 +91,32 @@ function renderTree() {
   const container = treeEl('tree-container'),
     nodes = treeEl('nodes'),
     canvas = treeEl('tree-canvas');
-  const branch = BRANCHES[GameState.curNat], line = branch.tanks;
+  const branch = BRANCHES[GameState.curNat],
+    line = branch.tanks;
   treeEl('branch-number').textContent = branch.number;
   treeEl('branch-title').textContent = branch.title;
-  const width = Math.max(120, ...line.map(t=>t.n.length*8+20)),
-    height = 56,
+  const height = 84,
     gap = 36,
-    inset = 24,
-    mapHeight = 212;
-  const mapWidth = 2 * inset + line.length * (width + gap) - gap;
+    inset = 22,
+    firstRow = 36,
+    rowStep = height + 18,
+    mapHeight = firstRow + (Math.max(2, branch.routes.length) - 1) * rowStep + height + 17;
+  container.style.setProperty('--tree-height', mapHeight + 9 + 'px');
+  const ctx = canvas.getContext('2d');
+  ctx.font = getComputedStyle(nodes).getPropertyValue('--node-name-font').trim();
+  // Long tier VIII–X names should not push tier II off a small phone screen.
+  const columns = branch.routes[0].map((t) => ({
+    width: Math.max(
+      137,
+      ...line.filter((v) => v.tier === t.tier).map((v) => Math.ceil(ctx.measureText(v.n).width) + 20)
+    )
+  }));
+  let nextX = inset;
+  for (const col of columns) {
+    col.x = nextX;
+    nextX += col.width + gap;
+  }
+  const mapWidth = nextX - gap + inset;
   const map = treeEl('tree-map');
   map.style.width = mapWidth + 'px';
   map.style.height = mapHeight + 'px';
@@ -99,29 +125,34 @@ function renderTree() {
   canvas.height = Math.round(mapHeight * dpr);
   canvas.style.width = mapWidth + 'px';
   canvas.style.height = mapHeight + 'px';
-  const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  const flat = line.every(t => t.cls === line[0].cls);
-  const pos = new Map(
-    line.map((t, i) => [t.id, { x: inset + i * (width + gap), y: flat ? 89 : ({ lt: 131, mt: 94, ht: 57 }[t.cls] ?? 94) }])
-  );
+  // Routes sharing a prefix are adjacent in the catalogue. Draw each shared
+  // node once, centred over the lanes that descend from it, including later forks.
+  const pos = new Map();
+  for (const t of line) {
+    const lanes = branch.routes.flatMap((route, i) => (route[t.tier - 1] === t ? [i] : []));
+    const y = branch.routes.length === 1
+      ? ({ lt: 112, mt: 87, ht: 62 }[t.cls] ?? 87)
+      : firstRow + (lanes[0] + lanes.at(-1)) * rowStep / 2;
+    pos.set(t.id, { ...columns[t.tier - 1], y });
+  }
+  ctx.font = '11px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#acb6ab';
+  columns.forEach(({ x, width }, i) => ctx.fillText(CONFIG.TIER_ROMAN[i + 1], x + width / 2, 24));
   const focused = nodes.contains(document.activeElement) && document.activeElement.dataset.tankId;
   const buttons = line.map((t) => {
     const { id } = t,
-      { x, y } = pos.get(id),
+      { x, y, width } = pos.get(id),
       state = researchState(id),
       selected = GameState.selected === id;
     const parent = pos.get(researchParent(id));
-    ctx.font = '11px Consolas, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#acb6ab';
-    ctx.fillText(CONFIG.TIER_ROMAN[t.tier], x + width / 2, 24);
     if (parent) {
       ctx.strokeStyle =
         state.kind === 'owned' ? '#87ac82' : state.kind === 'available' ? '#c8b181' : '#66726a';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(parent.x + width, parent.y + height / 2);
+      ctx.moveTo(parent.x + parent.width, parent.y + height / 2);
       ctx.lineTo(x, y + height / 2);
       ctx.stroke();
     }
@@ -146,8 +177,19 @@ function renderTree() {
       price = document.createElement('span');
     tag.textContent = CONFIG.TIER_ROMAN[t.tier] + ' / ' + CONFIG.TANK_CLASSES[t.cls];
     name.textContent = t.n;
-    price.textContent = selected ? '✓ Для боя' : state.kind === 'owned' ? 'В ангаре' : t.xp ? xpLabel(t.xp) : 'Бесплатно';
-    button.append(tag, name, price);
+    price.textContent = selected
+      ? '✓ Для боя'
+      : state.kind === 'owned'
+        ? 'В ангаре'
+        : t.xp
+          ? xpLabel(t.xp)
+          : 'Бесплатно';
+    const img = document.createElement('img');
+    img.src = 'models/' + t.thumbnail;
+    img.alt = '';
+    img.className = 'node-tank';
+    img.draggable = false;
+    button.append(tag, img, name, price);
     button.onfocus = () => showTreeCard(id);
     button.onpointerenter = (e) => {
       if (e.pointerType === 'mouse') showTreeCard(id);
@@ -158,8 +200,11 @@ function renderTree() {
   nodes.replaceChildren(...buttons);
   // Browsing a nation does not equip its tank. A branch always opens on a card belonging to it.
   if (DB[treeCardId]?.nat !== GameState.curNat || lastTreeSelection !== GameState.selected) {
-    treeCardId = DB[GameState.selected].nat === GameState.curNat ? GameState.selected :
-      line.filter(t => GameState.owned.includes(t.id)).at(-1)?.id || line[0].id;
+    treeCardId =
+      DB[GameState.selected].nat === GameState.curNat
+        ? GameState.selected
+        : line.filter((t) => GameState.owned.includes(t.id)).sort((a, b) => b.tier - a.tier)[0]?.id ||
+          line[0].id;
   }
   lastTreeSelection = GameState.selected;
   showTreeCard(treeCardId || GameState.selected);
@@ -171,7 +216,7 @@ function renderTree() {
   ])
     treeEl('tree-' + key).onclick = () => {
       container.scrollBy({
-        left: sign * Math.max(width + gap, container.clientWidth - width - gap),
+        left: sign * Math.max(columns[0].width + gap, container.clientWidth - columns[0].width - gap),
         behavior: 'instant'
       });
       updateTreeNav();

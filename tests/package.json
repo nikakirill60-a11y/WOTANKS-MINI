@@ -1,0 +1,6 @@
+{
+  "name": "city-tanks-browser-checks",
+  "private": true,
+  "scripts": { "test": "node --test" },
+  "devDependencies": { "playwright-core": "1.55.1" }
+}

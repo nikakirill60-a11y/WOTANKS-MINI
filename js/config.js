@@ -4,15 +4,10 @@
 const CONFIG = {
   TIER_ROMAN: ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"],
   SHELLS: [
-    { name: 'ББ', sMul: 1, dMul: 1, color: '#f1c40f', rico: true },
-    { name: 'ОФ', sMul: 0.6, dMul: 1.5, color: '#e74c3c', rico: false },
-    { name: 'Подкал', sMul: 1.6, dMul: 0.75, color: '#3498db', rico: true }
+    { name: 'ББ', sMul: 1, dMul: 1, penMul: 1, color: '#f1c40f', rico: true },
+    { name: 'ОФ', sMul: 0.6, dMul: 1.5, penMul: 0.55, color: '#e74c3c', rico: false },
+    { name: 'Подкал', sMul: 1.6, dMul: 0.75, penMul: 1.3, color: '#3498db', rico: true }
   ],
-  CREW_MESSAGES: {
-    HIT: ["Есть пробитие!", "Цель поражена!", "Попали!"],
-    RICO: ["Рикошет!", "Не пробили!"],
-    KILL: ["Враг уничтожен!", "Цель уничтожена!"]
-  },
   NATIONS: {
     ussr: 'СССР',
     germany: 'Германия',
@@ -21,18 +16,14 @@ const CONFIG = {
     japan: 'Япония',
     china: 'Китай',
     france: 'Франция',
-    european: 'Сборная Европы'
+    sweden: 'Швеция'
   },
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
   PROMOCODES: {
-    "BETA_TEST": { tank: "KV220BT" },
+    "BETA_TEST": { gold: 500 },
     "START2025": { gold: 100, silver: 5000 },
     "TANKS": { xp: 1000 },
-    "MAUS": { gold: 5000, xp: 10000, silver: 50000 },
-    "WT220": { rentalTank: "WT_E220", rentalBattles: 1 },
-    "BLITZ220": { rentalTank: "WT_E220", rentalBattles: 1 },
-    "VONKRIEGER": { rentalTank: "WT_E220", rentalBattles: 1 },
-    "E220": { rentalTank: "WT_E220", rentalBattles: 1 }
+    "MAUS": { gold: 5000, xp: 10000, silver: 50000 }
   },
   MODULES: {
     rammer: { name: "Досылатель", desc: "Перезарядка -10%", icon: "🔧", cost: 5000, stat: 'reload', value: -0.1 },
@@ -45,12 +36,12 @@ const CONFIG = {
     armor_plate: { name: "Допброня", desc: "Броня +20%", icon: "🪨", cost: 8000, stat: 'armor', value: 0.2 }
   },
   CONSUMABLES: [
-    { name: "Ремкомплект", shortName: "РЕМ", key: "4", icon: "🔧", cost: 500, desc: "Чинит гусеницу" },
-    { name: "Аптечка", shortName: "АПТ", key: "5", icon: "💊", cost: 500, desc: "+15% ХП" },
-    { name: "Адреналин", shortName: "АДР", key: "6", icon: "💉", cost: 500, desc: "Ускорение перезарядки 10сек" },
-    { name: "Огнетушитель", shortName: "ОГН", key: "7", icon: "🧯", cost: 600, desc: "Снимает горение, +5% ХП" },
-    { name: "Доп.паёк", shortName: "ПАЁ", key: "8", icon: "🍫", cost: 800, desc: "+5% урон на весь бой" },
-    { name: "Топливо 105", shortName: "ТОП", key: "9", icon: "⛽", cost: 700, desc: "+15% скорость на 15сек" }
+    { name: "Ремкомплект", shortName: "РЕМ", key: "5/Q", icon: "🔧", cost: 500, desc: "Чинит гусеницу и двигатель" },
+    { name: "Аптечка", shortName: "АПТ", key: "4", icon: "💊", cost: 500, desc: "+15% ХП" },
+    { name: "Адреналин", shortName: "АДР", key: "R", icon: "💉", cost: 500, desc: "Ускорение перезарядки 10сек" },
+    { name: "Огнетушитель", shortName: "ОГН", key: "6/F", icon: "🧯", cost: 600, desc: "Снимает горение, +5% ХП" },
+    { name: "Доп.паёк", shortName: "ПАЁ", key: "9", icon: "🍫", cost: 800, desc: "+5% урон на весь бой" },
+    { name: "Топливо 105", shortName: "ТОП", key: "0", icon: "⛽", cost: 700, desc: "+15% скорость на 15сек" }
   ],
   BOOSTERS: {
     xp: { name: "Бустер опыта x2", icon: "⭐", color: "#3498db", multiplier: 2, costGold: 100 },
@@ -80,18 +71,23 @@ const CONFIG = {
   },
 
   // ========== ФИЗИКА ЛАНДШАФТА ==========
+  // Rolling/steering resistance and the fraction of lateral slip removed per 60 Hz step.
   TERRAIN: {
-    normal:  { name: "Грунт",   speedMul: 1,    turnMul: 1,    drift: 0,    color: null },
-    mud:     { name: "Грязь",   speedMul: 0.55, turnMul: 0.7,  drift: 0,    color: '#3a2e1a' },
-    ice:     { name: "Лёд",     speedMul: 1.05, turnMul: 1.35, drift: 0.35, color: '#bcdfe8' },
-    asphalt: { name: "Асфальт", speedMul: 1.25, turnMul: 1.1,  drift: 0,    color: '#444448' }
+    normal:  { name: 'Грунт',        speedMul: 1,    resistance: 1,    grip: .29 },
+    trail:   { name: 'Просёлок',     speedMul: 1,    resistance: .92,  grip: .30 },
+    sand:    { name: 'Рыхлый песок', speedMul: .85,  resistance: 1.5,  grip: .22 },
+    gravel:  { name: 'Щебень',       speedMul: .96,  resistance: 1.1,  grip: .24 },
+    stubble: { name: 'Стерня',       speedMul: .94,  resistance: 1.18, grip: .27 },
+    mud:     { name: 'Грязь',        speedMul: .55,  resistance: 1.85, grip: .33 },
+    ice:     { name: 'Лёд',          speedMul: 1.05, resistance: 1.12, grip: .026 },
+    asphalt: { name: 'Асфальт',      speedMul: 1,    resistance: .78,  grip: .52 }
   },
 
   // ========== КРИТИЧЕСКИЕ ПОВРЕЖДЕНИЯ МОДУЛЕЙ ==========
   CRITICALS: {
     engine:  { name: "Двигатель повреждён", icon: "⚙️", chance: 0.12, duration: 12000, effect: 'speed', value: 0.5 },
     ammo:    { name: "Боеукладка повреждена", icon: "💥", chance: 0.08, duration: 10000, effect: 'reload', value: 0.6 },
-    gunner:  { name: "Наводчик ранен", icon: "🎯", chance: 0.10, duration: 15000, effect: 'spread', value: 0.8 }
+    gun:     { name: "Орудие повреждено", icon: "🎯", chance: 0.10, duration: 15000, effect: 'dmg', value: 0.8 }
   },
 
   // ========== БРОНЕЗОНЫ ==========
@@ -99,105 +95,71 @@ const CONFIG = {
     front: { mul: 1.0,  label: "лоб" },
     side:  { mul: 0.55, label: "борт" },
     rear:  { mul: 0.3,  label: "корма" }
-  },
-
-  // ========== КАМУФЛЯЖИ ==========
-  CAMOS: {
-    forest:  { name: "Лесной",     icon: "🌲", cost: 2000, currency: 'silver', camoBonus: 0.02, color: '#2d5a1e' },
-    desert_c:{ name: "Пустынный",  icon: "🏜️", cost: 2000, currency: 'silver', camoBonus: 0.02, color: '#c2a645' },
-    urban:   { name: "Городской",  icon: "🏙️", cost: 2500, currency: 'silver', camoBonus: 0.02, color: '#5a5a5a' },
-    winter:  { name: "Зимний",     icon: "❄️", cost: 2500, currency: 'silver', camoBonus: 0.02, color: '#dfeaf0' },
-    tiger:   { name: "Тигровый",   icon: "🐯", cost: 150,  currency: 'gold',   camoBonus: 0.02, color: '#e0a030' },
-    golden:  { name: "Золотой",    icon: "✨", cost: 500,  currency: 'gold',   camoBonus: 0.02, color: '#f1c40f' }
-  },
-
-  // ========== ЭКИПАЖ И ПЕРКИ ==========
-  CREW_ROLES: ['commander', 'driver', 'gunner'],
-  CREW_XP_PER_LEVEL: 500,
-  CREW_MAX_LEVEL: 10,
-  CREW_PERKS: {
-    sixth_sense:  { name: "Шестое чувство", desc: "Лампочка при обнаружении танка врагом", icon: "💡", role: 'commander', reqLevel: 3, cost: 1 },
-    eagle_eye:    { name: "Орлиный глаз",   desc: "Обзор +5%", icon: "🦅", role: 'commander', reqLevel: 6, cost: 1, stat: 'vr', value: 0.05 },
-    smooth_ride:  { name: "Плавный ход",    desc: "Устойчивость на разбитой местности +10%", icon: "🛞", role: 'driver', reqLevel: 3, cost: 1, stat: 'stability', value: 0.1 },
-    offroad:      { name: "Король бездорожья", desc: "Штраф грязи/льда снижен на 15%", icon: "🚜", role: 'driver', reqLevel: 6, cost: 1, stat: 'terrainRes', value: 0.15 },
-    steady_hand:  { name: "Твёрдая рука",   desc: "Разброс при движении -8%", icon: "✋", role: 'gunner', reqLevel: 3, cost: 1, stat: 'accuracyMoving', value: 0.08 },
-    deadeye:      { name: "Снайпер",        desc: "Шанс крит. повреждения модулей врага +5%", icon: "🎯", role: 'gunner', reqLevel: 6, cost: 1, stat: 'critChance', value: 0.05 }
-  },
-
-  // ========== ЧЕРТЕЖИ ==========
-  BLUEPRINTS_PER_TANK: 10,
-  BLUEPRINT_DISCOUNT_PER_FRAGMENT: 0.1,
-
-  // ========== БОЕВОЙ ПРОПУСК ==========
-  BATTLE_PASS: {
-    maxLevel: 30,
-    xpPerLevel: 1000,
-    premiumCostGold: 2500,
-    seasonName: "Сезонный",
-    premiumTankLevels: {
-      1:  { id: 'BP_PZ2D',  name: "Pz.Kpfw. II Ausf. D", tier: 2 },
-      15: { id: 'BP_T34E',  name: "Т-34 экранированный", tier: 5 },
-      30: { id: 'BP_E75TS', name: "E 75 TS",             tier: 8 }
-    }
-  },
-
-  // ========== РЕФЕРАЛЬНАЯ ПРОГРАММА ==========
-  REFERRAL: {
-    bonusForInviter: { silver: 5000, gold: 50 },
-    bonusForNewbie: { silver: 3000 },
-    milestoneRewards: {
-      5:  { gold: 100 },
-      10: { gold: 250 },
-      25: { gold: 750 }
-    }
-  },
-
-  // ========== РЫНОК ==========
-  MARKETPLACE: {
-    minBattlesToSellTank: 100,
-    feePercent: 0.1
   }
 };
 
-// ========== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ИГРЫ ==========
+// Только эти поля переживают перезапуск. Бой, снаряды и ввод остаются в памяти.
+function initialProgress() {
+  return {
+    XP: 500, GOLD: 0, SILVER: 5000, charges: 0,
+    owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
+    usedPromos: [],
+    inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
+    modules: {}, upgrades: {}, upgradesBought: {},
+    totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,
+    loginCalendar: { claimedDays: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
+  };
+}
+
+// Only battle timers stop in the controls menu. Calendar, saves, FPS and the
+// hangar still use real time. Preserve the two original deadline time bases.
+const BattleClock = {
+  reset() {
+    this.at = this.dateAt = null;
+    this.skip = this.dateSkip = 0;
+  },
+  pause() {
+    if (this.at !== null) return;
+    this.at = performance.now();
+    this.dateAt = Date.now();
+  },
+  resume() {
+    if (this.at === null) return;
+    this.skip += performance.now() - this.at;
+    this.dateSkip += Date.now() - this.dateAt;
+    this.at = this.dateAt = null;
+  },
+  now() { return (this.at ?? performance.now()) - this.skip; },
+  date() { return (this.dateAt ?? Date.now()) - this.dateSkip; }
+};
+BattleClock.reset();
+
 const GameState = {
-  // Ресурсы
-  XP: 500,
-  GOLD: 0,
-  SILVER: 5000,
-  charges: 0,
-  
-  // Танки
-  owned: ["T26", "PZ2", "T1CUNN", "CRUS2", "RENOTSU", "VAEB", "R35", "STRV21"],
-  selected: "T26",
-  curNat: "ussr",
-  rentalTanks: {},
-  
+  ...initialProgress(),
   // Состояние игры
   gameActive: false,
-  waffentragerMode: false,
   controlMode: 'pc',
   pendingBattle: null,
-  
+
   // Игрок и юниты
   player: null,
   units: [],
+  arena: null, navigation: null, terrainZones: [],
   bullets: [],
   walls: [],
   particles: [],
   tracks: [],
-  
+
   // Камера
-  cam: { x: 0, y: 0 },
+  aim: { x: 0, y: 0 },
   shakeTimer: 0,
   shakeIntensity: 0,
-  
+
   // Бой
   curShell: 0,
-  curMap: 'city',
   battleDmg: 0,
   battleKills: 0,
-  
+
   // Расходники
   consumables: [false, false, false, false, false, false],
   adrenalineActive: false,
@@ -205,92 +167,27 @@ const GameState = {
   fuelBoostActive: false,
   fuelBoostTimer: 0,
   paiokActive: false,
-  
+
   // Управление
   keys: {},
-  mouse: { x: 0, y: 0 },
-  mouseDown: false,
-  joystickData: { active: false, dx: 0, dy: 0, angle: 0, mag: 0 },
-  mobileFireActive: false,
-  
-  // Прогресс
-  usedPromos: [],
-  quest23: { active: true, kills: 0, target: 15, claimed: false },
-  inventory: {},
-  boosters: { xp: 0, gold: 0, silver: 0 },
-  boosterStock: { xp: 0, gold: 0, silver: 0 },
-  modules: {},
-  upgrades: {},
-  upgradesBought: {},
-  
-  // ✅ МУЛЬТИПЛЕЕР (ВАЖНО!)
-  multiplayerMode: false,
-  currentRoomId: null,
-  multiplayerEnemies: [],
-  multiplayerAllies: [],
-  otherPlayers: {},
-
-  // Общая статистика (нужна рынку: 100 боёв для продажи коллекционных танков)
-  totalBattles: 0,
-
-  // Камуфляжи: { camoId: true } куплены, equippedCamo: { tankId: camoId }
-  camos: {},
-  equippedCamo: {},
-
-  // Экипаж: { tankId: { commander:{xp,level,perks:[]}, driver:{...}, gunner:{...} } }
-  crew: {},
-
-  // Чертежи: { tankId: fragmentsCount }
-  blueprints: {},
-
-  // Коллекционные бонусы, которые уже выданы (чтобы не дублировать)
-  collectionBonusesClaimed: [],
-
-  // Боевой пропуск
-  battlePass: {
-    season: 1,
-    level: 1,
-    xp: 0,
-    premium: false,
-    claimedFree: [],
-    claimedPremium: []
-  },
-
-  // Реферальная программа
-  referralCode: null,
-  referredBy: null,
-  referralCount: 0,
-  referralClaimedMilestones: [],
-
-  // Рынок
-  marketBattlesCache: 0,
-
-  // Новости
-  newsLastSeenId: 0
+  mouseDown: false, holdTurret: false,
+  joystickData: { active: false, dx: 0, dy: 0, mag: 0 },
+  mobileFireActive: false
 };
 
 // ========== МАСШТАБ ==========
-let nodeScale = 1;
-
 function updateScale() {
   const w = window.innerWidth;
-  nodeScale = w < 400 ? 0.65 : w < 600 ? 0.75 : w < 900 ? 0.85 : w < 1200 ? 0.95 : 1;
-  
+
   const mm = document.getElementById('minimap');
   if (mm) {
-    const sz = Math.min(Math.max(w * 0.12, 80), 180);
+    const large = GameState.units.length === 30;
+    const sz = Math.round(large ? Math.min(208, Math.max(112, w * .14)) : Math.min(180, Math.max(86, w * .12)));
+    const b = GameState.arena?.bounds;
     mm.width = sz;
-    mm.height = sz;
+    mm.height = Math.round(8 + (sz-8)*(b ? b.y/b.x : .72));
     mm.style.width = sz + 'px';
-    mm.style.height = sz + 'px';
-  }
-  
-  const tc = document.getElementById('tree-canvas');
-  if (tc) {
-    tc.width = 2200 * nodeScale;
-    tc.height = 1400 * nodeScale;
-    tc.style.width = (2200 * nodeScale) + 'px';
-    tc.style.height = (1400 * nodeScale) + 'px';
+    mm.style.height = 'auto';
   }
 }
 

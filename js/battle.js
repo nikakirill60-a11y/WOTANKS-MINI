@@ -1,32 +1,8 @@
-// js/battle.js
-// ========== НАСТРОЙКА КАРТЫ ==========
-function setupWalls(mt) {
-  GameState.walls = [];
-  if (mt === 'city') {
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        const bhp = 400 + Math.floor(Math.random() * 300);
-        GameState.walls.push({ x: -400 + c * 500, y: -1000 + r * 500, w: 100, h: 100, type: 'building', color: '#3a3a3a', hp: bhp, maxHp: bhp });
-      }
-    }
-  }
-  if (mt === 'field') {
-    for (let i = 0; i < 8; i++) {
-      GameState.walls.push({ x: -1000 + Math.random() * 2500, y: -1000 + Math.random() * 2000, w: 30 + Math.random() * 40, h: 30 + Math.random() * 40, type: 'bush', color: '#2d5a1e' });
-    }
-  }
-  if (mt === 'desert') {
-    for (let i = 0; i < 6; i++) {
-      GameState.walls.push({ x: -600 + Math.random() * 2000, y: -600 + Math.random() * 1200, w: 80 + Math.random() * 60, h: 20, type: 'dune', color: '#c2a645' });
-    }
-  }
-}
-
 // ========== БОНУСЫ ==========
 function getModBonuses(tankId) {
   const mods = GameState.modules[tankId] || [null, null, null];
   const b = { hp: 0, dmg: 0, vr: 0, camo: 0, reload: 0, shell_speed: 0, speed: 0, armor: 0 };
-  mods.forEach(m => {
+  mods.forEach((m) => {
     if (m && CONFIG.MODULES[m]) {
       const mod = CONFIG.MODULES[m];
       b[mod.stat] = (b[mod.stat] || 0) + mod.value;
@@ -41,9 +17,11 @@ function getUpgradeBonuses(tankId) {
   const eng = CONFIG.UPGRADES.engine[u.engine] || CONFIG.UPGRADES.engine[0];
   const tur = CONFIG.UPGRADES.turret[u.turret] || CONFIG.UPGRADES.turret[0];
   return {
-    dmgMul: gun.dmgMul, reloadMul: gun.reloadMul,
+    dmgMul: gun.dmgMul,
+    reloadMul: gun.reloadMul,
     speedMul: eng.speedMul,
-    hpMul: tur.hpMul, vrMul: tur.vrMul
+    hpMul: tur.hpMul,
+    vrMul: tur.vrMul
   };
 }
 
@@ -54,250 +32,277 @@ function getAllBonuses(tankId) {
   };
 }
 
-// ========== НАЧАЛО БОЯ ==========
-function startBattle(mode) {
-  console.log('🎮 startBattle вызвана, mode:', mode);
-  console.log('🌐 multiplayerMode:', GameState.multiplayerMode);
-  
-  GameState.gameActive = true;
-  GameState.battleDmg = 0;
-  GameState.battleKills = 0;
-  GameState.curMap = document.getElementById('map-select').value;
-  GameState.consumables = [false, false, false, false, false, false];
-  GameState.adrenalineActive = false;
-  GameState.fuelBoostActive = false;
-  GameState.paiokActive = false;
-  
-  document.querySelectorAll('.cons-btn').forEach(b => { b.classList.remove('used'); b.classList.add('ready'); });
-  document.querySelectorAll('.m-cons').forEach(b => b.classList.remove('used'));
-  
-  document.getElementById('ui').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  document.getElementById('result-screen').classList.remove('show');
-  
-  if (GameState.controlMode === 'mobile') {
-    document.getElementById('mobile-controls').classList.add('show');
-  } else {
-    document.getElementById('mobile-controls').classList.remove('show');
-  }
-  startPerfMonitor();
-
-  const bonuses = getAllBonuses(GameState.selected);
-  GameState.player = new Tank(GameState.selected, -1500, 0, 'player', bonuses);
-  GameState.units = [GameState.player];
-  GameState.bullets = [];
-  GameState.particles = [];
-  GameState.tracks = [];
-  
-  setupWalls(GameState.curMap);
-  setupTerrain(GameState.curMap);
-
-  if (typeof WeatherEngine !== 'undefined' && WeatherEngine.initWeatherForBattle) {
-    WeatherEngine.initWeatherForBattle(GameState.curMap);
-  }
-  if (typeof CombatMechanics !== 'undefined' && CombatMechanics.setupFuelBarrels) {
-    CombatMechanics.setupFuelBarrels(GameState.curMap);
-  }
-
-  // ✅ ПРОВЕРКА МУЛЬТИПЛЕЕРА
-  if (GameState.multiplayerMode) {
-    console.log('🌐 МУЛЬТИПЛЕЕР БОЙ!');
-    console.log('👥 Враги:', GameState.multiplayerEnemies);
-    console.log('👥 Союзники:', GameState.multiplayerAllies);
-    console.log('👥 Другие игроки:', Object.keys(GameState.otherPlayers));
-    console.log('👥 Всего юнитов:', GameState.units.length);
-    
-    // Добавляем других игроков
-    for (const name in GameState.otherPlayers) {
-      const tank = GameState.otherPlayers[name];
-      if (!GameState.units.includes(tank)) {
-        GameState.units.push(tank);
-        console.log('➕ Добавлен:', name);
-      }
-    }
-    
-    console.log('👥 Итогово юнитов:', GameState.units.length);
-    updateScoreboard();
-    
-    if (GameState.currentRoomId) {
-      syncPlayerPositions(GameState.currentRoomId);
-      syncPlayerShots(GameState.currentRoomId);
-    }
-    return;
-  }
-
-  // Обычный бой с ботами
-  console.log('🤖 Обычный бой с ботами');
-  const pt = GameState.player.tier;
-  const valid = Object.keys(DB).filter(id => Math.abs(DB[id].tier - pt) <= 1 && !DB[id].collection);
-  
-  for (let i = 0; i < mode - 1; i++) {
-    const id = valid[Math.floor(Math.random() * valid.length)];
-    GameState.units.push(new Tank(id, -1400 + Math.random() * 200, -500 + Math.random() * 1000, 'ally'));
-  }
-  
-  for (let i = 0; i < mode; i++) {
-    const id = valid[Math.floor(Math.random() * valid.length)];
-    const e = new Tank(id, 1200 + Math.random() * 600, -500 + Math.random() * 1000, 'enemy');
-    e.angle = Math.PI;
-    GameState.units.push(e);
-  }
-  
-  updateScoreboard();
+// The notice covers loading and recoverable failures. A cancelled/failed sortie never
+// starts simulation, spends a booster or runs the end-of-match reward hooks.
+let battleLaunch = null;
+function battleNotice(title, text) {
+  document.getElementById('battle-notice-title').textContent = title;
+  document.getElementById('battle-notice-text').textContent = text;
+  document.getElementById('battle-notice').hidden = false;
 }
-
-// ========== ТРЕНИРОВКА ==========
+function battleFailed(message) {
+  backToGarage();
+  battleNotice('3D-бой недоступен', message);
+}
+function startBattle(mode) {
+  return launchBattle(mode === 15 || mode === 10 ? mode : 7);
+}
 function startTraining() {
-  GameState.gameActive = true;
-  GameState.battleDmg = 0;
-  GameState.battleKills = 0;
-  GameState.curMap = document.getElementById('map-select').value;
-  GameState.consumables = [false, false, false, false, false, false];
-  
-  document.querySelectorAll('.cons-btn').forEach(b => { b.classList.remove('used'); b.classList.add('ready'); });
-  document.querySelectorAll('.m-cons').forEach(b => b.classList.remove('used'));
-  
-  const eid = document.getElementById('enemy-select').value;
-  document.getElementById('ui').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  document.getElementById('result-screen').classList.remove('show');
-  startPerfMonitor();
-  
-  if (GameState.controlMode === 'mobile') {
-    document.getElementById('mobile-controls').classList.add('show');
-  } else {
-    document.getElementById('mobile-controls').classList.remove('show');
+  return launchBattle(1);
+}
+// Draw different vehicles before repeats. Deal one per nation per pass so a
+// fork with twice as many vehicles can't crowd another nation out of a 7×7.
+function makeRoster(playerId, size) {
+  const start = Math.floor(Math.random() * PLAYABLE_NATIONS.length),
+    deck = [playerId];
+  const groups = PLAYABLE_NATIONS.map((_, i) =>
+    BRANCHES[PLAYABLE_NATIONS[(start + i) % PLAYABLE_NATIONS.length]].tanks
+      .filter((t) => t.id !== playerId && Math.abs(t.tier - DB[playerId].tier) <= 1)
+      .map((t) => t.id)
+  );
+  for (let more = true; more; ) {
+    more = false;
+    for (const g of groups)
+      if (g.length) {
+        deck.push(g.splice(Math.floor(Math.random() * g.length), 1)[0]);
+        more = true;
+      }
   }
-
-  const bonuses = getAllBonuses(GameState.selected);
-  GameState.player = new Tank(GameState.selected, -500, 0, 'player', bonuses);
-  const enemy = new Tank(eid, 500, 0, 'enemy');
-  enemy.angle = Math.PI;
-  
-  GameState.units = [GameState.player, enemy];
-  GameState.bullets = [];
-  GameState.particles = [];
-  GameState.tracks = [];
-  
-  setupWalls(GameState.curMap);
-  setupTerrain(GameState.curMap);
-  updateScoreboard();
+  return Array.from({ length: size }, (_, i) => deck[i % deck.length]);
+}
+async function launchBattle(teamSize) {
+  if (GameState.gameActive || battleLaunch) return false;
+  const ticket = (battleLaunch = new AbortController());
+  GarageViewer.suspend();
+  battleNotice('Выезд на позицию', 'Готовим модели и местность…');
+  try {
+    BattleView.open(() =>
+      battleFailed('Графический контекст потерян. Вернитесь в ангар и запустите бой снова.')
+    );
+    const g = GameState,
+      training = teamSize === 1;
+    const map = document.getElementById('map-select').value;
+    const arena = BattleMaps.create(map),
+      navigation = new BattleNavigation(arena);
+    const playerId = g.selected;
+    const roster = makeRoster(playerId, teamSize);
+    const formation = battleFormation(
+      arena,
+      navigation,
+      roster,
+      training ? document.getElementById('enemy-select').value : null
+    );
+    // A large roster may need 15 different mesh files. Bound peak
+    // memory on phones; duplicate tanks still share one set of geometries.
+    const assets = new Map(),
+      ids = [...new Set(formation.map((slot) => slot.id))];
+    for (let i = 0; i < ids.length; i += 4) {
+      if (ticket.signal.aborted) return false;
+      await Promise.all(
+        ids.slice(i, i + 4).map(async (id) => assets.set(id, await BattleModels.load(id, ticket.signal)))
+      );
+    }
+    if (ticket.signal.aborted) return false;
+    g.training = training;
+    g.battleDmg = g.battleKills = 0;
+    g.bullets = [];
+    g.tracks = [];
+    g.particles = [];
+    g.casings = [];
+    g.consumables = Array(6).fill(false);
+    g.adrenalineActive = g.fuelBoostActive = g.paiokActive = false;
+    g.shakeTimer = 0;
+    BattleClock.reset();
+    CombatMechanics.smokeClouds = [];
+    CombatMechanics.artilleryStrikes = [];
+    g.arena = arena;
+    g.navigation = navigation;
+    g.walls = arena.walls;
+    g.terrainZones = arena.zones;
+    WeatherEngine.initWeatherForBattle(arena);
+    g.units = formation.map((slot) => {
+      const u = new Tank(
+        slot.id,
+        slot.x,
+        slot.y,
+        slot.team,
+        slot.team === 'player' ? getAllBonuses(slot.id) : null
+      );
+      u.angle = u.tAngle = u.lookYaw = slot.angle;
+      u.modelAsset = assets.get(slot.id);
+      TrackDrive.place(u);
+      u.practiceTarget = !!slot.practice;
+      u.visible = slot.team !== 'enemy' || training;
+      if (slot.team !== 'player' && !u.practiceTarget) BotAI.attach(u, slot, navigation);
+      return u;
+    });
+    g.player = g.units[0];
+    navigation.recon?.sample(g.units, 0);
+    updateScale();
+    const drum = g.player.usesMagazine;
+    document.body.classList.toggle('drum-equipped', drum);
+    setShell(drum ? 0 : g.curShell);
+    document.getElementById('ui').style.display = 'none';
+    BattleView.build();
+    document.querySelectorAll('.cons-btn').forEach((b) => {
+      b.classList.remove('used');
+      b.classList.add('ready');
+    });
+    document.querySelectorAll('.m-cons').forEach((b) => b.classList.remove('used'));
+    document.getElementById('hud').style.display = 'block';
+    document.getElementById('result-screen').classList.remove('show');
+    document.getElementById('mobile-controls').classList.toggle('show', g.controlMode === 'mobile');
+    document.getElementById('combat-sector').textContent =
+      `СЕКТОР ${arena.spec.sector}  /  ${training ? 'ТРЕНИРОВКА' : teamSize + ' × ' + teamSize}`;
+    document.getElementById('combat-map').textContent = arena.spec.name;
+    document.getElementById('combat-tank').textContent = DB[playerId].n;
+    document.getElementById('battle-notice').hidden = true;
+    g.gameActive = true;
+    updateScoreboard();
+    updateHUD();
+    startPerfMonitor();
+    BattleInput.begin();
+    startBattleLoop();
+    return true;
+  } catch (error) {
+    if (!ticket.signal.aborted) battleFailed(error.message || 'Не удалось открыть поле боя.');
+    return false;
+  } finally {
+    if (battleLaunch === ticket) battleLaunch = null;
+  }
 }
 
 // ========== КОНЕЦ БОЯ ==========
 function endBattle(won) {
+  if (!GameState.gameActive) return;
   GameState.gameActive = false;
+  BattleInput.end();
+  if (tutorialPollHandle !== null) closeTutorial();
+  stopPerfMonitor();
+  document.getElementById('mobile-controls').classList.remove('show');
   GameState.totalBattles = (GameState.totalBattles || 0) + 1;
-  
+
   let silver = Math.floor(GameState.battleDmg * 0.5 + GameState.battleKills * 200);
   let xpReward = Math.floor(GameState.battleKills * 500 + (won ? 300 : 100));
-  let xpMul = 1, goldMul = 1, silverMul = 1;
-  
-  if (GameState.boosters.xp > 0) { xpMul = CONFIG.BOOSTERS.xp.multiplier; GameState.boosters.xp--; }
-  if (GameState.boosters.gold > 0) { goldMul = CONFIG.BOOSTERS.gold.multiplier; GameState.boosters.gold--; }
-  if (GameState.boosters.silver > 0) { silverMul = CONFIG.BOOSTERS.silver.multiplier; GameState.boosters.silver--; }
-  
+  let xpMul = 1,
+    goldMul = 1,
+    silverMul = 1;
+
+  if (GameState.boosters.xp > 0) {
+    xpMul = CONFIG.BOOSTERS.xp.multiplier;
+    GameState.boosters.xp--;
+  }
+  if (GameState.boosters.gold > 0) {
+    goldMul = CONFIG.BOOSTERS.gold.multiplier;
+    GameState.boosters.gold--;
+  }
+  if (GameState.boosters.silver > 0) {
+    silverMul = CONFIG.BOOSTERS.silver.multiplier;
+    GameState.boosters.silver--;
+  }
+
   silver = Math.floor(silver * silverMul);
   xpReward = Math.floor(xpReward * xpMul);
   const goldReward = Math.floor((won ? 50 : 10) * goldMul);
-  
+
   GameState.SILVER += silver;
   GameState.XP += xpReward;
   GameState.GOLD += goldReward;
-  
-  if (GameState.quest23 && !GameState.quest23.claimed && GameState.battleKills > 0) {
-    GameState.quest23.kills += GameState.battleKills;
-    saveProgress();
-  }
-  
-  if (GameState.multiplayerMode) {
-    endMultiplayerBattle();
-  }
 
-  // Проверка аренды танков (например, WT_E220 по промокоду)
-  var pTankId = GameState.player ? GameState.player.id : null;
-  if (pTankId && GameState.rentalTanks && GameState.rentalTanks[pTankId]) {
-    GameState.rentalTanks[pTankId]--;
-    if (GameState.rentalTanks[pTankId] <= 0) {
-      delete GameState.rentalTanks[pTankId];
-      GameState.owned = GameState.owned.filter(function(id) { return id !== pTankId; });
-      if (GameState.selected === pTankId) {
-        GameState.selected = GameState.owned[0] || 'T26';
-      }
-      setTimeout(function() {
-        alert("⚠️ Срок аренды " + (DB[pTankId] ? DB[pTankId].n : pTankId) + " завершён! Танк списан из ангара.");
-      }, 600);
-    }
-  }
+  if (won) GameState.lifetimeWins++;
+  GameState.lifetimeKills += GameState.battleKills;
+  saveProgress();
 
-  addBattlePassXP(won ? 300 : 100);
-  checkCollectionBonuses();
-
-  // 78. Пополнение сейфов золота и серебра
-  if (typeof EconomyEngine !== 'undefined' && EconomyEngine.addBattleToVault) {
-    EconomyEngine.addBattleToVault(silver, won ? 15 : 5);
-  }
-
-  // 7. Обновление рейтинга в Лиге
-  let rankedInfo = '';
-  if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.updateRankedMatch) {
-    const rRes = SupabaseFeatures.updateRankedMatch(won, GameState.battleKills, GameState.battleDmg);
-    rankedInfo = `<br><span style="color:${rRes.league.color};font-weight:bold;">${rRes.league.icon} ${rRes.league.name}: ${rRes.rating} MMR (${rRes.delta >= 0 ? '+' : ''}${rRes.delta})</span>`;
-  }
-
-  // 10. Урон по Мировому Боссу
-  if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.dealWorldBossDamage) {
-    SupabaseFeatures.dealWorldBossDamage(Math.floor(GameState.battleDmg));
-  }
-
-  // 1. Автосинхронизация с облаком Supabase
-  if (typeof SupabaseFeatures !== 'undefined' && SupabaseFeatures.autoCloudSync) {
-    SupabaseFeatures.autoCloudSync();
-  }
-  
   document.getElementById('result-screen').classList.add('show');
-  document.getElementById('result-title').innerText = won ? "ПОБЕДА!" : "ПОРАЖЕНИЕ";
-  document.getElementById('result-title').style.color = won ? "#2ecc71" : "#e74c3c";
-  
+  document.getElementById('result-title').innerText = won ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ';
+  document.getElementById('result-title').style.color = won ? '#2ecc71' : '#e74c3c';
+
   let boostInfo = '';
   if (xpMul > 1) boostInfo += '<br><span style="color:#3498db">⭐ Бустер XP x' + xpMul + '</span>';
   if (silverMul > 1) boostInfo += '<br><span style="color:#bdc3c7">💰 Бустер ₽ x' + silverMul + '</span>';
   if (goldMul > 1) boostInfo += '<br><span style="color:#f1c40f">🪙 Бустер G x' + goldMul + '</span>';
-  
-  document.getElementById('result-stats').innerHTML = 
-    'Урон: ' + Math.floor(GameState.battleDmg) + '<br>' +
-    'Фрагов: ' + GameState.battleKills + '<br>' +
-    'Серебро: +' + silver + '₽<br>' +
-    'Опыт: +' + xpReward + ' XP<br>' +
-    'Золото: +' + goldReward + ' G' + boostInfo + rankedInfo;
-  
+
+  document.getElementById('result-stats').innerHTML =
+    'Урон: ' +
+    Math.floor(GameState.battleDmg) +
+    '<br>' +
+    'Фрагов: ' +
+    GameState.battleKills +
+    '<br>' +
+    'Серебро: +' +
+    silver +
+    '₽<br>' +
+    'Опыт: +' +
+    xpReward +
+    ' XP<br>' +
+    'Золото: +' +
+    goldReward +
+    ' G' +
+    boostInfo;
+
   updateBoosterUI();
 }
 
 function backToGarage() {
+  document.body.classList.remove('drum-equipped');
+  if (battleLaunch) {
+    battleLaunch.abort();
+    battleLaunch = null;
+  }
+  GameState.gameActive = false;
+  stopBattleLoop();
+  BattleInput.end();
+  if (tutorialPollHandle !== null) closeTutorial();
   stopPerfMonitor();
-  GameState.waffentragerMode = false;
-  if (typeof WT_STATE !== 'undefined') WT_STATE.active = false;
-  var wtHud = document.getElementById('wt-hud');
-  if (wtHud) wtHud.style.display = 'none';
-
+  BattleView.dispose();
+  GameState.aim = { x: 0, y: 0, h: 0 };
+  GameState.player = null;
+  GameState.units = [];
+  GameState.arena = GameState.navigation = null;
+  GameState.walls = [];
+  GameState.terrainZones = [];
+  WeatherEngine.waterBodies = [];
+  WeatherEngine.ground = null;
+  MapChart.reset();
+  GameState.bullets = [];
+  GameState.particles = [];
+  GameState.tracks = [];
+  CombatMechanics.smokeClouds = [];
+  CombatMechanics.artilleryStrikes = [];
+  document.getElementById('hud').classList.remove('photo-mode');
+  document.getElementById('battle-notice').hidden = true;
+  document.body.classList.remove('mobile-mode');
   document.getElementById('result-screen').classList.remove('show');
   document.getElementById('ui').style.display = 'flex';
   document.getElementById('hud').style.display = 'none';
   document.getElementById('mobile-controls').classList.remove('show');
-  
+
   updateResources();
-  if (typeof updateQuestUI === 'function') updateQuestUI();
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
   renderTree();
   renderCarousel();
 }
 
+function leaveBattle() {
+  if (GameState.gameActive && confirm('Выйти в ангар без награды за бой?')) backToGarage();
+}
+
 // ========== ЭФФЕКТЫ ==========
-function spawnParticles(x, y, color, count, speed, life) {
+function spawnParticles(x, y, color, count, speed, life, h = surfaceHeight(x, y) + 4) {
   for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2, s = Math.random() * speed;
-    GameState.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life, ml: life, color, sz: 2 + Math.random() * 3 });
+    const a = Math.random() * Math.PI * 2,
+      s = Math.random() * speed;
+    GameState.particles.push({
+      x,
+      y,
+      h,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      life,
+      ml: life,
+      color,
+      sz: 2 + Math.random() * 3
+    });
   }
 }
 
@@ -308,9 +313,9 @@ function boom(x, y) {
   spawnParticles(x, y, '#333', 8, 2, 50);
 }
 
-function sparks(x, y) {
-  spawnParticles(x, y, '#ffcc00', 6, 4, 15);
-  spawnParticles(x, y, '#fff', 3, 3, 10);
+function sparks(x, y, h) {
+  spawnParticles(x, y, '#ffcc00', 6, 4, 15, h);
+  spawnParticles(x, y, '#fff', 3, 3, 10, h);
 }
 
 function smoke(x, y) {
@@ -319,7 +324,10 @@ function smoke(x, y) {
     y: y + (Math.random() - 0.5) * 5,
     vx: (Math.random() - 0.5) * 0.5,
     vy: (Math.random() - 0.5) * 0.5 - 0.3,
-    life: 30, ml: 30, color: '#555', sz: 4 + Math.random() * 4
+    life: 30,
+    ml: 30,
+    color: '#555',
+    sz: 4 + Math.random() * 4
   });
 }
 

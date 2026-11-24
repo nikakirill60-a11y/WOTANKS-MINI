@@ -1,8 +1,8 @@
 // js/settings.js
 // ========== ПАНЕЛЬ НАСТРОЕК ==========
 console.log('⚙️ settings.js загружен');
-// GameState.settings = { volume: 0..1, showTracks: bool, lang: 'ru'|'en' }
-// Значения по умолчанию и загрузка/сохранение — см. auth.js (loadProgress/saveProgress).
+// GameState.settings = { volume: 0..1, lookSensitivity: 0.3..2.5, showTracks: bool, lang: 'ru'|'en' }
+// Значения по умолчанию и загрузка/сохранение — см. local-profile.js.
 
 // Небольшой словарь для локализации интерфейса. Полный перевод всех текстов
 // игры (сотни строк в HTML/JS) — отдельная большая задача; здесь переводится
@@ -11,7 +11,7 @@ console.log('⚙️ settings.js загружен');
 const I18N = {
   ru: {
     settingsTitle: '⚙️ Настройки',
-    volume: '🔊 Громкость звука',
+    volume: '🔊 Громкость звука', sensitivity: 'Чувствительность обзора',
     showTracks: '🛞 Следы гусениц',
     showTracksHint: 'Выключите на слабых устройствах для роста FPS',
     lang: '🌐 Язык интерфейса',
@@ -20,7 +20,7 @@ const I18N = {
   },
   en: {
     settingsTitle: '⚙️ Settings',
-    volume: '🔊 Sound volume',
+    volume: '🔊 Sound volume', sensitivity: 'Look sensitivity',
     showTracks: '🛞 Track marks',
     showTracksHint: 'Turn off on weak devices to improve FPS',
     lang: '🌐 Interface language',
@@ -36,7 +36,7 @@ function t(key) {
 
 // ========== ПРИМЕНЕНИЕ НАСТРОЕК ==========
 function applySettings() {
-  if (!GameState.settings) GameState.settings = { volume: 1, showTracks: true, lang: 'ru' };
+  if (!GameState.settings) GameState.settings = initialProgress().settings;
 
   // Громкость — через мастер-гейн AudioSystem (см. audio.js)
   if (typeof AudioSystem !== 'undefined' && AudioSystem.setVolume) {
@@ -47,29 +47,6 @@ function applySettings() {
   document.documentElement.lang = GameState.settings.lang === 'en' ? 'en' : 'ru';
   renderSettingsPanel();
 }
-
-// ========== ХУК: СКРЫТИЕ СЛЕДОВ ГУСЕНИЦ ПРИ ОТРИСОВКЕ ==========
-// Неинвазивно оборачиваем draw() — если showTracks выключен, на время
-// отрисовки подменяем GameState.tracks на пустой массив (сама физика/лог
-// следов в update() продолжает работать как обычно).
-var settingsDrawHookPatched = false;
-function patchSettingsDrawHook() {
-  if (settingsDrawHookPatched) return;
-  settingsDrawHookPatched = true;
-  var origDraw = window.draw;
-  if (typeof origDraw !== 'function') return;
-  window.draw = function () {
-    if (GameState.settings && GameState.settings.showTracks === false) {
-      var saved = GameState.tracks;
-      GameState.tracks = [];
-      try { origDraw.apply(this, arguments); }
-      finally { GameState.tracks = saved; }
-    } else {
-      origDraw.apply(this, arguments);
-    }
-  };
-}
-patchSettingsDrawHook();
 
 // ========== UI ==========
 function ensureSettingsModal() {
@@ -90,7 +67,7 @@ function renderSettingsPanel() {
 }
 
 function buildSettingsHtml(modal) {
-  var s = GameState.settings || { volume: 1, showTracks: true, lang: 'ru' };
+  var s = GameState.settings || initialProgress().settings;
   modal.innerHTML =
     '<div style="background:#1a1a2e;border:2px solid #3498db;border-radius:10px;width:90%;max-width:420px;padding:18px;box-shadow:0 0 30px rgba(52,152,219,0.4)">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
@@ -100,8 +77,11 @@ function buildSettingsHtml(modal) {
 
       '<div style="margin-bottom:16px">' +
         '<label style="color:#fff;font-size:13px;display:block;margin-bottom:6px">' + t('volume') + ': <span id="settings-volume-val">' + Math.round(s.volume * 100) + '%</span></label>' +
-        '<input type="range" min="0" max="100" value="' + Math.round(s.volume * 100) + '" style="width:100%" oninput="setSettingVolume(this.value)">' +
+        '<input type="range" min="0" max="100" value="' + Math.round(s.volume * 100) + '" id="volume-slider" style="width:100%" oninput="setSettingVolume(this.value)">' +
       '</div>' +
+
+      '<div style="margin-bottom:16px"><label for="look-sensitivity">' + t('sensitivity') + ': <output id="sensitivity-val">' + (s.lookSensitivity || 1).toFixed(2) + '</output></label>' +
+        '<input id="look-sensitivity" type="range" min="0.3" max="2.5" step="0.05" value="' + (s.lookSensitivity || 1) + '" style="width:100%" oninput="setLookSensitivity(this.value)"></div>' +
 
       '<div style="margin-bottom:16px">' +
         '<label style="color:#fff;font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer">' +
@@ -156,3 +136,9 @@ window.hideSettings = hideSettings;
 window.setSettingVolume = setSettingVolume;
 window.setSettingTracks = setSettingTracks;
 window.setSettingLang = setSettingLang;
+
+function setLookSensitivity(v) {
+  GameState.settings.lookSensitivity = bounded(Number(v) || 1, .3, 2.5);
+  document.getElementById('sensitivity-val').textContent = GameState.settings.lookSensitivity.toFixed(2);
+  saveProgress();
+}

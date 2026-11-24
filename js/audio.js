@@ -14,8 +14,8 @@ const AudioSystem = {
     },
 
     setVolume(v) {
-        if (!this.context) this.init();
-        this.masterGain.gain.value = Math.max(0, Math.min(1, v));
+        // init() reads the saved volume on first playback, after entering the garage.
+        if (this.masterGain) this.masterGain.gain.value = Math.max(0, Math.min(1, v));
     },
 
     play(type, volume = 0.3) {

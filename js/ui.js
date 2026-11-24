@@ -1,9 +1,9 @@
 // js/ui.js
 console.log('🔄 ui.js загружается...');
 
-// ========== Сообщения экипажа ==========
-function crewMsg(msg, color) {
-  var el = document.getElementById('crew-msg');
+// ========== Боевые сообщения ==========
+function combatMessage(msg, color) {
+  var el = document.getElementById('combat-message');
   if (!el) return;
   el.innerText = msg;
   el.style.color = color || '#fff';
@@ -33,6 +33,7 @@ function updateResources() {
   if (gold) gold.innerText = GameState.GOLD;
   if (silver) silver.innerText = GameState.SILVER;
   if (charges) charges.innerText = GameState.charges || 0;
+  if (!document.getElementById('bay-research').hidden) renderTree();
 }
 
 // ========== Обмен XP на золото ==========
@@ -43,65 +44,38 @@ function exchangeXP() {
     var msg = document.getElementById('exchange-msg');
     if (msg) { msg.innerText = "✅"; setTimeout(function() { msg.innerText = ""; }, 1500); }
     updateResources();
+    saveProgress();
   }
 }
 
 // ========== Выбор нации ==========
-var NAT_BUTTON_LABELS = {
-  ussr: 'СССР',
-  germany: 'ГЕРМАНИЯ',
-  usa: 'США',
-  uk: 'БРИТАНИЯ',
-  japan: 'ЯПОНИЯ',
-  china: 'КИТАЙ',
-  france: 'ФРАНЦИЯ',
-  european: 'ЕВРОПА'
-};
-
 function renderNatButtons() {
-  var container = document.getElementById('nat-buttons');
-  if (!container) return;
-  var nations = Object.keys(CONFIG.NATIONS);
-  var currentBtns = container.querySelectorAll('.n-btn');
-  if (currentBtns.length !== nations.length) {
-    container.innerHTML = '';
-    nations.forEach(function(nat) {
-      var btn = document.createElement('button');
-      btn.className = 'n-btn' + (GameState.curNat === nat ? ' active-n' : '');
-      btn.textContent = NAT_BUTTON_LABELS[nat] || (CONFIG.NATIONS[nat] ? CONFIG.NATIONS[nat].toUpperCase() : nat.toUpperCase());
-      btn.onclick = function() { setNat(nat, this); };
-      container.appendChild(btn);
-    });
-  } else {
-    currentBtns.forEach(function(b, idx) {
-      var nat = nations[idx];
-      b.classList.toggle('active-n', GameState.curNat === nat);
-    });
-  }
+  const host = document.getElementById('nat-buttons');
+  host.replaceChildren(...PLAYABLE_NATIONS.map(nat => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.nation = nat;
+    button.setAttribute('aria-pressed',String(nat === GameState.curNat));
+    button.className = 'n-btn' + (nat === GameState.curNat ? ' active-n' : '');
+    button.textContent = CONFIG.NATIONS[nat].toLocaleUpperCase('ru-RU');
+    button.onclick = () => setNat(nat);
+    return button;
+  }));
 }
 
-function setNat(nat, btn) {
+function setNat(nat) {
+  if (!PLAYABLE_NATIONS.includes(nat)) return;
+  const focused = document.activeElement?.dataset.nation === nat;
   GameState.curNat = nat;
+  saveProgress();
   renderTree();
-  var container = document.getElementById('nat-buttons');
-  if (container) {
-    var nations = Object.keys(CONFIG.NATIONS);
-    var btns = container.querySelectorAll('.n-btn');
-    btns.forEach(function(b, idx) {
-      if (b === btn || nations[idx] === nat) {
-        b.classList.add('active-n');
-      } else {
-        b.classList.remove('active-n');
-      }
-    });
-  } else {
-    document.querySelectorAll('.n-btn').forEach(function(b) { b.classList.remove('active-n'); });
-    if (btn) btn.classList.add('active-n');
-  }
+  revealTreeNode();
+  if (focused) document.querySelector(`.n-btn[data-nation="${nat}"]`)?.focus({preventScroll:true});
 }
 
 // ========== Выбор снаряда ==========
 function setShell(i) {
+  if (GameState.player?.usesMagazine) i = 0;
   GameState.curShell = i;
   document.querySelectorAll('.shell-opt').forEach(function(e, j) { e.classList.toggle('active', j === i); });
   document.querySelectorAll('.m-shell').forEach(function(e, j) { e.classList.toggle('active', j === i); });
@@ -112,21 +86,22 @@ function useCons(i) {
   if (!GameState.gameActive || !GameState.player || GameState.player.dead || GameState.consumables[i]) return;
   var cons = CONFIG.CONSUMABLES[i];
   if (!cons) return;
-  if (GameState.SILVER < cons.cost) { crewMsg("Нет серебра!", "#e74c3c"); return; }
+  if (GameState.SILVER < cons.cost) { combatMessage("Нет серебра!", "#e74c3c"); return; }
   GameState.SILVER -= cons.cost;
   GameState.consumables[i] = true;
   var el = document.getElementById('cons' + (i + 1));
-  if (el) el.classList.add('used');
+  if (el) { el.classList.add('used'); el.classList.remove('ready'); }
   var mel = document.getElementById('mcons' + (i + 1));
   if (mel) mel.classList.add('used');
   switch (i) {
-    case 0: GameState.player.trackBroken = false; crewMsg("🔧 Починено!", "#2ecc71"); snd('hit'); break;
-    case 1: GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.15); crewMsg("+15% HP", "#2ecc71"); snd('hit'); break;
-    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = Date.now() + 10000; crewMsg("💉 Адреналин!", "#f39c12"); snd('hit'); break;
-    case 3: GameState.player.onFire = false; GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.05); crewMsg("🧯 Огонь потушен!", "#2ecc71"); snd('hit'); break;
-    case 4: GameState.paiokActive = true; crewMsg("⛽ Доп.бачок! +5% урон", "#f39c12"); snd('hit'); break;
-    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = Date.now() + 15000; crewMsg("⛽ Топливо 105!", "#f39c12"); snd('hit'); break;
+    case 0: GameState.player.trackBroken = false; GameState.player.engineRestartAt = GameState.player.critTimers.engine = 0; combatMessage("🔧 Починено!", "#2ecc71"); snd('hit'); break;
+    case 1: GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.15); combatMessage("+15% HP", "#2ecc71"); snd('hit'); break;
+    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = BattleClock.date() + 10000; combatMessage("💉 Адреналин!", "#f39c12"); snd('hit'); break;
+    case 3: GameState.player.onFire = false; GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.05); combatMessage("🧯 Огонь потушен!", "#2ecc71"); snd('hit'); break;
+    case 4: GameState.paiokActive = true; combatMessage("⛽ Доп.бачок! +5% урон", "#f39c12"); snd('hit'); break;
+    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = BattleClock.date() + 15000; combatMessage("⛽ Топливо 105!", "#f39c12"); snd('hit'); break;
   }
+  saveProgress();
 }
 
 // ========== Бустеры ==========
@@ -251,7 +226,7 @@ function showUpgrades() {
   var cats = [
     { key: 'gun', icon: '🔫', title: 'Орудие', items: CONFIG.UPGRADES.gun },
     { key: 'engine', icon: '⚙️', title: 'Двигатель', items: CONFIG.UPGRADES.engine },
-    { key: 'turret', icon: '🛡️', title: 'Башня', items: CONFIG.UPGRADES.turret }
+    { key: 'turret', icon: '🛡️', title: t.turretArmor == null ? 'Рубка' : 'Башня', items: CONFIG.UPGRADES.turret }
   ];
   var html = '<div class="upgrade-panel"><h3>📈 Прокачка: ' + t.n + ' [' + (CONFIG.TIER_ROMAN[tier] || 'XI') + ']</h3><div class="upgrade-columns">';
   for (var ci = 0; ci < cats.length; ci++) {
@@ -259,6 +234,7 @@ function showUpgrades() {
     html += '<div class="upgrade-col"><div class="upgrade-col-title">' + cat.icon + ' ' + cat.title + '</div>';
     for (var lvl = 0; lvl < cat.items.length; lvl++) {
       var item = cat.items[lvl];
+      var name = cat.key === 'turret' && t.turretArmor == null ? item.name.replace('башня','рубка') : item.name;
       var isBought = bought[cat.key][lvl];
       var isEquipped = u[cat.key] === lvl;
       var canBuy = !isBought && lvl > 0 && bought[cat.key][lvl - 1];
@@ -268,7 +244,7 @@ function showUpgrades() {
       if (isEquipped) cardClass += ' equipped';
       else if (isBought) cardClass += ' bought';
       else if (!canBuy) cardClass += ' locked';
-      html += '<div class="' + cardClass + '"><div class="upg-name">' + item.name + '</div><div class="upg-desc">' + item.desc + '</div>';
+      html += '<div class="' + cardClass + '"><div class="upg-name">' + name + '</div><div class="upg-desc">' + item.desc + '</div>';
       if (isEquipped) { html += '<div class="upg-btn installed">✅ Установлено</div>'; }
       else if (isBought) { html += '<div class="upg-btn equip" onclick="equipUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ')">⚙️ Установить</div>'; }
       else if (canBuy && canAfford) { html += '<div class="upg-btn buy" onclick="buyUpgrade(\'' + tid + '\',\'' + cat.key + '\',' + lvl + ',' + cost + ')">💰 Купить ' + cost + '💰</div>'; }
@@ -302,35 +278,6 @@ function equipUpgrade(tid, cat, lvl) {
   saveProgress();
 }
 
-// ========== Квест ==========
-function updateQuestUI() {
-  var q = GameState.quest23;
-  if (!q) return;
-  if (q.claimed) { var widget = document.getElementById('quest-widget'); if (widget) widget.style.display = 'none'; return; }
-  var widget = document.getElementById('quest-widget');
-  if (widget) widget.style.display = 'block';
-  var pct = Math.min(100, (q.kills / q.target) * 100);
-  var bar = document.getElementById('quest-bar');
-  var text = document.getElementById('quest-text');
-  var btn = document.getElementById('quest-claim-btn');
-  if (bar) bar.style.width = pct + '%';
-  if (text) text.innerText = q.kills + ' / ' + q.target;
-  if (q.kills >= q.target) { if (btn) btn.style.display = 'block'; if (text) text.style.display = 'none'; }
-  else { if (btn) btn.style.display = 'none'; if (text) text.style.display = 'block'; }
-}
-
-function claimQuestReward() {
-  if (!GameState.quest23.claimed) {
-    GameState.quest23.claimed = true;
-    if (GameState.owned.indexOf('T3485VIC') === -1) { GameState.owned.push('T3485VIC'); }
-    alert("🎉 Танк Т-34-85 получен!");
-    updateResources();
-    renderCarousel();
-    updateQuestUI();
-    saveProgress();
-  }
-}
-
 // ========== Промокод ==========
 function showPromo() {
   var modal = document.getElementById('promo-modal');
@@ -354,20 +301,6 @@ function activatePromo() {
     if (reward.gold) { GameState.GOLD += reward.gold; msg += reward.gold + 'G '; }
     if (reward.silver) { GameState.SILVER += reward.silver; msg += reward.silver + '💰 '; }
     if (reward.xp) { GameState.XP += reward.xp; msg += reward.xp + 'XP '; }
-    if (reward.tank) {
-      if (GameState.owned.indexOf(reward.tank) === -1) { GameState.owned.push(reward.tank); msg += 'Танк: ' + DB[reward.tank].n + ' '; }
-      else { msg += '+500G '; GameState.GOLD += 500; }
-    }
-    if (reward.rentalTank) {
-      var rtid = reward.rentalTank;
-      GameState.rentalTanks = GameState.rentalTanks || {};
-      GameState.rentalTanks[rtid] = (GameState.rentalTanks[rtid] || 0) + (reward.rentalBattles || 1);
-      if (GameState.owned.indexOf(rtid) === -1) {
-        GameState.owned.push(rtid);
-      }
-      GameState.selected = rtid;
-      msg += 'Аренда на ' + (reward.rentalBattles || 1) + ' бой: ' + (DB[rtid] ? DB[rtid].n : rtid) + '! ';
-    }
     if (reward.charges) {
       GameState.charges = (GameState.charges || 0) + reward.charges;
       msg += reward.charges + ' ⚡ ';
@@ -385,13 +318,17 @@ function activatePromo() {
 
 // ========== Продажа танка ==========
 function sellTank(tid) {
+  if (!DB[tid] || DB[tid].xp === 0 || !GameState.owned.includes(tid)) return;
   if (GameState.owned.length <= 1) { alert("⚠️ Нельзя продать последний танк!"); return; }
   var t = DB[tid];
-  var price = t.collection ? t.tier * 15000 : t.gold ? t.gold * 200 : t.tier * 5000;
+  var price = t.tier * 5000;
   if (confirm('💰 Продать ' + t.n + ' за ' + price + '💰?')) {
     GameState.SILVER += price;
     GameState.owned = GameState.owned.filter(function(id) { return id !== tid; });
-    if (GameState.selected === tid) GameState.selected = GameState.owned[0];
+    if (GameState.selected === tid) {
+      GameState.selected = GameState.owned[0];
+      GameState.curNat = DB[GameState.selected].nat;
+    }
     delete GameState.upgrades[tid];
     delete GameState.upgradesBought[tid];
     delete GameState.modules[tid];
@@ -406,34 +343,13 @@ function sellTank(tid) {
 function fillTrainNatSelect() {
   var s = document.getElementById('train-nat-select');
   if (!s) return;
-  s.innerHTML = '';
-  var nats = [];
-  var keys = Object.keys(DB);
-  for (var i = 0; i < keys.length; i++) {
-    var n = DB[keys[i]].nat;
-    if (nats.indexOf(n) === -1) nats.push(n);
-  }
-  for (var j = 0; j < nats.length; j++) {
-    var o = document.createElement('option');
-    o.value = nats[j];
-    o.innerText = CONFIG.NATIONS[nats[j]] || nats[j];
-    s.appendChild(o);
-  }
+  s.replaceChildren(...PLAYABLE_NATIONS.map(nat => new Option(CONFIG.NATIONS[nat],nat)));
 }
 
 function fillEnemySelect() {
-  var nat = document.getElementById('train-nat-select').value;
-  var s = document.getElementById('enemy-select');
-  if (!s) return;
-  s.innerHTML = '';
-  var ids = Object.keys(DB).filter(function(id) { return DB[id].nat === nat; }).sort(function(a, b) { return DB[a].tier - DB[b].tier; });
-  for (var i = 0; i < ids.length; i++) {
-    var id = ids[i];
-    var o = document.createElement('option');
-    o.value = id;
-    o.innerText = DB[id].n + ' [' + (CONFIG.TIER_ROMAN[DB[id].tier] || 'XI') + ']';
-    s.appendChild(o);
-  }
+  const nat = document.getElementById('train-nat-select').value;
+  document.getElementById('enemy-select').replaceChildren(...BRANCHES[nat].tanks.map(t =>
+    new Option(`${t.n} [${CONFIG.TIER_ROMAN[t.tier]}]`, t.id)));
 }
 
 function toggleTraining() {
@@ -442,7 +358,8 @@ function toggleTraining() {
 }
 
 // ========== Карусель танков ==========
-function renderCarousel() {
+function renderCarousel(fromCarousel = false) {
+  GarageViewer.syncSelection(fromCarousel);
   var c = document.getElementById('tank-carousel');
   if (!c) return;
   c.innerHTML = '';
@@ -456,45 +373,33 @@ function renderCarousel() {
     var id = sorted[si];
     var t = DB[id];
     if (!t) continue;
-    var isColl = t.collection || false;
-    var isFlame = t.flame || false;
-    var isMissile = t.missile || false;
-    var isTitan = t.titan || false;
-    var isDual = t.dualGun || false;
     var slot = document.createElement('div');
-    slot.className = 'tank-slot';
-    if (t.premium && !isColl) slot.className += ' premium-slot';
-    if (isColl) slot.className += ' collection-slot';
-    if (isFlame) slot.className += ' flame-slot';
-    if (isTitan) slot.className += ' titan-slot';
-    if (isDual) slot.className += ' dualgun-slot';
-    if (isMissile) slot.style.borderColor = '#00ccff';
-    if (GameState.selected === id) slot.className += ' selected';
+    slot.className = 'tank-slot' + (GameState.selected === id ? ' selected' : '');
+    slot.dataset.tankId = id;
+    var select = document.createElement('button');
+    select.type = 'button';
+    select.className = 'slot-select';
+    select.setAttribute('aria-label', 'Выбрать для боя: ' + t.n);
+    select.setAttribute('aria-pressed', String(GameState.selected === id));
     (function(tankId) {
-      slot.onclick = function(e) {
-        if (e.target.classList.contains('sell-btn')) return;
+      select.onclick = function() {
         GameState.selected = tankId;
-        renderCarousel();
+        GameState.curNat = DB[tankId].nat;
+        saveProgress();
+        renderCarousel(true);
         renderTree();
+        var active = c.querySelector('.selected .slot-select');
+        if (active) active.focus({ preventScroll: true });
       };
     })(id);
     var sb = document.createElement('button');
     sb.className = 'sell-btn';
+    sb.setAttribute('aria-label', 'Продать: ' + t.n);
     sb.innerText = '💰';
     (function(tankId) {
       sb.onclick = function(e) { e.stopPropagation(); sellTank(tankId); };
     })(id);
-    slot.appendChild(sb);
-    if (isColl || isDual) {
-      var bg = document.createElement('div');
-      bg.className = 'coll-badge';
-      if (isFlame) bg.className += ' flame-badge';
-      if (isTitan) bg.className += ' titan-badge';
-      if (isDual) bg.className += ' dualgun-badge';
-      if (isMissile) bg.style.background = '#00ccff';
-      bg.innerText = isFlame ? '🔥' : (isMissile ? '🚀' : (isTitan ? '🛡️' : (isDual ? '🔫' : '⭐')));
-      slot.appendChild(bg);
-    }
+    if (GameState.owned.length > 1 && t.xp > 0) slot.appendChild(sb);
     var upg = GameState.upgrades[id];
     if (upg) {
       var total = (upg.gun || 0) + (upg.engine || 0) + (upg.turret || 0);
@@ -503,287 +408,41 @@ function renderCarousel() {
     var mods = GameState.modules[id] || [null, null, null];
     var modCount = mods.filter(function(m) { return m; }).length;
     if (modCount > 0) { var mi = document.createElement('div'); mi.className = 'mod-indicator'; mi.innerText = '🔧+' + modCount; slot.appendChild(mi); }
-    var wrap = document.createElement('div');
+    var wrap = document.createElement('span');
     wrap.className = 'slot-bg';
-    var cv = document.createElement('canvas');
-    cv.width = 140;
-    cv.height = 80;
-    drawTankIcon(cv, id);
-    wrap.appendChild(cv);
-    var info = document.createElement('div');
+    const thumbnail = document.createElement('img');
+    thumbnail.src = 'models/' + t.thumbnail;
+    thumbnail.alt = '';
+    wrap.appendChild(thumbnail);
+    var info = document.createElement('span');
     info.className = 'slot-info';
     var tierEl = document.createElement('span');
     tierEl.className = 'slot-tier';
     tierEl.innerText = CONFIG.TIER_ROMAN[t.tier] || 'XI';
     var nameEl = document.createElement('span');
     nameEl.className = 'slot-name';
-    if (isFlame) nameEl.style.color = '#ff4500';
-    else if (isMissile) nameEl.style.color = '#00ccff';
-    else if (isTitan) nameEl.style.color = '#4a8fb5';
-    else if (isDual) nameEl.style.color = '#ffd700';
-    else if (isColl) nameEl.style.color = getRarityColor(t.tier);
     nameEl.innerText = t.n;
     var clsEl = document.createElement('span');
     clsEl.className = 'slot-cls';
-    clsEl.innerText = isFlame ? '🔥AT' : (isMissile ? '🚀NT' : (isTitan ? '🛡️' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : (isDual ? '🔫' + CONFIG.TANK_CLASSES[t.cls || 'mt'] : CONFIG.TANK_CLASSES[t.cls || 'mt'])));
+    clsEl.innerText = CONFIG.TANK_CLASSES[t.cls];
     info.appendChild(tierEl);
     info.appendChild(nameEl);
     info.appendChild(clsEl);
-    slot.appendChild(wrap);
-    slot.appendChild(info);
+    select.append(wrap, info);
+    slot.appendChild(select);
     c.appendChild(slot);
-  }
-}
-
-// ========== Иконка танка ==========
-function drawTankIcon(canvas, tankId) {
-  var ctx2 = canvas.getContext('2d');
-  var t = DB[tankId];
-  if (!t) return;
-  ctx2.clearRect(0, 0, canvas.width, canvas.height);
-  ctx2.save();
-  ctx2.translate(canvas.width / 2, canvas.height / 2);
-  ctx2.scale(0.8, 0.8);
-  var a = -Math.PI / 6;
-  var s = t.s || 1;
-  var bc = t.nc || '#666';
-  if (t.flame) bc = '#ff4500';
-  else if (t.missile) bc = '#00ccff';
-  else if (t.titan) bc = '#4a8fb5';
-  else if (t.dualGun) bc = '#8a8a8a';
-  else if (t.collection) bc = getRarityColor(t.tier);
-  else if (t.premium) bc = '#f39c12';
-  ctx2.save();
-  ctx2.rotate(a);
-  ctx2.fillStyle = bc;
-  var bW = t.isLong ? 80 : (t.dualGun ? 70 : 44);
-  ctx2.fillRect(-bW / 2 * s, -14 * s, bW * s, 28 * s);
-  ctx2.fillStyle = "#111";
-  ctx2.fillRect(-bW / 2 * s - 2, -16 * s, (bW + 4) * s, 6 * s);
-  ctx2.fillRect(-bW / 2 * s - 2, 10 * s, (bW + 4) * s, 6 * s);
-  ctx2.restore();
-  ctx2.save();
-  var off = (t.off || 0) * s;
-  ctx2.translate(Math.cos(a) * off, Math.sin(a) * off);
-  ctx2.rotate(a);
-  ctx2.fillStyle = bc;
-  ctx2.filter = 'brightness(1.2)';
-  var turSz = t.dualGun ? 14 : 10;
-  ctx2.fillRect(-turSz * s, -turSz * s, turSz * 2 * s, turSz * 2 * s);
-  ctx2.filter = 'none';
-  if (t.flame) {
-    ctx2.fillStyle = "#333";
-    ctx2.fillRect(5 * s, -5 * s, 25 * s, 10 * s);
-    ctx2.fillStyle = "#ff4500";
-    ctx2.fillRect(28 * s, -4 * s, 6 * s, 8 * s);
-  } else if (t.dualGun) {
-    var gunLen = 35 * s;
-    var gunW = 2.5 * s;
-    var sp = 4 * s;
-    ctx2.fillStyle = "#444";
-    ctx2.fillRect(5 * s, -sp - gunW, gunLen, gunW * 2);
-    ctx2.fillRect(5 * s, sp - gunW, gunLen, gunW * 2);
-    ctx2.fillStyle = "#333";
-    ctx2.fillRect(2 * s, -sp - gunW - 1, 5 * s, (sp + gunW) * 2 + 2);
-  } else {
-    ctx2.fillStyle = "#111";
-    ctx2.fillRect(5 * s, -3 * s, 35 * s, 6 * s);
-  }
-  ctx2.restore();
-  ctx2.restore();
-}
-
-// ========== Дерево исследований ==========
-function renderTree() {
-  renderNatButtons();
-  var nodes = document.getElementById('nodes');
-  var tc = document.getElementById('tree-canvas');
-  if (!nodes || !tc) return;
-  var sc = nodeScale;
-  tc.width = 2200 * sc;
-  tc.height = 1400 * sc;
-  tc.style.width = (2200 * sc) + 'px';
-  tc.style.height = (1400 * sc) + 'px';
-  nodes.style.width = (2200 * sc) + 'px';
-  nodes.style.height = (1400 * sc) + 'px';
-  var ctx3 = tc.getContext('2d');
-  nodes.innerHTML = '';
-  ctx3.clearRect(0, 0, tc.width, tc.height);
-  ctx3.strokeStyle = "#555";
-  ctx3.lineWidth = 2 * sc;
-  for (var id in DB) {
-    var t = DB[id];
-    if (t.nat !== GameState.curNat || t.collection) continue;
-    var sx = t.x * sc;
-    var sy = t.y * sc;
-    if (t.p && DB[t.p] && !DB[t.p].collection) {
-      ctx3.beginPath();
-      ctx3.moveTo(DB[t.p].x * sc + 120 * sc, DB[t.p].y * sc + 24 * sc);
-      ctx3.lineTo(sx, sy + 24 * sc);
-      ctx3.stroke();
-    }
-    var div = document.createElement('div');
-    div.className = 'node';
-    if (GameState.owned.indexOf(id) !== -1) div.className += ' owned';
-    if (GameState.selected === id) div.className += ' selected';
-    if (t.premium) div.className += ' premium-glow';
-    div.style.cssText = 'left:' + sx + 'px;top:' + sy + 'px;width:' + (120 * sc) + 'px;height:' + (48 * sc) + 'px;font-size:' + (9 * sc) + 'px';
-    var cost = t.gold ? t.gold + 'G' : (t.xp !== undefined ? getDiscountedXPCost(id, t.xp) + 'XP' : '');
-    var clsStr = CONFIG.TANK_CLASSES[t.cls || 'mt'] || '';
-    var mag = t.mag && t.mag > 1 ? '🔢' + t.mag : '';
-    var dualTag = t.dualGun ? '🔫 ' : '';
-    div.innerHTML = '<b style="color:' + (t.premium ? '#f1c40f' : '#fff') + '">' + dualTag + (t.premium ? '⭐ ' : '') + t.n + '</b><br><span style="color:#f1c40f">[' + (CONFIG.TIER_ROMAN[t.tier] || 'XI') + ']</span> ' + clsStr + ' ' + mag + '<br>' + cost;
-    (function(tankId, tankData) {
-      div.onclick = function() {
-        if (GameState.owned.indexOf(tankId) !== -1) { GameState.selected = tankId; }
-        else if (tankData.gold) {
-          if (GameState.GOLD >= tankData.gold) { GameState.GOLD -= tankData.gold; GameState.owned.push(tankId); GameState.selected = tankId; }
-        } else if (tankData.xp !== undefined) {
-          var discXp = getDiscountedXPCost(tankId, tankData.xp);
-          if (GameState.XP >= discXp && (!tankData.p || GameState.owned.indexOf(tankData.p) !== -1)) {
-            GameState.XP -= discXp;
-            GameState.owned.push(tankId);
-            GameState.selected = tankId;
-            GameState.blueprints[tankId] = 0;
-          }
-        }
-        renderTree();
-        renderCarousel();
-        updateResources();
-        saveProgress();
-      };
-    })(id, t);
-    nodes.appendChild(div);
   }
 }
 
 // ========== Таблица команд ==========
 function updateScoreboard() {
-  var al = document.getElementById('allies-list');
-  var en = document.getElementById('enemies-list');
-  if (!al || !en) return;
-  al.innerHTML = '<b>🤝 Союзники</b><br>';
-  en.innerHTML = '<b>⚔️ Враги</b><br>';
-  for (var i = 0; i < GameState.units.length; i++) {
-    var u = GameState.units[i];
-    if (u.team === 'enemy' && !u.visible && !u.dead) continue;
-    var mk = u.flame ? '🔥' : (u.missile ? '🚀' : (u.titan ? '🛡️' : (u.dualGun ? '🔫' : (u.collection ? '⭐' : ''))));
-    var sp = '<span class="' + (u.dead ? 'dead' : '') + '">' + (CONFIG.TIER_ROMAN[u.tier] || 'XI') + '|' + mk + u.name + '</span><br>';
-    if (u.team === 'enemy') en.innerHTML += sp;
-    else al.innerHTML += sp;
-  }
-}
-
-// ========== Таблица лидеров ==========
-function showLeaderboard() {
-  console.log('🏆 Открываем таблицу лидеров');
-  var modal = document.getElementById('leaderboard-modal');
-  if (modal) modal.classList.add('show');
-  loadLeaderboard();
-}
-
-function hideLeaderboard() {
-  var modal = document.getElementById('leaderboard-modal');
-  if (modal) modal.classList.remove('show');
-}
-
-function switchLBTab(tab, btn) {
-  document.querySelectorAll('.lb-tab').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  document.querySelectorAll('.lb-content').forEach(function(c) { c.classList.remove('active-lb'); });
-  var content = document.getElementById('lb-' + tab);
-  if (content) content.classList.add('active-lb');
-  if (tab === 'online') { loadOnlinePlayers(); }
-}
-
-async function loadLeaderboard() {
-  console.log('🌐 Загружаем таблицу лидеров');
-  var listEl = document.getElementById('lb-global-list');
-  if (!supabaseClient) {
-    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">❌ Нет соединения</div>';
-    return;
-  }
-  try {
-    const result = await getLeaderboard(100);
-    if (!result.success || !result.data || result.data.length === 0) {
-      if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">😴 Пока никого нет</div>';
-      return;
-    }
-    var html = '';
-    result.data.forEach(function(user, index) {
-      var place = index + 1;
-      var medal = '🏅';
-      var medalClass = '';
-      if (place === 1) { medal = '🥇'; medalClass = 'gold'; }
-      else if (place === 2) { medal = '🥈'; medalClass = 'silver'; }
-      else if (place === 3) { medal = '🥉'; medalClass = 'bronze'; }
-      var isYou = currentUser && user.username === currentUser ? ' you' : '';
-      var winRate = user.total_battles > 0 ? Math.round((user.total_wins / user.total_battles) * 100) : 0;
-      html += '<div class="lb-row' + isYou + '">';
-      html += '<div class="lb-row-rank ' + medalClass + '">' + medal + ' ' + place + '</div>';
-      html += '<div class="lb-row-name"><span class="lb-row-name-icon">' + (isYou ? '👤' : '👤') + '</span><span>' + user.username + (isYou ? ' (Вы)' : '') + '</span></div>';
-      html += '<div class="lb-row-value lb-row-xp">' + user.xp.toLocaleString() + ' XP</div>';
-      html += '<div class="lb-row-value">' + user.total_battles + '</div>';
-      html += '<div class="lb-row-value">' + user.total_wins + ' (' + winRate + '%)</div>';
-      html += '<div class="lb-row-value">' + user.total_kills + '</div>';
-      html += '</div>';
-    });
-    if (listEl) listEl.innerHTML = html;
-  } catch (error) {
-    console.error('⚠️ Ошибка лидеров:', error);
-    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">⚠️ Ошибка</div>';
-  }
-}
-
-async function loadOnlinePlayers() {
-  console.log('🌐 Загружаем онлайн игроков');
-  var onlineListEl = document.getElementById('lb-online-list');
-  var emptyEl = document.getElementById('lb-online-empty');
-  if (!supabaseClient) {
-    if (onlineListEl) onlineListEl.innerHTML = '';
-    if (emptyEl) { emptyEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">📡 Онлайн недоступен</div>'; emptyEl.style.display = 'block'; }
-    return;
-  }
-  try {
-    const result = await getOnlinePlayers();
-    if (!result.success || !result.data || result.data.length === 0) {
-      if (onlineListEl) onlineListEl.innerHTML = '';
-      if (emptyEl) emptyEl.style.display = 'block';
-      return;
-    }
-    if (emptyEl) emptyEl.style.display = 'none';
-    if (onlineListEl) onlineListEl.innerHTML = '';
-    result.data.forEach(function(player) {
-      var tank = DB[player.selected_tank];
-      var tankName = tank ? tank.n : 'Unknown';
-      var timeAgo = getTimeAgo(new Date(player.last_online));
-      var card = document.createElement('div');
-      card.className = 'online-card';
-      card.innerHTML = '<div style="font-size:16px;margin-bottom:5px;">' + (tank && tank.nc ? '<span style="color:' + tank.nc + '">🛡️</span>' : '🛡️') + '</div>';
-      card.innerHTML += '<div class="online-name"><span class="online-status"></span>' + player.username + '</div>';
-      card.innerHTML += '<div class="online-tank">' + tankName + '</div>';
-      card.innerHTML += '<div class="online-time">' + timeAgo + '</div>';
-      if (onlineListEl) onlineListEl.appendChild(card);
-    });
-  } catch (error) {
-    console.error('⚠️ Ошибка онлайн:', error);
-    if (emptyEl) emptyEl.style.display = 'block';
-  }
-}
-
-function getTimeAgo(date) {
-  var seconds = Math.floor((new Date() - date) / 1000);
-  if (seconds < 60) return '🕒 Только что';
-  var minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return minutes + 'м назад';
-  var hours = Math.floor(minutes / 60);
-  if (hours < 24) return hours + 'ч назад';
-  var days = Math.floor(hours / 24);
-  return days + 'д назад';
+  const alive = GameState.units.filter(u => !u.dead);
+  document.getElementById('allies-list').textContent = alive.filter(u => u.team !== 'enemy').length;
+  document.getElementById('enemies-list').textContent = alive.filter(u => u.team === 'enemy').length;
 }
 
 // ========== Экспорт всех функций ==========
-window.crewMsg = crewMsg;
+window.combatMessage = combatMessage;
 window.dmgLog = dmgLog;
 window.updateResources = updateResources;
 window.exchangeXP = exchangeXP;
@@ -802,8 +461,6 @@ window.showUpgrades = showUpgrades;
 window.hideUpgrades = hideUpgrades;
 window.buyUpgrade = buyUpgrade;
 window.equipUpgrade = equipUpgrade;
-window.updateQuestUI = updateQuestUI;
-window.claimQuestReward = claimQuestReward;
 window.showPromo = showPromo;
 window.hidePromo = hidePromo;
 window.activatePromo = activatePromo;
@@ -812,15 +469,10 @@ window.fillTrainNatSelect = fillTrainNatSelect;
 window.fillEnemySelect = fillEnemySelect;
 window.toggleTraining = toggleTraining;
 window.renderCarousel = renderCarousel;
-window.drawTankIcon = drawTankIcon;
+
 window.renderTree = renderTree;
 window.renderNatButtons = renderNatButtons;
 window.updateScoreboard = updateScoreboard;
-window.showLeaderboard = showLeaderboard;
-window.hideLeaderboard = hideLeaderboard;
-window.switchLBTab = switchLBTab;
-window.loadLeaderboard = loadLeaderboard;
-window.loadOnlinePlayers = loadOnlinePlayers;
 window.showContainerShop = showContainerShop;
 window.hideContainerShop = hideContainerShop;
 window.switchTab = switchTab;

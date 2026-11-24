@@ -1,12 +1,7 @@
 // js/damage-indicator.js
 // ========== ИНДИКАТОР НАПРАВЛЕНИЯ УРОНА ==========
 console.log('🩸 damage-indicator.js загружен');
-// Камера в игре не вращается вслед за танком (мир рисуется в мировых
-// координатах со смещением, без поворота — см. main.js), поэтому угол на
-// экране совпадает с мировым углом атаки. onPlayerHit(angle, dmg)
-// вызывается неинвазивными хуками из main.js/tank.js в момент попадания по
-// игроку; angle — направление "от стрелка к игроку" (как b.a в main.js),
-// поэтому источник урона находится в противоположном направлении (+180°).
+// Угол к источнику урона относительно направления камеры за корпусом.
 
 function ensureDamageIndicatorHost() {
   var host = document.getElementById('damage-indicator-host');
@@ -27,7 +22,7 @@ function onPlayerHit(fromAngle, dmg) {
 
   var host = ensureDamageIndicatorHost();
   var attackerAngle = fromAngle + Math.PI; // направление К стрелку от игрока
-  var deg = attackerAngle * 180 / Math.PI;
+  var deg = (attackerAngle - GameState.player.angle) * 180 / Math.PI;
 
   var intensity = Math.min(1, 0.35 + (dmg || 0) / 400);
   var wedge = document.createElement('div');

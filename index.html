@@ -7,66 +7,40 @@
   
   <!-- СТИЛИ -->
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/styles1.css">
-  <link rel="stylesheet" href="css/leaderboard.css">
   <link rel="stylesheet" href="css/features.css">
-
-  <!-- SUPABASE БИБЛИОТЕКА -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0"></script>
+  <link rel="stylesheet" href="css/hangar.css">
+  <link rel="stylesheet" href="css/battle.css">
 </head>
 <body>
-
-<!-- ========== ЭКРАН ВХОДА ========== -->
-<div id="login-screen">
-  <div class="login-box">
-    <h1>CITY TANKS</h1>
-    <input type="text" id="username-input" placeholder="Имя пользователя">
-    <input type="password" id="password-input" placeholder="Пароль">
-    <div class="login-btns">
-      <button class="btn" onclick="login()">ВОЙТИ</button>
-      <button class="btn" onclick="register()">РЕГИСТРАЦИЯ</button>
-    </div>
-    <div id="login-msg"></div>
-  </div>
-</div>
 
 <!-- ========== ВЫБОР УПРАВЛЕНИЯ ========== -->
 <div id="control-modal">
   <h2>ВЫБЕРИТЕ УПРАВЛЕНИЕ</h2>
   <div class="control-options">
-    <div class="control-option" onclick="selectControl('pc')">
+    <button type="button" class="control-option" onclick="selectControl('pc')">
       <div class="control-icon">🖥️</div>
       <h3>ПК / Ноутбук</h3>
-      <p>WASD - движение<br>Мышь - прицел<br>ЛКМ - стрельба</p>
-    </div>
-    <div class="control-option" onclick="selectControl('mobile')">
+      <p>WASD / стрелки — ход и поворот корпуса<br>Мышь — обзор · ЛКМ — огонь · ПКМ — свободный обзор<br>Shift — оптика · колесо — зум · E — автоприцел</p>
+    </button>
+    <button type="button" class="control-option" onclick="selectControl('mobile')">
       <div class="control-icon">📱</div>
       <h3>Телефон / Планшет</h3>
-      <p>Джойстик - направление<br>Кнопка - стрельба</p>
-    </div>
+      <p>Тяните слева — ход и поворот корпуса<br>Свайп по полю или кнопке огня — обзор<br>«Прицел» — оптика · «Авто» — захват цели</p>
+    </button>
   </div>
+  <button class="battle-cancel" onclick="document.getElementById('control-modal').classList.remove('show')">Назад в ангар</button>
 </div>
 
 <!-- ========== КОНТЕЙНЕРЫ ========== -->
 <div id="container-modal">
   <div class="modal-header">
     <h2>📦 КОНТЕЙНЕРЫ</h2>
+    <button type="button" class="btn btn-close" onclick="hideContainerShop()">В ангар</button>
   </div>
 <div class="modal-tabs">
     <button class="modal-tab active" onclick="switchTab('shop', this)">📦 Магазин</button>
     <button class="modal-tab" onclick="switchTab('inventory', this)">🎒 Инвентарь</button>
-    <button class="modal-tab" onclick="switchTab('collection', this)">🎖️ Коллекция</button>
-    <button class="modal-tab" onclick="switchTab('bp', this); BattlePassSystem.render()">🎫 Пропуск Сезона</button>
-    <button class="modal-tab" onclick="switchTab('market', this); SocialSystem.loadOffers(); SocialSystem.populateSellSelect();">⚖️ Рынок</button>
-    <!-- NEW: новые вкладки — камуфляжи, экипаж, чертежи, рефералка, новости -->
-    <button class="modal-tab" onclick="switchTab('camo', this); renderCamoShop();">🎨 Камуфляжи</button>
-    <button class="modal-tab" onclick="switchTab('crew', this); renderCrewPanel(GameState.selected);">👨‍✈️ Экипаж</button>
-    <button class="modal-tab" onclick="switchTab('blueprints', this); renderBlueprintsGrid();">📐 Чертежи</button>
-    <button class="modal-tab" onclick="switchTab('referral', this); SocialSystem.renderReferral();">🔗 Друзья</button>
-    <button class="modal-tab" onclick="switchTab('news', this); renderNewsFeed();">📰 Новости <span id="news-badge"></span></button>
-    <!-- NEW: достижения и ежедневные задачи -->
-    <button class="modal-tab" onclick="switchTab('achievements', this); renderAchievementsGrid();">🏆 Достижения</button>
-    <button class="modal-tab" onclick="switchTab('quests', this); refreshDailyQuests();">📋 Задачи <span id="daily-quests-badge"></span></button>
+
 </div>
 
 <!-- Содержимое вкладки Магазина контейнеров -->
@@ -80,76 +54,13 @@
     <div id="inventory-grid" class="inventory-grid"></div>
 </div>
 
-<!-- Содержимое вкладки Коллекции -->
-<div id="tab-collection" class="tab-content">
-    <div id="collection-grid" class="collection-grid"></div>
-</div>
-
-<!-- Содержимое вкладки Боевого Пропуска -->
-<div id="tab-bp" class="tab-content">
-    <!-- Генерируется динамически через bp.js -->
-</div>
-
-<!-- Содержимое вкладки Рынка -->
-<div id="tab-market" class="tab-content">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div>
-            <h3>⚖️ Предложения рынка</h3>
-            <div id="market-offers-list" style="max-height: 400px; overflow-y: auto;">
-                Загрузка лотов...
-            </div>
-        </div>
-        <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px;">
-            <h3>📤 Продать коллекционный танк</h3>
-            <p style="font-size:12px; color:#aaa;">Требуется: не менее 100 сыгранных боев.</p>
-            <label>Выберите танк:</label><br>
-            <select id="market-sell-select" style="width:100%; margin-bottom:10px;"></select>
-            
-            <label>Цена в золоте (G):</label><br>
-            <input type="number" id="market-sell-gold" value="0" style="width:100%; margin-bottom:10px;">
-            
-            <button class="btn" style="width:100%;" onclick="SocialSystem.sellTank(document.getElementById('market-sell-select').value, parseInt(document.getElementById('market-sell-gold').value), 0)">Выставить на рынок</button>
-            <button class="btn" style="width:100%;margin-top:6px;background:#8e44ad" onclick="var sel=document.getElementById('market-sell-select');var id=sel.value;showPriceHistory(id,'tank', DB[id]?DB[id].n:id)">📈 История цен этого танка</button>
-        </div>
-    </div>
-</div>
-
-<!-- NEW: Содержимое вкладки Камуфляжей -->
-<div id="tab-camo" class="tab-content">
-    <div id="camo-grid"><!-- заполняется camouflage.js --></div>
-</div>
-
-<!-- NEW: Содержимое вкладки Экипажа -->
-<div id="tab-crew" class="tab-content">
-    <div id="crew-panel-content" style="padding:14px"><!-- заполняется crew.js --></div>
-</div>
-
-<!-- NEW: Содержимое вкладки Чертежей -->
-<div id="tab-blueprints" class="tab-content">
-    <div id="blueprints-grid"><!-- заполняется blueprints.js --></div>
-</div>
-
-<!-- NEW: Содержимое вкладки Друзья (реферальная программа) -->
-<div id="tab-referral" class="tab-content">
-    <!-- заполняется social.js: SocialSystem.renderReferral() -->
-</div>
-
-<!-- NEW: Содержимое вкладки Новости -->
-<div id="tab-news" class="tab-content">
-    <div id="news-feed"><!-- заполняется news.js --></div>
-</div>
-
-<!-- NEW: Содержимое вкладки Достижений -->
-<div id="tab-achievements" class="tab-content">
-    <div id="achievements-grid" style="padding:10px"><!-- заполняется achievements.js --></div>
-</div>
-
-<!-- NEW: Содержимое вкладки Ежедневных задач -->
-<div id="tab-quests" class="tab-content">
-    <div id="daily-quests-grid" style="padding:10px"><!-- заполняется daily-quests.js --></div>
-</div>
-
 </div><!-- /container-modal -->
+
+<dialog id="calendar-modal" aria-labelledby="calendar-title">
+  <div class="modal-header"><h2 id="calendar-title">Календарь наград</h2>
+    <button type="button" class="btn" onclick="this.closest('dialog').close()">В ангар</button></div>
+  <div id="calendar-days"></div>
+</dialog>
 
 <!-- ========== ПРОМОКОД ========== -->
 <div id="promo-modal">
@@ -172,194 +83,162 @@
 <div id="module-modal" class="module-modal"></div>
 <div id="upgrade-modal" class="upgrade-modal"></div>
 
-<!-- ========== ТАБЛИЦА ЛИДЕРОВ ========== -->
-<div id="leaderboard-modal" class="leaderboard-modal">
-  <div class="leaderboard-panel">
-    <div class="leaderboard-header">
-      <h2>🏆 ТАБЛИЦА ЛИДЕРОВ</h2>
-      <button class="btn-close-lb" onclick="hideLeaderboard()">✕</button>
-    </div>
-    <div class="leaderboard-tabs">
-      <button class="lb-tab active" onclick="switchLBTab('global', this)">🌍 ГЛОБАЛЬНАЯ</button>
-      <button class="lb-tab" onclick="switchLBTab('online', this)">👥 ОНЛАЙН</button>
-    </div>
-    <div id="lb-global" class="lb-content active-lb">
-      <div class="leaderboard-table">
-        <div class="lb-header">
-          <div class="lb-rank">МЕСТО</div>
-          <div class="lb-name">ИМЯ</div>
-          <div class="lb-xp">ОПЫТ</div>
-          <div class="lb-battles">БОИ</div>
-          <div class="lb-wins">ПОБЕДЫ</div>
-          <div class="lb-kills">ФРАГИ</div>
-        </div>
-        <div id="lb-global-list" class="lb-list"></div>
-      </div>
-    </div>
-    <div id="lb-online" class="lb-content">
-      <div class="online-players">
-        <div id="lb-online-list" class="online-list"></div>
-        <div id="lb-online-empty" style="text-align:center;padding:20px;color:#888;display:none;">
-          😴 Никого нет онлайн
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ========== ГЛАВНЫЙ ИНТЕРФЕЙС ========== -->
-<div id="ui" style="display:none;">
-  <!-- ===== TOP BAR ===== -->
-  <div id="live-activity-ticker" style="background:linear-gradient(90deg,#0f1423,#1a2639);border-bottom:1px solid #00e5ff;color:#fff;padding:6px 15px;font-size:12px;text-align:center;box-shadow:0 0 10px rgba(0,229,255,0.2);">📢 <b>События сервера:</b> Игрок VonKrieger_99 выбил Blitzträger auf E 220! | 👹 Мировой босс Левиафан атакован! | 🛡️ Клановые битвы открыты!</div>
-  <div id="top-bar">
-    <div class="user-info">
-      👤 <span id="current-user">Player</span>
-      <button class="btn btn-sm btn-logout" onclick="logout()">ВЫЙТИ</button>
-    </div>
-    <div id="res-panel">
-      <div>ОПЫТ: <span id="xp-val">0</span> XP</div>
-      <div class="gold-txt">ЗОЛОТО: <span id="gold-val">0</span> G</div>
-      <div class="silver-txt">СЕРЕБРО: <span id="silver-val">0</span> ₽</div>
-      <div style="color:#00e5ff;font-weight:bold">⚡ ЗАРЯДЫ: <span id="charges-val">0</span></div>
-    </div>
-    <div id="exchange-panel">
-      100 XP → 10 G
-      <button class="btn btn-sm" onclick="exchangeXP()">ОБМЕН</button>
-      <button class="btn btn-sm" style="background:#00e5ff;color:#000;font-weight:bold;margin-left:5px;" onclick="buyCharges(1)" title="Купить 1 заряд за 100 золота">+1 ⚡ (100 G)</button>
-      <span id="exchange-msg"></span>
-    </div>
-    <div class="top-btns">
-      <button class="btn btn-leaderboard" onclick="showLeaderboard()">🏆 ТОП</button>
-      <button class="btn btn-promo" onclick="showPromo()">🎟️ КОД</button>
-      <button class="btn btn-container" onclick="showContainerShop()">📦 КОНТЕЙНЕРЫ</button>
-      <button class="btn btn-inventory" onclick="openInventoryTab()">🎒<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
-      <button class="btn btn-modules" onclick="showModules()">⚙️ МОДУЛИ</button>
-      <button class="btn btn-upgrade" onclick="showUpgrades()">🔩 ПРОКАЧКА</button>
-      <!-- НОВЫЕ ФИЧИ В ВЕРХНЕМ МЕНЮ -->
-      <button class="btn" style="background:#1b4f72;border:1px solid #3498db;font-weight:bold" onclick="FeaturesHub.openClans()">🛡️ КЛАНЫ</button>
-      <button class="btn" style="background:#2e4053;border:1px solid #5dade2;font-weight:bold" onclick="FeaturesHub.openMailbox()">📬 ПОЧТА</button>
-      <button class="btn" style="background:#78281f;border:1px solid #e74c3c;font-weight:bold" onclick="FeaturesHub.openWorldBoss()">👹 БОСС-РЕЙД</button>
-      <button class="btn" style="background:#512e5f;border:1px solid #af7ac5;font-weight:bold" onclick="FeaturesHub.openRanked()">🏅 ЛИГА</button>
-      <button class="btn" style="background:#145a32;border:1px solid #2ecc71;font-weight:bold" onclick="FeaturesHub.openCalendar()">📅 НАГРАДЫ</button>
-      <button class="btn" style="background:#7d6608;border:1px solid #f1c40f;font-weight:bold" onclick="FeaturesHub.openWheel()">🎡 КОЛЕСО</button>
-      <button class="btn" style="background:#117864;border:1px solid #1abc9c;font-weight:bold" onclick="FeaturesHub.openVaults()">🏦 СЕЙФЫ</button>
-      <button class="btn" style="background:#b9770e;border:1px solid #e67e22;font-weight:bold" onclick="FeaturesHub.openSpecialModes()">🔥 РЕЖИМЫ</button>
-      <!-- NEW: обучение -->
-      <button class="btn" style="background:#8e44ad" onclick="startTutorial()">🎓 ОБУЧЕНИЕ</button>
-      <!-- NEW: настройки -->
-      <button class="btn" style="background:#555" onclick="showSettings()">⚙️</button>
-    </div>
-  </div>
-
-  <!-- ===== БУСТЕРЫ ===== -->
-  <div id="booster-display" class="booster-bar"></div>
-
-  <!-- ===== ОСНОВНАЯ ЗОНА АНГАРА ===== -->
-  <div id="main-garage-area">
-    <!-- КВЕСТ -->
-    <div id="quest-widget">
-      <div class="quest-title">⭐ 23 ФЕВРАЛЯ: ПОБЕДА ⭐</div>
-      <div class="quest-desc">Уничтожь 15 танков врага</div>
-      <div class="quest-progress-bg">
-        <div id="quest-bar" class="quest-progress-fill"></div>
+<div id="ui">
+  <header id="top-bar">
+    <div class="hangar-topline">
+      <div class="garage-brand">
+        <svg width="36" height="38" viewBox="0 0 36 38" fill="none" aria-hidden="true"><path d="m18 1 15 6v15l-15 14L3 22V7z" stroke="currentColor" stroke-width="2"/><path d="m9 12 9 4 9-4v4l-9 4-9-4zm0 8 9 4 9-4-9 9z" fill="currentColor"/></svg>
+        <div><strong>CITY TANKS</strong><small id="save-status" role="status">Сохранение в этом браузере</small></div>
       </div>
-      <div id="quest-text" class="quest-text">0 / 15</div>
-      <button id="quest-claim-btn" class="btn quest-btn" onclick="claimQuestReward()" style="display:none;">ЗАБРАТЬ T-34-85 ПОБЕДНЫЙ</button>
-    </div>
-
-    <!-- NEW: коллекционные значки -->
-    <div id="collection-badges"></div>
-
-    <!-- ВЫБОР НАЦИИ -->
-    <div id="nat-buttons">
-      <button class="n-btn active-n" onclick="setNat('ussr',this)">СССР</button>
-      <button class="n-btn" onclick="setNat('germany',this)">ГЕРМАНИЯ</button>
-      <button class="n-btn" onclick="setNat('usa',this)">США</button>
-      <button class="n-btn" onclick="setNat('uk',this)">БРИТАНИЯ</button>
-      <button class="n-btn" onclick="setNat('japan',this)">ЯПОНИЯ</button>
-      <button class="n-btn" onclick="setNat('china',this)">КИТАЙ</button>
-      <button class="n-btn" onclick="setNat('france',this)">ФРАНЦИЯ</button>
-      <button class="n-btn" onclick="setNat('european',this)">ЕВРОПА</button>
-    </div>
-
-    <!-- ДЕРЕВО РАЗВИТИЯ -->
-    <div class="tree-view" id="tree-container">
-      <canvas id="tree-canvas"></canvas>
-      <div id="nodes"></div>
-    </div>
-
-    <!-- УПРАВЛЕНИЕ БОЕМ -->
-    <div id="battle-controls">
-      <div style="margin-bottom:5px;font-size:14px">
-        КАРТА: <select id="map-select">
-          <option value="city">Город</option>
-          <option value="field">Поле</option>
-          <option value="desert">Пустыня</option>
-        </select>
+      <div id="res-panel" aria-label="Ресурсы">
+        <div><small>Опыт</small><b><span id="xp-val">0</span> XP</b></div>
+        <div class="gold-txt"><small>Золото</small><b><span id="gold-val">0</span> G</b></div>
+        <div><small>Серебро</small><b><span id="silver-val">0</span> ₽</b></div>
+        <div><small>Заряды</small><b><span id="charges-val">0</span> ⚡</b></div>
       </div>
-      <div class="btn-group">
-        <button class="btn main-battle-btn" onclick="showControlModal(7)">В БОЙ 7x7</button>
-        <button class="btn" style="background:#2980b9" onclick="showControlModal(10)">10x10</button>
-        <button class="btn" style="background:#7f8c8d" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+      <div id="exchange-panel">
+        <button class="btn btn-sm" onclick="exchangeXP()" title="Обменять 100 XP на 10 золота">ОБМЕН</button>
+        <button class="btn btn-sm" onclick="buyCharges(1)" title="Купить 1 заряд за 100 золота">+1 ⚡ · 100 G</button>
+        <span id="exchange-msg" role="status"></span>
       </div>
+      <button type="button" class="garage-settings" onclick="showSettings()" aria-label="Настройки" title="Настройки">⚙</button>
+    </div>
+    <nav class="top-btns" aria-label="Сервисы ангара">
+      <button class="depot-tool" onclick="showPromo()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5h18v3a3 3 0 0 0 0 6v3H3v-3a3 3 0 0 0 0-6ZM15 6v2m0 2v2m0 2v2"/></svg>Код</button>
+      <button class="depot-tool" onclick="showContainerShop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-5 9 5v10l-9 5-9-5V7Zm0 0 9 5 9-5m-9 5v10M7 5l9 5"/></svg>Контейнеры</button>
+      <button class="depot-tool" onclick="openInventoryTab()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v13H4zM7 8V5h10v3m-8 4h6"/></svg>Инвентарь<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
+      <button class="depot-tool" onclick="showModules()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 7 4v8l-7 4-7-4V6Zm-7 4 7 4 7-4m-7 4v8m-8 1 8 4 8-4"/></svg>Модули</button>
+      <button class="depot-tool" onclick="showUpgrades()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 6-6 4 4 7-7m-6 0h6v6M4 20h16"/></svg>Прокачка</button>
+      <button class="depot-tool" onclick="openCalendar()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v15H3zM7 3v5m10-5v5M3 11h18m-14 4h3"/></svg>Награды</button>
+      <button class="depot-tool" onclick="startTutorial()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5zM6 12v4c3 4 9 4 12 0v-4m4-3v7"/></svg>Обучение</button>
+    </nav>
+  </header>
 
-      <!-- ===== СОБЫТИЕ: ВАФФЕНТРАГЕР ===== -->
-      <div style="margin-top:10px;text-align:center;">
-        <button class="btn wt-event-btn" onclick="showWaffentragerModal()">⚡ ВАФФЕНТРАГЕР (1 vs 10) ⚡</button>
-      </div>
-      
-      <!-- ===== ОНЛАЙН РЕЖИМЫ ===== -->
-      <div style="margin-top:8px;">
-        <h3 style="text-align:center;color:#f1c40f;margin-bottom:5px;">🌐 ОНЛАЙН БОИ</h3>
-        <div class="btn-group">
-          <button class="btn" style="background:#27ae60;font-weight:bold;color:#fff" onclick="startMultiplayerSearch(1)">🌐 1x1 ОНЛАЙН</button>
-          <button class="btn" style="background:#27ae60;font-weight:bold;color:#fff" onclick="startMultiplayerSearch(2)">🌐 2x2 ОНЛАЙН</button>
-          <button class="btn" style="background:#3498db;font-weight:bold;color:#fff" onclick="showJoinRoomDialog()">🔗 ПРИСОЕДИНИТЬСЯ</button>
+  <main id="main-garage-area">
+    <div class="hangar-workspace">
+      <div class="hangar-heading">
+        <div><p class="bay-kicker">ГАРАЖНЫЙ КОМПЛЕКС <span>/</span> 01</p><h1>3D-ангар</h1></div>
+        <div class="bay-tabs" role="group" aria-label="Раздел ангара">
+          <button id="bay-inspect-tab" aria-controls="bay-inspection" aria-pressed="true">Мой танк</button>
+          <button id="bay-research-tab" aria-controls="bay-research" aria-pressed="false">Дерево развития</button>
         </div>
       </div>
+      <div class="bay-grid">
+        <section id="bay-inspection" class="bay-panel" aria-label="Осмотр техники">
+          <div class="bay-stage">
+            <div id="bay-viewport">
+              <div id="bay-poster" hidden><img alt=""><span></span></div>
+              <span id="bay-loading" role="status" hidden>Загрузка модели…</span>
+            </div>
+            <div id="bay-angles" role="group" aria-label="Ракурс осмотра" hidden>
+              <button data-view="iso">3/4</button><button data-view="front">Спереди</button><button data-view="side">Сбоку</button><button data-view="top">Сверху</button>
+            </div>
+            <div class="bay-caption"><p id="bay-kind" class="bay-kicker"></p><h2 id="bay-name"></h2><p id="bay-meta"></p></div>
+            <span class="bay-plate" aria-hidden="true">BOX <b>01</b></span>
+          </div>
+        </section>
+        <section id="bay-research" class="bay-panel" aria-label="Дерево развития" hidden>
+          <div class="branch-heading">
+            <div><p class="bay-kicker">ДЕРЕВО <span>/</span> <b id="branch-number"></b></p><h2 id="branch-title"></h2></div>
+            <div id="nat-buttons" role="group" aria-label="Нация ветки"></div>
+          </div>
+          <div class="tree-legend"><span><i></i> В ангаре</span><span><i></i> Доступно</span><span><i></i> Закрыто</span></div>
+          <div id="tree-container" class="tree-view" tabindex="0" role="region" aria-labelledby="branch-title">
+            <div id="tree-map"><canvas id="tree-canvas" aria-hidden="true"></canvas><div id="nodes"></div></div>
+          </div>
+          <div class="tree-nav"><span>Нажмите узел, чтобы исследовать или выбрать танк.</span><div>
+            <button type="button" id="tree-prev" aria-label="Предыдущие уровни">←</button>
+            <button type="button" id="tree-next" aria-label="Следующие уровни">→</button></div></div>
+          <section class="tree-dossier" aria-label="Характеристики узла">
+            <img id="tree-photo" alt="">
+            <div><p class="bay-kicker">ХАРАКТЕРИСТИКИ <span>/</span> <b id="tree-tier"></b></p>
+              <h3 id="tree-name"></h3><p id="tree-status"></p></div>
+            <dl id="tree-stats"></dl>
+          </section>
+        </section>
+        <aside class="bay-dispatch" aria-label="Машина для боя">
+          <p class="bay-kicker"><i class="bay-led"></i> ВЫБРАНО ДЛЯ БОЯ</p>
+          <h2 id="dispatch-name"></h2><p id="dispatch-meta"></p>
+          <div class="dispatch-heading">БАЗОВЫЕ ХАРАКТЕРИСТИКИ</div>
+          <dl class="dispatch-stats" aria-label="Базовые характеристики">
+            <div><dt>Прочность</dt><dd id="dispatch-hp"></dd></div>
+            <div><dt id="dispatch-dmg-label">Урон</dt><dd id="dispatch-dmg"></dd></div>
+            <div><dt id="dispatch-reload-label">Перезарядка</dt><dd id="dispatch-reload"></dd></div>
+            <div><dt>Пробитие</dt><dd id="dispatch-pen"></dd></div>
+            <div><dt>Лоб корпуса / башни</dt><dd id="dispatch-armor"></dd></div>
+            <div><dt>Скорость</dt><dd id="dispatch-speed"></dd></div>
+            <div><dt>Обзор</dt><dd id="dispatch-view"></dd></div>
+          </dl>
+          <p id="dispatch-drum" hidden></p>
+          <!-- УПРАВЛЕНИЕ БОЕМ -->
+          <div id="battle-controls">
+            <div class="dispatch-heading">3D-БОЙ С БОТАМИ</div>
+            <div class="dispatch-map">
+              <label for="map-select">Карта</label> <select id="map-select" aria-describedby="map-size map-detail"></select>
+            </div>
+            <details class="sector-brief"><summary>План сектора <b id="map-size"></b></summary>
+              <canvas id="map-plan" role="img" width="360" height="242" aria-label="Схема выбранной карты"></canvas>
+              <div class="plan-key"><span>◇ Свои</span><span>◇ Противник</span></div>
+              <p id="map-detail"></p>
+              <p class="survey-key"><b>◎ Разведка</b> Кольцом отмечены свои разведчики. Посещённые клетки светлеют.</p>
+            </details>
+            <div class="btn-group">
+              <button class="btn main-battle-btn" onclick="showControlModal(15)">В БОЙ 15×15</button>
+              <button class="btn" onclick="showControlModal(7)">7×7</button>
+              <button class="btn" onclick="showControlModal(10)">10×10</button>
+              <button class="btn" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+            </div>
 
-      <!-- ТРЕНИРОВКА -->
-      <div id="training-panel" style="display:none;margin-top:8px;background:#222;padding:10px;border:1px solid #444">
-        НАЦИЯ: <select id="train-nat-select" onchange="fillEnemySelect()"></select>
-        ВРАГ: <select id="enemy-select"></select>
-        <button class="btn" onclick="showControlModal('train')">НАЧАТЬ</button>
+            <!-- ТРЕНИРОВКА -->
+            <div id="training-panel" style="display:none">
+              <div class="training-options">
+                <label for="train-nat-select">Нация соперника</label><select id="train-nat-select" onchange="fillEnemySelect()"></select>
+                <label for="enemy-select">Машина соперника</label><select id="enemy-select"></select>
+                <button class="btn" onclick="showControlModal('train')">НАЧАТЬ</button>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
+      <details class="bay-supply">
+        <summary>Бустеры снабжения</summary>
+        <div id="booster-display" class="booster-bar"></div>
+      </details>
     </div>
-  </div>
+  </main>
 
-  <!-- ===== КАРУСЕЛЬ ТАНКОВ ===== -->
-  <div id="tank-carousel-container">
+  <section id="tank-carousel-container" aria-label="Ваши танки">
+    <div class="fleet-heading"><span>МОЯ ТЕХНИКА</span><b id="fleet-count"></b><i></i><small>ВЫБОР МАШИНЫ ДЛЯ БОЯ</small></div>
     <div id="tank-carousel"></div>
-  </div>
+  </section>
 </div>
 
 <!-- ========== HUD (ВО ВРЕМЯ БОЯ) ========== -->
 <div id="hud">
-  <div id="allies-list" class="team-list"></div>
-  <div id="enemies-list" class="team-list"></div>
+  <header class="combat-top">
+    <div class="combat-location"><span class="combat-eyebrow" id="combat-sector"></span><strong id="combat-map"></strong></div>
+    <button class="combat-score" id="score-toggle" type="button" aria-expanded="false" aria-controls="battle-roster" aria-label="Состав команд"><span id="allies-list"></span><i>:</i><span id="enemies-list"></span></button>
+    <button type="button" id="battle-exit">Меню</button>
+  </header>
+  <div id="scope-mask" aria-hidden="true"></div>
+  <div id="sight-mode" hidden></div><div id="gun-marker" hidden aria-hidden="true"></div>
+  <section id="battle-roster" hidden aria-label="Состав команд"><div><h3>СОЮЗНИКИ</h3><ul id="roster-allies"></ul></div><div><h3>ПРОТИВНИКИ</h3><ul id="roster-enemies"></ul></div></section>
+  <small id="relative-hint" hidden>Обзор без захвата · Alt — переставить мышь</small>
+  <div id="battle-reticle" aria-hidden="true"><i></i></div>
 
-  <!-- NEW: лампочка "Шестое чувство" и индикатор пинга/FPS -->
-  <div id="sixth-sense-lamp" title="Вас обнаружили"></div>
   <div id="perf-hud"></div>
+  <div id="water-warning" hidden></div>
 
-  <!-- HUD СОБЫТИЯ ВАФФЕНТРАГЕР -->
-  <div id="wt-hud" style="display:none;">
-    <div id="wt-timer-box">⏳ <span id="wt-timer">06:00</span></div>
-    <div id="wt-shield-box">
-      <div id="wt-shield-status"><span style="color:#00e5ff">🛡️ ЩИТ БОССА АКТИВЕН</span></div>
-      <div id="wt-energy-level">⚡ Уровень энергии: x1 (+0% урона)</div>
-    </div>
-    <div id="wt-ability-bar">
-      <button id="wt-btn-emp" class="wt-ability-btn" onclick="useWaffentragerAbility('emp')">⚡ ЭМИ [E]</button>
-      <button id="wt-btn-tp" class="wt-ability-btn" onclick="useWaffentragerAbility('teleport')">🌀 ТЕЛЕПОРТ [T]</button>
-      <button id="wt-btn-turbo" class="wt-ability-btn" onclick="useWaffentragerAbility('turbo')">🚀 ФОРСАЖ [Shift]</button>
-      <button id="wt-btn-repair" class="wt-ability-btn" onclick="useWaffentragerAbility('repair')">🔧 РЕМОНТ [R]</button>
-    </div>
-  </div>
-  
   <!-- НИЖНЯЯ ПАНЕЛЬ -->
   <div id="bottom-bar">
+    <div id="field-actions">
+      <button class="btn btn-sm" onclick="CombatMechanics.deploySmokeScreen(GameState.player)">Дым <kbd>7</kbd></button>
+      <button class="btn btn-sm" onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">Артподдержка <kbd>8</kbd></button>
+    </div>
+    <div class="armor-readout"><b id="combat-tank"></b><span id="hp-text"></span></div>
     <div id="hp-ui"><div id="hp-bar"></div></div>
+    <div class="drive-readout"><span id="drive-speed">0 км/ч</span><span id="drive-surface">Грунт</span></div>
     <div id="ammo-ui"><span id="ammo-val">ЗАРЯЖЕНО</span></div>
     <div id="shell-ui">
       <span class="shell-opt active" onclick="setShell(0)">1:ББ</span>
@@ -367,19 +246,22 @@
       <span class="shell-opt" onclick="setShell(2)">3:Подкал</span>
     </div>
     <div id="cons-ui">
-      <span class="cons-btn ready" id="cons1" onclick="useCons(0)">4:Ремкомплект</span>
-      <span class="cons-btn ready" id="cons2" onclick="useCons(1)">5:Аптечка</span>
-      <span class="cons-btn ready" id="cons3" onclick="useCons(2)">6:Адреналин</span>
-      <span class="cons-btn ready" id="cons4" onclick="useCons(3)">7:Огнетушитель</span>
-      <span class="cons-btn ready" id="cons5" onclick="useCons(4)">8:Доп.паёк</span>
-      <span class="cons-btn ready" id="cons6" onclick="useCons(5)">9:Топливо</span>
+      <span class="cons-btn ready" id="cons1" onclick="useCons(0)">5/Q:Ремкомплект</span>
+      <span class="cons-btn ready" id="cons2" onclick="useCons(1)">4:Аптечка</span>
+      <span class="cons-btn ready" id="cons3" onclick="useCons(2)">R:Адреналин</span>
+      <span class="cons-btn ready" id="cons4" onclick="useCons(3)">6/F:Огнетушитель</span>
+      <span class="cons-btn ready" id="cons5" onclick="useCons(4)">9:Доп.паёк</span>
+      <span class="cons-btn ready" id="cons6" onclick="useCons(5)">0:Топливо</span>
     </div>
   </div>
 
   <!-- ЛОГИ И ИНФОРМАЦИЯ -->
   <div id="dmg-log"></div>
-  <div id="crew-msg"></div>
-  <canvas id="minimap"></canvas>
+  <div id="combat-message"></div>
+  <figure class="map-instrument">
+    <figcaption id="recon-status" hidden></figcaption>
+    <canvas id="minimap" role="img" aria-label="Мини-карта боя: посещённые клетки, союзники и обнаруженные противники"></canvas>
+  </figure>
 </div>
 
 <!-- ========== МОБИЛЬНОЕ УПРАВЛЕНИЕ ========== -->
@@ -390,7 +272,15 @@
     </div>
   </div>
   <div id="fire-zone">
-    <div class="mobile-btn fire" id="fire-btn">ОГОНЬ</div>
+    <button type="button" class="mobile-btn fire" id="fire-btn">ОГОНЬ</button>
+  </div>
+  <div id="touch-radio"><button id="signal-btn" type="button" aria-controls="touch-signals" aria-expanded="false" aria-label="Быстрые сигналы">Связь</button>
+    <div id="touch-signals" hidden aria-label="Быстрые сигналы"></div>
+  </div>
+  <div id="touch-sight">
+    <button id="autoaim-btn" type="button" aria-pressed="false">Авто</button>
+    <button id="scope-btn" type="button" aria-pressed="false">Прицел</button>
+    <button id="zoom-btn" type="button" hidden aria-label="Следующая кратность">×2</button>
   </div>
   <div id="mobile-shells">
     <div class="m-shell active" onclick="setShell(0)">ББ</div>
@@ -407,37 +297,26 @@
   </div>
 </div>
 
+<section id="input-menu" hidden aria-labelledby="input-title">
+  <div class="input-panel"><small class="combat-eyebrow">УПРАВЛЕНИЕ · CITY TANKS</small>
+    <h2 id="input-title">Готовы к выезду</h2>
+    <p class="pc-help">Мышь вращает обзор, башня следует за прицелом. Удерживайте ПКМ, чтобы осмотреться. Shift — оптика, E — автоприцел, Esc — пауза.</p>
+    <p class="touch-help">Слева тяните джойстик, справа ведите пальцем для обзора. Можно наводиться и на самой кнопке огня.</p>
+    <button type="button" id="resume-input" class="btn">Взять управление</button><button type="button" class="battle-cancel" onclick="leaveBattle()">В ангар</button>
+    <button type="button" class="menu-skip battle-cancel" onclick="skipTutorial()">Пропустить обучение</button>
+  </div>
+</section>
+
 <!-- ========== ЭКРАН РЕЗУЛЬТАТОВ ========== -->
 <div id="result-screen">
+  <p class="combat-eyebrow">ИТОГИ БОЯ</p>
   <div id="result-title"></div>
   <div id="result-stats"></div>
   <button class="btn" style="margin-top:15px" onclick="backToGarage()">В АНГАР</button>
 </div>
 
 <!-- ========== CANVAS ДЛЯ ИГРЫ ========== -->
-<canvas id="game"></canvas>
-
-<!-- ========== ЧАТ ========== -->
-<div id="chat-panel" style="display:none;position:fixed;bottom:0;right:20px;width:350px;height:400px;background:rgba(0,0,0,0.9);border:2px solid #3498db;border-radius:10px 10px 0 0;z-index:1000;">
-  <div class="chat-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(52,152,219,0.3);border-bottom:1px solid #3498db;">
-    <h3 style="margin:0;color:#3498db;">💬 ЧАТ</h3>
-    <div>
-      <button class="btn btn-sm" onclick="switchChatTab('global')" id="chat-tab-global" style="background:#3498db;">🌍</button>
-      <button class="btn btn-sm" onclick="switchChatTab('room')" id="chat-tab-room" style="background:#555;">👥</button>
-      <button class="btn btn-sm" onclick="toggleChat()" style="background:#e74c3c;">✕</button>
-    </div>
-  </div>
-  
-  <div id="chat-messages" style="height:320px;overflow-y:auto;padding:10px;font-size:12px;"></div>
-  
-  <div style="display:flex;padding:10px;gap:5px;">
-    <input type="text" id="chat-input" placeholder="Введите сообщение..." style="flex:1;padding:8px;background:#222;border:1px solid #555;color:#fff;border-radius:4px;" onkeypress="if(event.key==='Enter')sendChatMessage()">
-    <button class="btn btn-sm" onclick="sendChatMessage()" style="background:#27ae60;">➤</button>
-  </div>
-</div>
-
-<!-- Кнопка открытия чата -->
-<button id="chat-toggle-btn" onclick="toggleChat()" style="position:fixed;bottom:20px;right:20px;width:50px;height:50px;background:#3498db;border:2px solid #fff;border-radius:50%;font-size:24px;cursor:pointer;z-index:999;box-shadow:0 0 10px rgba(52,152,219,0.5);">💬</button>
+<canvas id="game" hidden aria-label="Трёхмерное поле боя" tabindex="-1"></canvas>
 
 <!-- NEW: обучение — оверлей поверх всего интерфейса -->
 <div id="tutorial-overlay">
@@ -445,152 +324,54 @@
   <button id="tutorial-skip" onclick="skipTutorial()">Пропустить</button>
 </div>
 
-<!-- ========== МОДАЛКА ИВЕНТА ВАФФЕНТРАГЕР ========== -->
-<div id="waffentrager-modal" class="wt-modal">
-  <div class="wt-modal-content">
-    <div class="wt-modal-header">
-      <h2>⚡ СОБЫТИЕ: ВАФФЕНТРАГЕР (1 vs 10) ⚡</h2>
-      <button class="close-btn" onclick="closeWaffentragerModal()">×</button>
-    </div>
-    
-    <div class="wt-modal-body">
-      <p style="color:#aaa;text-align:center;font-size:13px;">
-        Сразитесь в легендарной битве 1 на 10! Возглавьте сверхмощный <b>Blitzträger</b> с силовым щитом или объединитесь в <b>Альянс Гончих</b>, перегружайте генераторы и сокрушите босса!
-      </p>
-
-      <h3 style="color:#00e5ff;margin-top:15px;text-align:center;">ВЫБЕРИТЕ РОЛЬ</h3>
-      <div class="wt-role-grid">
-        <div id="wt-role-random" class="wt-role-card selected" onclick="selectWTRole('random')">
-          <div class="wt-role-icon">🎲</div>
-          <h4>СЛУЧАЙНО</h4>
-          <p>Автоматический подбор роли: Босс или Гончая</p>
-        </div>
-
-        <div id="wt-role-boss" class="wt-role-card" onclick="selectWTRole('boss')">
-          <div class="wt-role-icon">⚡</div>
-          <h4>BLITZTRÄGER (БОСС)</h4>
-          <p>1 против 10! Силовой щит, ЭМИ-удар, гипер-залпы и телепорт</p>
-        </div>
-
-        <div id="wt-role-hound" class="wt-role-card" onclick="selectWTRole('hound')">
-          <div class="wt-role-icon">🐺</div>
-          <h4>ГОНЧИЕ (АЛЬЯНС)</h4>
-          <p>Команда 10 танков: сбор плазмы, перегрузка генераторов, снятие щита</p>
-        </div>
-      </div>
-
-      <div id="wt-hound-picker" style="margin-top:15px;">
-        <h4 style="color:#3498db;text-align:center;">ВЫБЕРИТЕ МАШИНУ ГОНЧИХ</h4>
-        <div class="wt-hound-grid">
-          <div id="wt-hound-T55_THUNDER" class="wt-hound-card selected" onclick="selectWTHound('T55_THUNDER')">
-            <div class="wt-hound-name">T-55 Thunderbolt</div>
-            <div class="wt-hound-desc">Турбо-СТ • Сбалансированный штурмовик</div>
-          </div>
-          <div id="wt-hound-RESISTOR_140" class="wt-hound-card" onclick="selectWTHound('RESISTOR_140')">
-            <div class="wt-hound-name">Resistor (Об. 140)</div>
-            <div class="wt-hound-desc">Высокий ДПМ • Электро-отражатель</div>
-          </div>
-          <div id="wt-hound-THUNDERBOLT_PATTON" class="wt-hound-card" onclick="selectWTHound('THUNDERBOLT_PATTON')">
-            <div class="wt-hound-name">Thunderbolt (Patton)</div>
-            <div class="wt-hound-desc">Тяжёлая броня • Огневая поддержка</div>
-          </div>
-          <div id="wt-hound-FOUDRE_BC" class="wt-hound-card" onclick="selectWTHound('FOUDRE_BC')">
-            <div class="wt-hound-name">Foudre (Bat.-Chât.)</div>
-            <div class="wt-hound-desc">4 снаряда барабан • Гипер-скорость</div>
-          </div>
-          <div id="wt-hound-JISKRA_TVP" class="wt-hound-card" onclick="selectWTHound('JISKRA_TVP')">
-            <div class="wt-hound-name">Jiskra (TVP 50/51)</div>
-            <div class="wt-hound-desc">Скоростной барабан • Плазменный залп</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="background:#111;border:1px solid #333;border-radius:8px;padding:10px;margin-top:15px;display:flex;justify-content:space-around;text-align:center;">
-        <div>⚡ <b>Награда за победу:</b> <span style="color:#00e5ff">1–3 Заряда</span></div>
-        <div>📦 <b>Контейнер:</b> <span style="color:#f1c40f">E 220, Sturmtiger, WT E100</span></div>
-      </div>
-    </div>
-
-    <div class="wt-modal-footer">
-      <button class="btn wt-start-btn" onclick="showControlModal('waffentrager')">⚡ В БОЙ 1 vs 10 ⚡</button>
-    </div>
+<section id="battle-notice" role="status" hidden>
+  <div><p class="combat-eyebrow">CITY TANKS &nbsp;/&nbsp; БОЕВОЙ ВЫЕЗД</p>
+    <h2 id="battle-notice-title"></h2><p id="battle-notice-text"></p>
+    <button class="btn" onclick="backToGarage()">Вернуться в ангар</button>
   </div>
-</div>
+</section>
 
-<!-- ========== СКРИПТЫ (ПРАВИЛЬНЫЙ ПОРЯДОК!) ========== -->
-<!-- Порядок подключения JS файлов: исходный порядок сохранён,
-     новые файлы отмечены NEW и вставлены в рабочих точках зависимостей -->
+    <script src="models/catalog.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/tanks.js"></script>
     <script src="js/containers.js"></script>
-    <script src="js/waffentrager.js"></script>          <!-- NEW: режим Ваффентрагер 1 vs 10 -->
+    <script src="js/calendar.js"></script>
     <script src="js/audio.js"></script>
+    <script src="js/battle-space.js"></script>
+    <script src="js/battle-ground.js"></script>
+    <script src="js/battle-maps.js"></script>
+    <script src="js/battle-navigation.js"></script>
+    <script src="js/battle-recon.js"></script>
+    <script src="js/bot-ai.js"></script>
+    <script src="js/map-chart.js"></script>
     <script src="js/tank.js"></script>
     <script src="js/armor-system.js"></script>       <!-- NEW: бронезоны + крит.повреждения -->
     <script src="js/terrain.js"></script>              <!-- NEW: физика ландшафта -->
+    <script src="js/track-contact.js"></script>
+    <script src="js/track-drive.js"></script>
     <script src="js/destructible.js"></script>         <!-- NEW: разрушаемые здания -->
     <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
-    <script src="js/crew.js"></script>                  <!-- NEW: экипаж и перки -->
-    <script src="js/camouflage.js"></script>            <!-- NEW: камуфляжи -->
-    <script src="js/blueprints.js"></script>            <!-- NEW: чертежи -->
-    <script src="js/collections-bonus.js"></script>     <!-- NEW: коллекционный бонус -->
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
+    <script src="js/local-profile.js"></script>
+    <script src="js/garage-viewer.js"></script>
+    <script src="js/research-tree.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/bp.js"></script>                    <!-- ПЕРЕПИСАН: BattlePassSystem -->
-    <script src="js/social.js"></script>                <!-- ПЕРЕПИСАН: SocialSystem (рынок + рефералка) -->
     <script src="js/controls.js"></script>
+    <script src="vendor/three-r180.min.js"></script>
+    <script src="js/battle-models.js"></script>
+    <script src="js/depot-room.js"></script>
+    <script src="js/depot-view.js"></script>
+    <script src="js/battle-world.js"></script>
+    <script src="js/battle-look.js"></script>
+    <script src="js/battle-view.js"></script>
     <script src="js/battle.js"></script>
-    <script src="js/multiplayer.js"></script>
-    <script src="js/chat.js"></script>
     <script src="js/main.js"></script>
-    <script src="js/news.js"></script>                  <!-- NEW: новости ангара -->
     <script src="js/tutorial.js"></script>              <!-- NEW: интерактивное обучение -->
-    <script src="js/perf-hud.js"></script>              <!-- NEW: индикатор пинга/FPS -->
-    <script src="js/achievements.js"></script>          <!-- NEW: достижения/медали -->
+    <script src="js/perf-hud.js"></script>              <!-- NEW: индикатор FPS -->
     <script src="js/damage-indicator.js"></script>      <!-- NEW: индикатор направления урона -->
-    <script src="js/daily-quests.js"></script>           <!-- NEW: ежедневные задачи -->
     <script src="js/settings.js"></script>               <!-- NEW: панель настроек -->
-    <script src="js/market-history.js"></script>          <!-- NEW: история цен рынка -->
 
-    <!-- 🌟 НОВЫЕ СИСТЕМЫ И ФИЧИ (100 ФИЧ) 🌟 -->
-    <script src="js/features/supabase-features.js"></script>
+    <!-- Снаряжение, окружение и дополнительные окна ангара -->
     <script src="js/features/combat-mechanics.js"></script>
     <script src="js/features/weather-environments.js"></script>
-    <script src="js/features/special-modes.js"></script>
-    <script src="js/features/audio-visual-fx.js"></script>
-    <script src="js/features/customization-attachments.js"></script>
-    <script src="js/features/progression-upgrades.js"></script>
-    <script src="js/features/economy-vaults.js"></script>
-    <script src="js/features/ui-controls-ux.js"></script>
-    <script src="js/features/campaign-battles.js"></script>
-    <script src="js/features-hub.js"></script>
-
-<script>
-  // Инициализация при загрузке
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎮 DOM готов');
-    setTimeout(() => {
-      if (typeof initSupabase === 'function') {
-        initSupabase();
-        console.log('✅ initSupabase вызвана');
-      } else {
-        console.error('❌ initSupabase не найдена!');
-      }
-    }, 500);
-  });
-  
-  // Функция для присоединения к комнате
-  function showJoinRoomDialog() {
-    const code = prompt('Введите код комнаты (6 букв):');
-    if (code && code.length >= 6) {
-      joinRoom(code.toUpperCase());
-    } else if (code) {
-      alert('❌ Неверный код! Должен быть 6 символов');
-    }
-  }
-</script>
 
 </body>
 </html>

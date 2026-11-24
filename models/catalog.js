@@ -84,6 +84,53 @@ const US_BRANCH = defineLine('usa', [
   ['M46PATTON','M46 Patton','mt','m46-patton',       1700,360,7600,218,102,127,48,1.04,380,.20],
   ['M48PATTON','M48 Patton','mt','m48-patton',       2050,390,7200,255,120,254,45,1.06,395,.18]
 ]);
+// The T20 fork reuses I–VII of the Patton route. Store full-clip alpha,
+// not per-round damage: reload is the cooldown AFTER the fourth shot.
+const US_T57_BRANCH = defineLine('usa', [
+  ['T69','T69','mt','t69',                   1350, 960,22000,181,102,114,51,1.02,370,.21,{mag:4,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}],
+  ['T54E1','T54E1','ht','t54e1',            1800,1560,30000,210,110,127,43,1.11,380,.14,{mag:4,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}],
+  ['T57HEAVY','T57 Heavy','ht','t57-heavy', 2250,1600,23000,258,127,152,35,1.16,395,.10,{mag:4,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}]
+], US_BRANCH.slice(0,7));
+const US_T110E5_BRANCH = defineLine('usa', [
+  ['T1HEAVY','T1 Heavy','ht','t1-heavy', 720,115,3600,128,102,102,35,1.05,320,.15,{minPitch:-5,maxPitch:15}],
+  ['M6','M6','ht','m6',                1020,240,7200,160,102,102,35,1.10,330,.13,{minPitch:-8,maxPitch:20}],
+  ['T29','T29','ht','t29',              1400,320,9000,198,102,279,35,1.14,350,.11,{minPitch:-8,maxPitch:15}],
+  ['T32','T32','ht','t32',              1600,320,8200,218,127,298,35,1.13,360,.10,{minPitch:-8,maxPitch:15}],
+  ['M103','M103','ht','m103',           1950,400,9500,258,127,254,34,1.18,380,.08,{minPitch:-8,maxPitch:15}],
+  ['T110E5','T110E5','ht','t110e5',     2350,400,8200,258,152,254,37,1.18,395,.07,{minPitch:-10,maxPitch:20}]
+], US_BRANCH.slice(0,4)); // M3 Lee → one T1 Heavy, not a second starter
+const US_YOH_BRANCH = defineLine('usa', [
+  ['PAWLACK','Pawlack Tank','ht','pawlack-tank',930,220,6800,155, 95,110,45,1.06,335,.14,{minPitch:-5,maxPitch:15}],
+  ['MIIY','M-II-Y','ht','m-ii-y',             1320,240,6200,190,120,165,40,1.08,350,.12,{minPitch:-10,maxPitch:20}],
+  ['MIIIY','M-III-Y','ht','m-iii-y',          1550,320,8200,220,135,220,40,1.10,365,.10,{minPitch:-10,maxPitch:20}],
+  ['MVIY','M-VI-Y','ht','m-vi-y',             1900,400,9500,248,140,260,40,1.13,380,.09,{oscillating:true,minPitch:-10,maxPitch:20}],
+  ['MVY','M-V-Y','ht','m-v-y',                2250,440,9600,258,150,280,42,1.13,395,.08,{oscillating:true,minPitch:-10,maxPitch:20}]
+], US_T110E5_BRANCH.slice(0,5));
+// M2 Light Tank is a new node, not the existing M2 Medium or a legacy T2 Light.
+const US_SHERIDAN_BRANCH = defineLine('usa', [
+  ['M2LT','M2 Light Tank','lt','m2-light-tank',              165, 40, 2100, 46,25,25,55, .72,285,.33,{minPitch:-8,maxPitch:20}],
+  ['M3ST','M3 Stuart','lt','m3-stuart',                      240, 45, 2000, 56,38,38,60, .77,300,.33,{minPitch:-8,maxPitch:20}],
+  ['M5ST','M5 Stuart','lt','m5-stuart',                      340, 45, 1900, 72,38,38,64, .79,320,.34,{minPitch:-8,maxPitch:20}],
+  ['M24','M24 Chaffee','lt','m24-chaffee',                   500,110, 3400,108,25,38,62, .85,340,.34,{minPitch:-8,maxPitch:20}],
+  ['T37','T37','lt','t37',                                   670,115, 3400,138,25,25,66, .87,350,.33,{minPitch:-10,maxPitch:20}],
+  ['T71CMCD','T71 CMCD','lt','t71-cmcd',                     870,150, 3800,168,25,25,64, .86,365,.35,{minPitch:-10,maxPitch:20}],
+  ['M41','M41 Walker Bulldog','lt','m41-walker-bulldog',    1100,175, 4200,185,25,25,70, .92,380,.32,{minPitch:-10,maxPitch:20}],
+  ['T49','T49','lt','t49',                                  1400,560,15500,152,25,25,68, .97,390,.31,{minPitch:-10,maxPitch:20}],
+  ['SHERIDAN','XM551 Sheridan','lt','xm551-sheridan',       1680,560,13500,230,20,35,65,1.04,400,.30,{minPitch:-8,maxPitch:20}]
+], US_BRANCH.slice(0,1));
+// The dash in the Soviet TD table means no separate turret plate. The model
+// mount supplies each local traverse sector; the armoured casemate stays on the hull.
+const USSR_268_BRANCH = defineLine('ussr', [
+  ['AT1','АТ-1','td','at-1',                       145, 55, 2400, 62, 15,null,30, .71,275,.34,{yawLimits:[-14,14],minPitch:-5,maxPitch:15}],
+  ['SU76M','СУ-76М','td','su-76m',                 205,110, 4000,100, 25,null,45, .76,300,.33,{yawLimits:[-12,12],minPitch:-4,maxPitch:25}],
+  ['SU85B','СУ-85Б','td','su-85b',                 315,150, 4400,130, 25,null,45, .81,315,.32,{yawLimits:[-10,10],minPitch:-5,maxPitch:15}],
+  ['SU85','СУ-85','td','su-85',                    470,180, 5200,144, 45,null,55, .89,330,.32,{yawLimits:[-10,10],minPitch:-5,maxPitch:15}],
+  ['SU100','СУ-100','td','su-100',                 690,390,10500,175, 75,null,50, .97,340,.30,{yawLimits:[-10,10],minPitch:-6,maxPitch:15}],
+  ['SU152','СУ-152','td','su-152',                 960,640,14500,150, 75,null,43,1.05,350,.25,{yawLimits:[-9,9],minPitch:-5,maxPitch:15}],
+  ['ISU152','ИСУ-152','td','isu-152',             1200,750,15200,260, 90,null,43,1.09,360,.23,{yawLimits:[-9,9],minPitch:-5,maxPitch:15}],
+  ['OBJ704','Объект 704','td','object-704',       1650,750,14000,286,120,null,37,1.14,375,.21,{yawLimits:[-10,10],minPitch:-5,maxPitch:15}],
+  ['OBJ268','Объект 268','td','object-268',       1950,750,13000,303,187,null,48,1.14,390,.21,{yawLimits:[-10,10],minPitch:-5,maxPitch:15}]
+], USSR_BRANCH.slice(0,1));
 const USSR_MEDIUM_BRANCH = defineLine('ussr', [
   ['BT2','БТ-2','lt','bt-2',              170, 45,2300, 50, 13, 13,52,.70,300,.35,{minPitch:-8,maxPitch:25}],
   ['BT7','БТ-7','lt','bt-7',              250, 55,2400, 65, 22, 15,60,.75,320,.35,{minPitch:-8,maxPitch:25}],
@@ -170,12 +217,13 @@ function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});
 }
 const BRANCHES = Object.freeze({
-  ussr: nationTree('01','ИС-7, ИС-4, Объект 140, Объект 430У, К-91 и Т-100 ЛТ',
-    USSR_BRANCH, USSR_IS4_BRANCH, USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH),
+  ussr: nationTree('01','ИС-7, ИС-4, Объект 140, Объект 430У, К-91, Т-100 ЛТ и Объект 268',
+    USSR_BRANCH, USSR_IS4_BRANCH, USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH),
   germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Grille 15, Jagdpanzer E 100, Maus, E 50 Ausf. M и E 100',
     GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH,
     GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH),
-  usa: nationTree('03','Путь к M48 Patton',US_BRANCH),
+  usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
+    US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH)
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));

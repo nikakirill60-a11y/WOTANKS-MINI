@@ -23,13 +23,16 @@ const obj430Ids = ['OBJ430','OBJ430U'];
 const k91Ids = ['A43','A44','OBJ416','OBJ430II','K91'];
 const e50Ids = ['VK3002M','PANTHER','PANTHERII','E50','E50M'];
 const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGPZE100'];
-const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds);
+const batch5 = require('./fixtures/batch5.cjs');
+const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
+const usTreeIds = usIds.concat(additions('usa'));
+const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'));
 const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids);
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
+const meshCounts = {...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
   A43:4665,A44:5232,OBJ416:6798,OBJ430II:6909,K91:7883,OBJ430:7137,OBJ430U:5790,
   VK3002M:5762,PANTHER:5830,PANTHERII:4691,E50:4989,E50M:4825,GRILLE15:7315,
   HETZER:5233,STUG3G:4502,JGPZIV:3638,JAGDP:5681,FERDINAND:4022,JAGDTIGER:5341,JGPZE100:5780,
@@ -684,7 +687,7 @@ test('US research from a free T1 Cunningham to M48 Patton, locked stats and loca
   let xp=414000;const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'IS3',XP:xp,garageSlots:prior.length+10})}});
   await click('Дерево развития');await click('США');
   assert.equal(await page.locator('#branch-number').innerText(),'03');assert.match(await page.locator('#branch-title').innerText(),/M48 Patton/);
-  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),usIds);
+  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),usTreeIds);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth));
   await click('Характеристики: M48 Patton');assert.match(await page.locator('#tree-status').innerText(),/M46 Patton/);
   assert.equal(await page.locator('#tree-inspect,#bay-picker').count(),0);
@@ -705,7 +708,7 @@ test('US M3 Lee: real depot and mobile sortie, limited traverse, swipe to aim, t
   const {page,click}=await offlineGame(t,{webgl:true,mobile:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','M3LEE'],selected:'M3LEE'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.M3LEE);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('usa');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usIds.concat(['M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
   await page.locator('#enemy-select').selectOption('M4SHERMAN');await click('НАЧАТЬ');await chooseControls(page,'mobile');await ready(page);
   const models=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.hp,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -1080,7 +1083,8 @@ test('route picker on a phone: browse the five supplied paths, buy only the twen
   }
   assert.deepEqual(meshes,[],'tree rows use their own icons, not twenty 3D viewers');
   await picker.selectOption(''); assert.equal(await page.locator('#nodes .node').count(),germanTreeIds.length);
-  await click('США'); assert.ok(await picker.isHidden()); await click('ГЕРМАНИЯ'); assert.equal(await picker.inputValue(),'');
+  await click('США'); assert.ok(await picker.isVisible()); assert.equal(await picker.inputValue(),'');
+  await click('ГЕРМАНИЯ'); assert.equal(await picker.inputValue(),'');
   await page.reload(); const s=await saved(page); assert.deepEqual([s.owned,s.selected,s.XP],[owned,'JGPZE100',0]);
   assert.equal(await page.locator('#dispatch-dmg').innerText(),'1050'); assert.equal(await page.locator('#dispatch-armor').innerText(),'250 / — мм');
 });

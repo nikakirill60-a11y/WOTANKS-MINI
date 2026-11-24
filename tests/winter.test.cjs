@@ -42,14 +42,71 @@ test('all 31 actual December visits award the two distinct milestone vehicles ex
   assert.equal(s.GOLD,27*50+4*500);await page.reload();assert.deepEqual(await saved(),s);
 });
 
-test('buy, open one and open all: only five missing collectibles, duplicate compensation, persistent playable inventory',async t=>{
-  const {page,click,saved}=await openGame(t,{mobile:true,seed:{SILVER:75000,inventory:{collection:5}}});
-  await click('Контейнеры');await page.locator('.c-card').filter({hasText:'Коллекционный контейнер'}).getByRole('button').click();
-  assert.equal((await saved()).SILVER,0);assert.equal((await saved()).inventory.collection,6);
-  await click('🎒 Инвентарь');await click('ОТКРЫТЬ 1');assert.match(await page.locator('#reward-display').innerText(),/ЗАБРАТЬ/);await click('ЗАБРАТЬ');
-  await click('ОТКРЫТЬ ВСЕ');assert.match(await page.locator('#reward-display').innerText(),/50000 ₽/);await click('ЗАБРАТЬ');
-  const s=await saved();assert.deepEqual(s.owned.sort(),['MS1','M4A3E2','T71DA','JPANTHERII','T62A','TL7'].sort());assert.equal(s.SILVER,50000);assert.deepEqual(s.inventory,{});
+test('collection: a single 5% roll for the whole pool, equal missing vehicles, two currency bands and no duplicates',async t=>{
+  const {page}=await openGame(t);
+  const {pool,full,oneLeft,edges}=await page.evaluate(()=>{
+    const pool=CONTAINERS.collection.vehicles;
+    function draw(owned,outcome,detail){
+      GameState.owned=['MS1',...owned];
+      const rolls=[outcome,detail];
+      const r=openContainerDirect('collection',()=>rolls.shift());
+      return r.id || [r.type,r.amount];
+    }
+    // A stratified sample checks the exact bands, not a flaky random frequency estimate.
+    function histogram(owned){
+      const hits={};
+      for(let i=0;i<2000;i++){
+        const r=draw(owned,(i+.5)/2000,(i%5+.5)/5), k=Array.isArray(r)?r[0]:r;
+        hits[k]=(hits[k]||0)+1;
+      }
+      return hits;
+    }
+    return {pool,full:histogram([]),oneLeft:histogram(pool.slice(0,-1)),edges:[
+      draw([],0,0),draw([],.04999999,.999999),draw([],.05,0),draw([],.5249999,.999999),
+      draw([],.525,0),draw([],.999999,.999999),draw(pool,0,0),draw(pool,.49999,.999999),draw(pool,.5,.999999)
+    ]};
+  });
+  assert.deepEqual(pool,['M4A3E2','T71DA','JPANTHERII','T62A','TL7']);
+  assert.deepEqual(full,{M4A3E2:20,T71DA:20,JPANTHERII:20,T62A:20,TL7:20,silver:950,gold:950});
+  assert.deepEqual(oneLeft,{TL7:100,silver:950,gold:950});
+  assert.deepEqual(edges,['M4A3E2','TL7',['silver',10000],['silver',30000],['gold',25],['gold',100],['silver',10000],['silver',30000],['gold',100]]);
+});
+
+test('150 gold each; insufficient funds leave old boxes alone; single and mixed bulk rewards survive reload',async t=>{
+  const {page,click,saved}=await openGame(t,{mobile:true,seed:{GOLD:299,SILVER:75000,owned:['MS1','T62A'],inventory:{collection:4,basic:2}}});
+  const alerts=[];page.on('dialog',d=>{alerts.push(d.message());return d.dismiss();});
+  await click('Контейнеры');
+  const box=page.locator('.c-card').filter({hasText:'Коллекционный контейнер'}),buy=box.getByRole('button',{name:'КУПИТЬ · 150 G'});
+  assert.match(await box.locator('.c-desc').innerText(),/5% на танк.*Серебро — 47,5%, золото — 47,5%/);
+  await buy.click();const paid=await saved();assert.equal(paid.GOLD,149);assert.equal(paid.SILVER,75000);
+  assert.deepEqual(paid.inventory,{collection:5,basic:2});await buy.click();assert.match(alerts.pop(),/Недостаточно золота/);assert.deepEqual(await saved(),paid);
+  await page.reload();await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
+  const old=page.locator('.inv-card').filter({hasText:'Коллекционный контейнер'});
+  async function open(button,rolls){
+    // Limit deterministic random input to this actual inventory button's synchronous click handler.
+    const unused=await old.getByRole('button',{name:button}).evaluate((b,values)=>{
+      const normal=Math.random;Math.random=()=>values.length?values.shift():normal();
+      try{b.click();return values.length;}finally{Math.random=normal;}
+    },rolls);
+    assert.equal(unused,0);
+    return page.locator('#reward-display').innerText();
+  }
+  assert.match(await open('ОТКРЫТЬ 1',[.05,0]),/10000 ₽/);await click('ЗАБРАТЬ');
+  assert.deepEqual((await saved()).owned,['MS1','T62A']);
+  const rewards=await open('ОТКРЫТЬ ВСЕ',[.99,.999999, .049999,.999999, .524999,.999999, .525,0]);
+  assert.match(rewards,/TL-7/);assert.match(rewards,/125 G/);assert.match(rewards,/30000 ₽/);await click('ЗАБРАТЬ');
+  const s=await saved();assert.deepEqual(s.inventory,{basic:2});assert.deepEqual(s.owned,['MS1','T62A','TL7']);
+  assert.equal(s.SILVER,115000);assert.equal(s.GOLD,274);assert.equal(s.XP,paid.XP);assert.equal(s.charges,paid.charges);
   await click('В ангар');await click('Выбрать для боя: TL-7');await page.reload();assert.equal((await saved()).selected,'TL7');assert.equal(await page.locator('#dispatch-dmg').innerText(),'1440 (4 × 360)');
   await page.evaluate(()=>{researchTank('TL7OLEN');researchTank('LOWE');sellTank('TL7');buyPremium('LOWE','2000-01-01');});
-  assert.equal((await saved()).owned.length,6);assert.equal((await saved()).GOLD,0);assert.ok(!(await saved()).owned.includes('TL7OLEN'));
+  assert.deepEqual((await saved()).owned,s.owned);assert.equal((await saved()).GOLD,s.GOLD);
+});
+
+test('completed collection shows resource-only odds before purchase; no silver is needed to buy the last affordable box',async t=>{
+  const {page,click,saved}=await openGame(t,{seed:{GOLD:150,SILVER:0,owned:['MS1','M4A3E2','T71DA','JPANTHERII','T62A','TL7']}});
+  await click('Контейнеры');const box=page.locator('.c-card').filter({hasText:'Коллекционный контейнер'});
+  assert.match(await box.locator('.c-desc').innerText(),/Все пять.*Серебро — 50%, золото — 50%/);
+  await box.getByRole('button').click();assert.equal((await saved()).GOLD,0);assert.equal((await saved()).inventory.collection,1);
+  await click('🎒 Инвентарь');await click('ОТКРЫТЬ 1');await click('ЗАБРАТЬ');const s=await saved();
+  assert.equal(s.owned.length,6);assert.deepEqual(s.inventory,{});assert.ok(s.SILVER>=10000 || s.GOLD>=25);
 });

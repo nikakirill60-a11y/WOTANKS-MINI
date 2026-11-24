@@ -184,6 +184,67 @@ test('the new MS-1 and both heavy tanks occupy the winter depot; camera, rapid s
   assert.equal(await page.evaluate(()=>typeof GarageViewer.inspect),'undefined');
 });
 
+test('winter yard: real meshes share the vehicle camera, with touch-orbit parallax, 3D snowfall and teardown', async t=>{
+  const {page,click}=await offlineGame(t,{webgl:true,mobile:true});
+  // Observe an actual renderer frame, not strings reported by DepotView or a screenshot of a poster.
+  await page.evaluate(()=>{
+    const prev=THREE.Scene.prototype.onAfterRender;
+    THREE.Scene.prototype.onAfterRender=function(r,scene,camera){
+      prev.apply(this,arguments);
+      if(!scene.getObjectByName('festive-spruce'))return;
+      THREE.Scene.prototype.onAfterRender=prev;
+      const landmarks=['festive-spruce','snowman','open-yard-doors'],seen=new Set();
+      const snow=scene.getObjectByName('falling-snow'), sky=scene.getObjectByName('polar-sky');
+      const probe=window.bayProbe={frames:0,disposed:false,read(){
+        return landmarks.map(name=>{
+          const prop=scene.getObjectByName(name),bounds=new THREE.Box3().setFromObject(prop),centre=bounds.getCenter(new THREE.Vector3());
+          return {world:centre.toArray(),uv:centre.project(camera).toArray(),size:bounds.getSize(new THREE.Vector3()).toArray(),rendered:seen.has(name)};
+        });
+      },time:()=>snow.material.uniforms.uTime.value,
+      hasWeather:snow.isInstancedMesh && snow.count>1 && snow.material.uniforms.uTime===sky.material.uniforms.uTime,
+      sameScene:!!scene.getObjectByName(DB[GameState.selected].n),opaque:!!scene.background?.isColor && !sky.material.transparent};
+      for(const name of landmarks)scene.getObjectByName(name).traverse(n=>{if(n.isMesh)n.onAfterRender=()=>seen.add(name);});
+      scene.onBeforeRender=()=>seen.clear(); scene.onAfterRender=()=>probe.frames++;
+      snow.addEventListener('dispose',()=>{probe.disposed=true;});
+      DepotView.view('iso');
+    };
+    DepotView.view('iso');
+  });
+  await page.waitForFunction(()=>window.bayProbe?.frames>0);
+  const read=()=>page.evaluate(()=>bayProbe.read()),before=await read();
+  assert.deepEqual(await page.evaluate(()=>[bayProbe.sameScene,bayProbe.hasWeather,bayProbe.opaque]),[true,true,true]);
+  assert.equal(await page.locator('#bay-viewport').evaluate(n=>getComputedStyle(n).backgroundImage),'none');
+  assert.equal(await page.locator('.winter-snow').count(),0);
+  for(const prop of before) {
+    assert.ok(prop.rendered && prop.size.every(x=>x>.15),'3D landmark actually drew in the first view');
+    assert.ok(Math.abs(prop.uv[0])<1 && Math.abs(prop.uv[1])<1,'landmark is in frame on a phone');
+  }
+  const touch=await page.context().newCDPSession(page),send=(type,points)=>touch.send('Input.dispatchTouchEvent',{type,touchPoints:points});
+  const rect=await page.locator('#depot-canvas').boundingBox(),p={id:1,x:rect.x+rect.width*.48,y:rect.y+rect.height*.58};
+  const frames=await page.evaluate(()=>bayProbe.frames);
+  await send('touchStart',[p]);await send('touchMove',[{...p,x:p.x+24}]);await send('touchEnd',[]);
+  await page.waitForFunction(n=>bayProbe.frames>n,frames);
+  const after=await read(),delta=after.map((prop,i)=>prop.uv[0]-before[i].uv[0]);
+  for(let i=0;i<before.length;i++){
+    assert.deepEqual(after[i].world,before[i].world,'objects do not follow the camera');
+    assert.ok(Math.abs(delta[i])>.02,'perspective changes for every landmark');
+  }
+  assert.ok(Math.max(...delta)-Math.min(...delta)>.04,'objects at different depths do not slide like a background');
+  assert.equal(await page.evaluate(()=>bayProbe.time()),0,'reduced motion keeps scenery but does not advance the snow');
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>bayProbe.time()>.02);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+  const frozen=await page.evaluate(()=>bayProbe.time());await page.waitForTimeout(220);
+  assert.equal(await page.evaluate(()=>bayProbe.time()),frozen);
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(n=>bayProbe.time()>n,frozen);
+  await click('Дерево развития');assert.equal(await page.locator('#depot-canvas').count(),0);
+  assert.ok(await page.evaluate(()=>bayProbe.disposed && !DepotView.stats()));
+  await click('Мой танк');await page.waitForFunction(()=>DepotView.stats()?.id==='MS1');
+  await page.locator('#depot-canvas').evaluate(c=>c.getContext('webgl2').getExtension('WEBGL_lose_context').loseContext());
+  await page.locator('#bay-poster').waitFor();assert.match(await page.locator('#bay-poster span').innerText(),/потерян контекст WebGL/);
+  assert.equal(await page.locator('#depot-canvas').count(),0);assert.equal(await page.evaluate(()=>DepotView.stats()),null);
+});
+
 async function ready(page,acquire=true) {
   await page.waitForFunction(()=>GameState.gameActive && BattleView.stats()?.triangles>0,null,{timeout:45000});
   if(acquire && await page.evaluate(()=>BattleInput.state==='waiting')) {

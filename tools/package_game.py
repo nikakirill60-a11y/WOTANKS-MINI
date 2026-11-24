@@ -14,7 +14,11 @@ START = '''CITY TANKS — Северное депо · зимний сезон 2
 С 1 по 31 декабря 2026 UTC подарок начисляется за каждый новый день посещения.
 За 15 визитов — финский БТ-42, за 31 — TL-7 Олень. Пропуски не обнуляют прогресс.
 Премиум-магазин: три машины за игровое золото, смена в 00:00 UTC.
-Контейнеры → Коллекционный контейнер: одна из пяти ещё не полученных машин за 75 000 серебра.
+Коллекционный контейнер стоит 150 игрового золота за штуку. Каждый ящик независимо даёт
+5% на недостающий коллекционный танк, 47,5% на серебро и 47,5% на золото.
+Когда все пять уже в ангаре — только серебро или золото, поровну.
+Зимний бокс, двор, ёлка, снеговик и падающий снег находятся вместе с танком в 3D.
+Вращайте вид мышью или пальцем. Если WebGL 2 недоступен, показывается только миниатюра танка.
 Дерево развития не изменилось. Прежнее депо сохранено в файлах, но скрыто в зимней версии.
 
 Вкладка «Мой танк» — депо выбранной открытой машины. У закрытого узла доступны иконка и ТТХ.
@@ -77,7 +81,7 @@ class EntryAssets(HTMLParser):
 def runtime_files():
     assets = EntryAssets()
     assets.feed((ROOT / 'index.html').read_text(encoding='utf-8'))
-    files = {'index.html', 'README.md', 'vendor/three.LICENSE', 'vendor/supabase-auth.LICENSE', 'vendor/tslib.LICENSE', 'assets/northlight.webp'} | assets.paths
+    files = {'index.html', 'README.md', 'vendor/three.LICENSE', 'vendor/supabase-auth.LICENSE', 'vendor/tslib.LICENSE'} | assets.paths
     for model in (ROOT / 'models').glob('*.mesh.js'):
         files.add('models/' + model.name)
         files.add('models/' + model.name.removesuffix('.mesh.js') + '.webp')

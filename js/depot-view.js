@@ -1,25 +1,40 @@
 // The owned vehicle and the battlefield share the same local mesh data. The
-// depot renders on demand; standalone showcase pages are not part of the game.
+// classic depot renders on demand; winter weather is animated only while the stand is visible.
 const DepotView = (() => {
   const T = THREE, winter = document.body.dataset.hangar === 'winter';
   const directions = {
-    iso: [1.08, winter ? 0.46 : 0.65, 1.45],
+    iso: [1.08, winter ? 0.26 : 0.65, 1.45],
     front: [0, 0.2, 1],
     side: [1, 0.15, 0],
     top: [0.001, 1, 0.025]
   };
   let renderer, scene, camera, controls, room, environment, resizeObserver, model, modelId, lost;
+  let weather, motion, intersection, inView = true, weatherTimer = 0, lastWeatherFrame = null;
   let preset = 'iso',
     frame = 0,
     focusHeight = 0.95,
     focusZ = -0.28;
 
   function draw() {
-    if (!frame && renderer)
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        if (model) renderer.render(scene, camera);
-      });
+    if (frame || !renderer || !model || document.hidden || !inView) return;
+    clearTimeout(weatherTimer);
+    frame = requestAnimationFrame(now => {
+      frame = 0;
+      if (!model || document.hidden || !inView) return;
+      const animate = weather && !motion.matches;
+      if (weather) {
+        if (animate && lastWeatherFrame !== null) weather.time.value += Math.min(.25,(now-lastWeatherFrame)/1000);
+        lastWeatherFrame = animate ? now : null;
+        weather.cutaway(camera);
+      }
+      renderer.render(scene, camera);
+      // Camera input still redraws immediately. Ambient movement doesn't need a 60 Hz GPU loop.
+      if (animate) weatherTimer = setTimeout(draw, 42);
+    });
+  }
+  function wake() {
+    clearTimeout(weatherTimer); cancelAnimationFrame(frame);
+    frame = 0; lastWeatherFrame = null; draw();
   }
   function view(name) {
     if (!model || !directions[name]) return;
@@ -63,7 +78,7 @@ const DepotView = (() => {
       height = Math.max(1, host.clientHeight);
     const oldAspect = camera.aspect;
     camera.aspect = width / height;
-    if (winter) camera.setViewOffset(width,height,0,-height*.075,width,height);
+    if (winter) camera.setViewOffset(width,height,0,-height*.085,width,height);
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.65, Math.sqrt(1300000 / (width * height))));
     renderer.setSize(width, height, false);
@@ -75,7 +90,7 @@ const DepotView = (() => {
     canvas.id = 'depot-canvas';
     canvas.tabIndex = 0;
     canvas.setAttribute('role', 'img');
-    renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: winter, powerPreference: 'high-performance' });
+    renderer = new T.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     host.prepend(canvas);
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.02;
@@ -88,10 +103,10 @@ const DepotView = (() => {
     };
     canvas.addEventListener('webglcontextlost', lost);
     scene = new T.Scene();
-    if (winter) renderer.setClearColor(0,0);
-    else { scene.background = new T.Color('#1b211d'); scene.fog = new T.FogExp2('#1b211d', 0.04); }
-    camera = new T.PerspectiveCamera(34, 1, 0.05, 85);
-    camera.zoom = 1.18;
+    scene.background = new T.Color(winter ? '#344a61' : '#1b211d');
+    scene.fog = new T.FogExp2(scene.background, winter ? .0145 : .04);
+    camera = new T.PerspectiveCamera(winter ? 42 : 34, 1, 0.05, winter ? 125 : 85);
+    camera.zoom = winter ? 1.08 : 1.18;
     controls = new T.OrbitControls(camera, canvas);
     controls.enablePan = false;
     controls.rotateSpeed = 0.65;
@@ -100,17 +115,20 @@ const DepotView = (() => {
     controls.maxDistance = 21;
     controls.minPolarAngle = 0.02;
     controls.maxPolarAngle = Math.PI * 0.488;
-    scene.add(new T.HemisphereLight(winter ? '#d4edff' : '#e7efdc', winter ? '#728ba4' : '#202c22', 1.65));
-    const key = new T.DirectionalLight('#fff0cf', winter ? 2.75 : 3.5);
-    key.position.set(-3.5, 6.5, 5);
+    scene.add(new T.HemisphereLight(winter ? '#b6d2f7' : '#e7efdc', winter ? '#37495e' : '#202c22', winter ? 1.18 : 1.65));
+    const key = new T.DirectionalLight(winter ? '#ffe5be' : '#fff0cf', winter ? 2.16 : 3.5);
+    if (winter) key.position.set(-7, 10, 6);
+    else key.position.set(-3.5, 6.5, 5);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
-    Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.1, far: 16 });
+    const reach = winter ? 11 : 4;
+    Object.assign(key.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach, near: 0.1, far: winter ? 38 : 16 });
+    key.shadow.camera.updateProjectionMatrix();
     key.shadow.bias = -0.00025;
     key.shadow.normalBias = 0.018;
     key.target.position.set(0, 0.6, -0.3);
-    const fill = new T.DirectionalLight('#c3d5e3', 1.15),
-      rim = new T.DirectionalLight(winter ? '#9fd6ff' : '#d8e6be', 2.2);
+    const fill = new T.DirectionalLight(winter ? '#97b6da' : '#c3d5e3', winter ? 0.74 : 1.15),
+      rim = new T.DirectionalLight(winter ? '#9fd6ff' : '#d8e6be', winter ? 1.7 : 2.2);
     fill.position.set(5, 3, -4);
     rim.position.set(-2, 4, -5);
     scene.add(key, key.target, fill, rim);
@@ -121,8 +139,17 @@ const DepotView = (() => {
     scene.environmentIntensity = 0.34;
     source.dispose();
     pmrem.dispose();
-    if (winter) room = buildWinterBay(scene);
-    else {
+    if (winter) {
+      weather = buildWinterBay(scene); room = weather.room;
+      motion = matchMedia('(prefers-reduced-motion: reduce)');
+      motion.addEventListener('change', wake);
+      document.addEventListener('visibilitychange', wake);
+      intersection = new IntersectionObserver(([entry]) => {
+        if (entry.target !== renderer?.domElement.parentElement) return;
+        inView = entry.isIntersecting; wake();
+      });
+      intersection.observe(host);
+    } else {
       const floor = new T.Mesh(
         new T.PlaneGeometry(200, 200),
         new T.MeshStandardMaterial({ color: '#151c16', roughness: 0.94, metalness: 0.08 })
@@ -148,6 +175,7 @@ const DepotView = (() => {
     root.traverse((o) => {
       if (o.geometry) geometries.add(o.geometry);
       if (o.material) for (const m of [].concat(o.material)) materials.add(m);
+      if (o.isInstancedMesh) o.dispose();
       o.shadow?.dispose();
     });
     for (const m of materials) {
@@ -200,12 +228,18 @@ const DepotView = (() => {
     renderer.shadowMap.needsUpdate = true;
     renderer.domElement.setAttribute(
       'aria-label',
-      '3D-модель: ' + DB[id].n + '. Перетащите для вращения; колесо или щипок — масштаб.'
+      '3D-ангар: ' + DB[id].n + '. Перетащите для вращения; колесо или щипок — масштаб.'
     );
     view('iso');
+    weather?.cutaway(camera);
     renderer.render(scene, camera);
   }
   function close() {
+    clearTimeout(weatherTimer);
+    motion?.removeEventListener('change', wake);
+    document.removeEventListener('visibilitychange', wake);
+    intersection?.disconnect();
+    motion = intersection = weather = lastWeatherFrame = null; inView = true;
     cancelAnimationFrame(frame);
     frame = 0;
     resizeObserver?.disconnect();

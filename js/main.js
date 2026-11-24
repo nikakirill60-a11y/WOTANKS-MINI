@@ -243,6 +243,8 @@ function init() {
   updateResources();
   updateInvCount();
   updateBoosterUI();
+  Accounts.init();
+  WinterSeason.init();
   startAutosave();
 }
 document.addEventListener('DOMContentLoaded', init, { once: true });

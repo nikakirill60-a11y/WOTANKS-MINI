@@ -318,7 +318,7 @@ function activatePromo() {
 
 // ========== Продажа танка ==========
 function sellTank(tid) {
-  if (!DB[tid] || DB[tid].xp === 0 || !GameState.owned.includes(tid)) return;
+  if (!DB[tid] || !(DB[tid].xp > 0) || !GameState.owned.includes(tid)) return;
   if (GameState.owned.length <= 1) { alert("⚠️ Нельзя продать последний танк!"); return; }
   var t = DB[tid];
   var price = t.tier * 5000;
@@ -327,7 +327,7 @@ function sellTank(tid) {
     GameState.owned = GameState.owned.filter(function(id) { return id !== tid; });
     if (GameState.selected === tid) {
       GameState.selected = GameState.owned[0];
-      GameState.curNat = DB[GameState.selected].nat;
+      if (BRANCHES[DB[GameState.selected].nat]) GameState.curNat = DB[GameState.selected].nat;
     }
     delete GameState.upgrades[tid];
     delete GameState.upgradesBought[tid];
@@ -343,12 +343,12 @@ function sellTank(tid) {
 function fillTrainNatSelect() {
   var s = document.getElementById('train-nat-select');
   if (!s) return;
-  s.replaceChildren(...PLAYABLE_NATIONS.map(nat => new Option(CONFIG.NATIONS[nat],nat)));
+  s.replaceChildren(...TRAINING_NATIONS.map(nat => new Option(CONFIG.NATIONS[nat],nat)));
 }
 
 function fillEnemySelect() {
   const nat = document.getElementById('train-nat-select').value;
-  document.getElementById('enemy-select').replaceChildren(...BRANCHES[nat].tanks.map(t =>
+  document.getElementById('enemy-select').replaceChildren(...Object.values(DB).filter(t => t.nat === nat).map(t =>
     new Option(`${t.n} [${CONFIG.TIER_ROMAN[t.tier]}]`, t.id)));
 }
 
@@ -384,7 +384,7 @@ function renderCarousel(fromCarousel = false) {
     (function(tankId) {
       select.onclick = function() {
         GameState.selected = tankId;
-        GameState.curNat = DB[tankId].nat;
+        if (BRANCHES[DB[tankId].nat]) GameState.curNat = DB[tankId].nat;
         saveProgress();
         renderCarousel(true);
         renderTree();

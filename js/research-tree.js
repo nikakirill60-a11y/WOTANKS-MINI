@@ -60,7 +60,7 @@ function showTreeCard(id) {
 }
 
 function researchTank(id) {
-  if (!Object.hasOwn(DB, id)) return;
+  if (!Object.hasOwn(DB, id) || DB[id].source) return;
   const state = researchState(id);
   showTreeCard(id);
   if (state.kind === 'locked') return;
@@ -199,9 +199,9 @@ function renderTree() {
   });
   nodes.replaceChildren(...buttons);
   // Browsing a nation does not equip its tank. A branch always opens on a card belonging to it.
-  if (DB[treeCardId]?.nat !== GameState.curNat || lastTreeSelection !== GameState.selected) {
+  if (!line.includes(DB[treeCardId]) || lastTreeSelection !== GameState.selected) {
     treeCardId =
-      DB[GameState.selected].nat === GameState.curNat
+      line.includes(DB[GameState.selected])
         ? GameState.selected
         : line.filter((t) => GameState.owned.includes(t.id)).sort((a, b) => b.tier - a.tier)[0]?.id ||
           line[0].id;

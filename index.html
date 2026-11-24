@@ -10,8 +10,9 @@
   <link rel="stylesheet" href="css/features.css">
   <link rel="stylesheet" href="css/hangar.css">
   <link rel="stylesheet" href="css/battle.css">
+  <link rel="stylesheet" href="css/winter.css">
 </head>
-<body>
+<body data-hangar="winter">
 
 <!-- ========== ВЫБОР УПРАВЛЕНИЯ ========== -->
 <div id="control-modal">
@@ -56,10 +57,41 @@
 
 </div><!-- /container-modal -->
 
-<dialog id="calendar-modal" aria-labelledby="calendar-title">
-  <div class="modal-header"><h2 id="calendar-title">Календарь наград</h2>
-    <button type="button" class="btn" onclick="this.closest('dialog').close()">В ангар</button></div>
-  <div id="calendar-days"></div>
+<dialog id="calendar-modal" class="winter-dialog" aria-labelledby="calendar-title">
+  <header class="winter-dialog-head"><div><p class="season-kicker">СЕВЕРНОЕ ДЕПО / 01—31 ДЕКАБРЯ 2026</p><h2 id="calendar-title">Адвент-календарь</h2></div>
+    <button type="button" class="winter-back" onclick="this.closest('dialog').close()">В ангар</button></header>
+  <p class="winter-intro">Заходите в ангар: подарок начисляется автоматически один раз в сутки. Смена дня — в 00:00 UTC. Пропуски не сбрасывают счётчик.</p>
+  <div class="advent-milestones">
+    <article><img src="models/bt-42.webp" alt=""><div><small>15 ВИЗИТОВ · ФИНЛЯНДИЯ</small><h3>БТ-42</h3><span id="milestone-15"></span></div></article>
+    <article><img src="models/tl-7-olen.webp" alt=""><div><small>31 ВИЗИТ · США</small><h3>TL-7 Олень</h3><span id="milestone-31"></span></div></article>
+  </div>
+  <div class="winter-subhead"><h3>Декабрь</h3><b id="advent-count"></b></div>
+  <div id="calendar-days" aria-label="Дни посещения"></div><p id="advent-status" class="winter-message" role="status"></p>
+</dialog>
+
+<dialog id="premium-modal" class="winter-dialog" aria-labelledby="premium-title">
+  <header class="winter-dialog-head"><div><p class="season-kicker">СНАБЖЕНИЕ / ТЕХНИКА VIII УРОВНЯ</p><h2 id="premium-title">Премиум-магазин</h2></div>
+    <button type="button" class="winter-back" onclick="this.closest('dialog').close()">В ангар</button></header>
+  <p class="winter-intro">Три машины дня за игровое золото. Новая тройка — каждый день в 00:00 UTC.</p>
+  <div class="winter-subhead"><h3 id="premium-date"></h3><span>Баланс: <b id="premium-balance"></b></span></div>
+  <div id="premium-cards"></div><p id="premium-status" class="winter-message" role="status"></p>
+</dialog>
+
+<dialog id="account-modal" class="winter-dialog" aria-labelledby="profile-title">
+  <header class="winter-dialog-head"><div><p class="season-kicker">CITY TANKS / ЛИЧНЫЙ АНГАР</p><h2 id="profile-title">Профиль игрока</h2></div>
+    <button type="button" class="winter-back" onclick="this.closest('dialog').close()">В ангар</button></header>
+  <form id="account-form">
+    <p class="winter-intro">Вы играете как гость. Войдите, чтобы открыть свой ангар на другом устройстве. Гостевой прогресс останется в этом браузере отдельно.</p>
+    <label for="profile-handle">Позывной игрока</label><input id="profile-handle" name="handle" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Например, polaris_27" required>
+    <label for="profile-pass">Пароль</label><input id="profile-pass" name="password" type="password" autocomplete="current-password" required>
+    <div class="profile-actions"><button class="winter-action" type="submit" value="login">Войти</button><button class="winter-back" type="submit" value="register">Создать аккаунт</button></div>
+    <p class="profile-foot">Новый позывной: 3–24 латинские буквы, цифры или _. Пароль — от 8 символов. Почта не нужна; сохраните пароль — восстановить его по письму нельзя. Для входа в прежний аккаунт Wot-mini можно указать почту вместо позывного.</p>
+  </form>
+  <section id="cloud-profile" hidden><p class="winter-intro">Аккаунт Wot-mini</p><strong id="profile-email"></strong><p id="profile-sync"></p>
+    <div class="profile-actions"><button type="button" class="winter-action" onclick="Accounts.logout()">Выйти в гостевой ангар</button>
+    <button type="button" class="winter-back" onclick="Accounts.downloadDraft()">Скачать копию</button>
+    <button id="cloud-recover" type="button" class="winter-back" onclick="Accounts.recover()" hidden>Загрузить облачную версию</button></div>
+  </section><p id="account-message" class="winter-message" role="status"></p>
 </dialog>
 
 <!-- ========== ПРОМОКОД ========== -->
@@ -105,12 +137,14 @@
       <button type="button" class="garage-settings" onclick="showSettings()" aria-label="Настройки" title="Настройки">⚙</button>
     </div>
     <nav class="top-btns" aria-label="Сервисы ангара">
+      <button class="depot-tool profile-tool" onclick="Accounts.open()" aria-label="Профиль игрока"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4 20v-2a8 6 0 0 1 16 0v2z"/></svg><span id="account-mode">Гость</span></button>
+      <button class="depot-tool event-tool" onclick="openCalendar()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v15H3zM7 3v5m10-5v5M3 11h18m-14 4h3"/></svg>Адвент</button>
+      <button class="depot-tool" onclick="openPremiumShop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 8 4 4 5-8 5 8 4-4-2 11H5z"/></svg>Премиум-магазин</button>
       <button class="depot-tool" onclick="showPromo()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5h18v3a3 3 0 0 0 0 6v3H3v-3a3 3 0 0 0 0-6ZM15 6v2m0 2v2m0 2v2"/></svg>Код</button>
       <button class="depot-tool" onclick="showContainerShop()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-5 9 5v10l-9 5-9-5V7Zm0 0 9 5 9-5m-9 5v10M7 5l9 5"/></svg>Контейнеры</button>
       <button class="depot-tool" onclick="openInventoryTab()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v13H4zM7 8V5h10v3m-8 4h6"/></svg>Инвентарь<span id="inv-top-badge" class="inv-top-badge" style="display:none">0</span></button>
       <button class="depot-tool" onclick="showModules()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 7 4v8l-7 4-7-4V6Zm-7 4 7 4 7-4m-7 4v8m-8 1 8 4 8-4"/></svg>Модули</button>
       <button class="depot-tool" onclick="showUpgrades()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 6-6 4 4 7-7m-6 0h6v6M4 20h16"/></svg>Прокачка</button>
-      <button class="depot-tool" onclick="openCalendar()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v15H3zM7 3v5m10-5v5M3 11h18m-14 4h3"/></svg>Награды</button>
       <button class="depot-tool" onclick="startTutorial()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5zM6 12v4c3 4 9 4 12 0v-4m4-3v7"/></svg>Обучение</button>
     </nav>
   </header>
@@ -118,7 +152,7 @@
   <main id="main-garage-area">
     <div class="hangar-workspace">
       <div class="hangar-heading">
-        <div><p class="bay-kicker">ГАРАЖНЫЙ КОМПЛЕКС <span>/</span> 01</p><h1>3D-ангар</h1></div>
+        <div><p class="bay-kicker">ЗИМНИЙ СЕЗОН <span>/</span> 2026</p><h1>Северное депо</h1></div>
         <div class="bay-tabs" role="group" aria-label="Раздел ангара">
           <button id="bay-inspect-tab" aria-controls="bay-inspection" aria-pressed="true">Мой танк</button>
           <button id="bay-research-tab" aria-controls="bay-research" aria-pressed="false">Дерево развития</button>
@@ -129,13 +163,14 @@
           <div class="bay-stage">
             <div id="bay-viewport">
               <div id="bay-poster" hidden><img alt=""><span></span></div>
+              <div class="winter-snow" aria-hidden="true"></div>
               <span id="bay-loading" role="status" hidden>Загрузка модели…</span>
             </div>
             <div id="bay-angles" role="group" aria-label="Ракурс осмотра" hidden>
               <button data-view="iso">3/4</button><button data-view="front">Спереди</button><button data-view="side">Сбоку</button><button data-view="top">Сверху</button>
             </div>
             <div class="bay-caption"><p id="bay-kind" class="bay-kicker"></p><h2 id="bay-name"></h2><p id="bay-meta"></p></div>
-            <span class="bay-plate" aria-hidden="true">BOX <b>01</b></span>
+            <span class="bay-plate" aria-hidden="true"><i></i> ПОЛЯРНАЯ НОЧЬ</span>
           </div>
         </section>
         <section id="bay-research" class="bay-panel" aria-label="Дерево развития" hidden>
@@ -201,6 +236,7 @@
           </div>
         </aside>
       </div>
+      <p id="season-note" role="status" hidden></p>
       <details class="bay-supply">
         <summary>Бустеры снабжения</summary>
         <div id="booster-display" class="booster-bar"></div>
@@ -334,6 +370,8 @@
     <script src="models/catalog.js"></script>
     <script src="js/config.js"></script>
     <script src="js/containers.js"></script>
+    <script src="js/winter-season.js"></script>
+    <script src="js/premium-shop.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/battle-space.js"></script>
@@ -350,6 +388,8 @@
     <script src="js/track-drive.js"></script>
     <script src="js/destructible.js"></script>         <!-- NEW: разрушаемые здания -->
     <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
+    <script src="vendor/auth-2.79.min.js"></script>
+    <script src="js/accounts.js"></script>
     <script src="js/local-profile.js"></script>
     <script src="js/garage-viewer.js"></script>
     <script src="js/research-tree.js"></script>
@@ -358,6 +398,7 @@
     <script src="vendor/three-r180.min.js"></script>
     <script src="js/battle-models.js"></script>
     <script src="js/depot-room.js"></script>
+    <script src="js/winter-bay.js"></script>
     <script src="js/depot-view.js"></script>
     <script src="js/battle-world.js"></script>
     <script src="js/battle-look.js"></script>

@@ -1,9 +1,9 @@
 // The owned vehicle and the battlefield share the same local mesh data. The
 // depot renders on demand; standalone showcase pages are not part of the game.
 const DepotView = (() => {
-  const T = THREE;
+  const T = THREE, winter = document.body.dataset.hangar === 'winter';
   const directions = {
-    iso: [1.08, 0.65, 1.45],
+    iso: [1.08, winter ? 0.46 : 0.65, 1.45],
     front: [0, 0.2, 1],
     side: [1, 0.15, 0],
     top: [0.001, 1, 0.025]
@@ -50,6 +50,7 @@ const DepotView = (() => {
         );
       }
     });
+    if (winter && name === 'iso') distance *= aspect < 1.6 ? 1.24 : 1.15;
     camera.position.copy(controls.target).addScaledVector(dir, distance);
     controls.update();
     for (const button of document.querySelectorAll('#bay-angles button'))
@@ -62,6 +63,7 @@ const DepotView = (() => {
       height = Math.max(1, host.clientHeight);
     const oldAspect = camera.aspect;
     camera.aspect = width / height;
+    if (winter) camera.setViewOffset(width,height,0,-height*.075,width,height);
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.65, Math.sqrt(1300000 / (width * height))));
     renderer.setSize(width, height, false);
@@ -73,7 +75,7 @@ const DepotView = (() => {
     canvas.id = 'depot-canvas';
     canvas.tabIndex = 0;
     canvas.setAttribute('role', 'img');
-    renderer = new T.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: winter, powerPreference: 'high-performance' });
     host.prepend(canvas);
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.02;
@@ -86,8 +88,8 @@ const DepotView = (() => {
     };
     canvas.addEventListener('webglcontextlost', lost);
     scene = new T.Scene();
-    scene.background = new T.Color('#1b211d');
-    scene.fog = new T.FogExp2('#1b211d', 0.04);
+    if (winter) renderer.setClearColor(0,0);
+    else { scene.background = new T.Color('#1b211d'); scene.fog = new T.FogExp2('#1b211d', 0.04); }
     camera = new T.PerspectiveCamera(34, 1, 0.05, 85);
     camera.zoom = 1.18;
     controls = new T.OrbitControls(camera, canvas);
@@ -98,8 +100,8 @@ const DepotView = (() => {
     controls.maxDistance = 21;
     controls.minPolarAngle = 0.02;
     controls.maxPolarAngle = Math.PI * 0.488;
-    scene.add(new T.HemisphereLight('#e7efdc', '#202c22', 1.65));
-    const key = new T.DirectionalLight('#fff0cf', 3.5);
+    scene.add(new T.HemisphereLight(winter ? '#d4edff' : '#e7efdc', winter ? '#728ba4' : '#202c22', 1.65));
+    const key = new T.DirectionalLight('#fff0cf', winter ? 2.75 : 3.5);
     key.position.set(-3.5, 6.5, 5);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
@@ -108,7 +110,7 @@ const DepotView = (() => {
     key.shadow.normalBias = 0.018;
     key.target.position.set(0, 0.6, -0.3);
     const fill = new T.DirectionalLight('#c3d5e3', 1.15),
-      rim = new T.DirectionalLight('#d8e6be', 2.2);
+      rim = new T.DirectionalLight(winter ? '#9fd6ff' : '#d8e6be', 2.2);
     fill.position.set(5, 3, -4);
     rim.position.set(-2, 4, -5);
     scene.add(key, key.target, fill, rim);
@@ -119,18 +121,21 @@ const DepotView = (() => {
     scene.environmentIntensity = 0.34;
     source.dispose();
     pmrem.dispose();
-    const floor = new T.Mesh(
-      new T.PlaneGeometry(200, 200),
-      new T.MeshStandardMaterial({ color: '#151c16', roughness: 0.94, metalness: 0.08 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = 0.044;
-    floor.receiveShadow = true;
-    const grid = new T.GridHelper(22, 44, '#626e56', '#3f4c3d');
-    grid.position.y = 0.047;
-    Object.assign(grid.material, { transparent: true, opacity: 0.12, depthWrite: false });
-    scene.add(floor, grid);
-    room = buildInspectionBay(scene, camera, controls);
+    if (winter) room = buildWinterBay(scene);
+    else {
+      const floor = new T.Mesh(
+        new T.PlaneGeometry(200, 200),
+        new T.MeshStandardMaterial({ color: '#151c16', roughness: 0.94, metalness: 0.08 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0.044;
+      floor.receiveShadow = true;
+      const grid = new T.GridHelper(22, 44, '#626e56', '#3f4c3d');
+      grid.position.y = 0.047;
+      Object.assign(grid.material, { transparent: true, opacity: 0.12, depthWrite: false });
+      scene.add(floor, grid);
+      room = buildInspectionBay(scene, camera, controls);
+    }
     controls.addEventListener('change', draw);
     resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);

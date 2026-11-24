@@ -16,7 +16,7 @@ const CONFIG = {
     japan: 'Япония',
     china: 'Китай',
     france: 'Франция',
-    sweden: 'Швеция'
+    sweden: 'Швеция', finland: 'Финляндия'
   },
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
   PROMOCODES: {
@@ -107,7 +107,7 @@ function initialProgress() {
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,
-    loginCalendar: { claimedDays: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
+    loginCalendar: { claimedDays: [] }, advent2026: { dates: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
   };
 }
 

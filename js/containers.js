@@ -1,5 +1,6 @@
-// Контейнеры снабжения содержат ресурсы, а не отдельный каталог машин.
+// Ordinary supply boxes keep their original resource tables. The collection has its own vehicle pool.
 const CONTAINERS = {
+  collection: { name:'Коллекционный контейнер', icon:'❄', cost:{silver:75000}, color:'#91c7d4', vehicles:SPECIAL_TANKS.filter(t=>t.source==='collection').map(t=>t.id) },
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
     drops: [['silver', 5000, 15000], ['xp', 2000, 8000], ['gold', 50, 200]] },
   premium: { name: 'Офицерский резерв', icon: '🎁', cost: {gold: 500}, color: '#d0a76b',
@@ -27,11 +28,19 @@ function migrateSupplyBoxes(inventory) {
 function openContainerDirect(id) {
   const box = CONTAINERS[id];
   if (!box) return null;
+  if (box.vehicles) {
+    const missing = box.vehicles.filter(id => !GameState.owned.includes(id));
+    if (missing.length) {
+      const id = missing[Math.floor(Math.random()*missing.length)]; GameState.owned.push(id);
+      return {type:'vehicle', id, amount:1, display:DB[id].n, icon:box.icon, color:box.color};
+    }
+    GameState.SILVER += 50000;
+    return {type:'silver', amount:50000, display:'Коллекция собрана · 50 000 ₽', icon:'💰', color:box.color};
+  }
   const [type, min, max] = box.drops[Math.floor(Math.random() * box.drops.length)];
   const [field, label, unit, icon, color] = SUPPLIES[type];
   const amount = min + Math.floor(Math.random() * (max - min + 1));
   GameState[field] += amount;
-  updateResources();
   return { type, amount, label, display: amount + ' ' + unit, icon, color };
 }
 
@@ -144,6 +153,7 @@ function openFromInventory(cid) {
   const rwd = openContainerDirect(cid);
   if (!rwd) return;
 
+  updateResources(); if (rwd.id) renderCarousel();
   showOpenAnim(cid, rwd);
   updateInvCount();
   saveProgress();
@@ -162,6 +172,7 @@ function openAllFromInventory(cid) {
   }
 
   delete GameState.inventory[cid];
+  updateResources(); if (results.some(r => r.id)) renderCarousel();
   showBulkOpenResults(results, CONTAINERS[cid]);
   updateInvCount();
   renderInventoryGrid();
@@ -178,9 +189,13 @@ function showInvNotification(name, icon) {
 
 function showBulkOpenResults(results, container) {
   const totals = {};
-  for (const r of results) totals[r.type] = (totals[r.type] || 0) + r.amount;
+  const names = [];
+  for (const r of results) {
+    if (r.type === 'vehicle') names.push(DB[r.id].n);
+    else totals[r.type] = (totals[r.type] || 0) + r.amount;
+  }
   showOpenAnim(null, { icon: container.icon, color: container.color,
-    display: Object.entries(totals).map(([type, n]) => `${n} ${SUPPLIES[type][2]}`).join(' · ') });
+    display: [...names,...Object.entries(totals).map(([type, n]) => `${n} ${SUPPLIES[type][2]}`)].join(' · ') });
 }
 
 function showOpenAnim(cid, reward) {
@@ -189,7 +204,7 @@ function showOpenAnim(cid, reward) {
   document.getElementById('anim-container').style.display = 'none';
   const display = document.getElementById('reward-display');
   display.style.display = 'flex';
-  display.innerHTML = `<div class="rwd-glow" style="color:${reward.color}"><div class="rwd-icon">${reward.icon}</div>
+  display.innerHTML = `<div class="rwd-glow" style="color:${reward.color}"><div class="rwd-icon">${reward.id ? `<img src="models/${DB[reward.id].thumbnail}" alt="" style="max-width:220px">` : reward.icon}</div>
     <div class="rwd-text">${reward.display}</div></div><button class="btn rwd-collect" onclick="collectReward()">ЗАБРАТЬ</button>`;
 }
 
@@ -209,8 +224,8 @@ function renderContainerGrid() {
     const card = document.createElement('div');
     card.className = 'c-card'; card.style.borderColor = box.color;
     card.innerHTML = `<div class="c-icon">${box.icon}</div><div class="c-name">${box.name}</div>
-      <div class="c-desc">Одна из трёх наград с равным шансом</div>
-      <div class="c-drops">${box.drops.map(([t,a,b]) => `<div>${SUPPLIES[t][1]}: ${a}–${b}</div>`).join('')}</div>
+      <div class="c-desc">${box.vehicles ? 'Гарантированно одна недостающая машина, шансы равны. Когда собраны все пять — 50 000 ₽.' : 'Одна из трёх наград с равным шансом'}</div>
+      <div class="c-drops">${box.vehicles ? box.vehicles.map(id=>`<div>${GameState.owned.includes(id) ? '✓ ' : ''}${DB[id].n}</div>`).join('') : box.drops.map(([t,a,b]) => `<div>${SUPPLIES[t][1]}: ${a}–${b}</div>`).join('')}</div>
       <button class="btn c-buy" onclick="buyContainer('${id}')">КУПИТЬ · ${cost} ${unit}</button>`;
     host.append(card);
   }

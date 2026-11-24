@@ -42,7 +42,7 @@ const GarageViewer = (() => {
       return;
     }
     const tank = DB[selectedId];
-    el('bay-kind').textContent = 'БОЕВАЯ МАШИНА';
+    el('bay-kind').textContent = ({collection:'КОЛЛЕКЦИОННАЯ МАШИНА',premium:'ПРЕМИУМ-МАШИНА',advent:'НАГРАДА АДВЕНТА'})[tank.source] || 'ИССЛЕДУЕМАЯ МАШИНА';
     el('bay-name').textContent = tank.n;
     el('bay-meta').textContent =
       description(tank) + (tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');

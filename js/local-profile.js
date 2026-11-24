@@ -1,4 +1,4 @@
-// One save per browser. Never serialize a running match or any account credentials.
+// Guest slot only. Cloud snapshots use the same field allowlist, never the guest slot. Never serialize a running match or any account credentials.
 const LOCAL_SAVE_KEY = 'ct_progress_v1';
 const progressFields = Object.keys(initialProgress());
 let canSaveProgress = false;
@@ -44,37 +44,64 @@ function setSaveStatus(message, warning) {
 const oldTankKeys = Object.freeze({
   ST1:'STI', STRV21:'STRVFM21', PZ2:'PZII', SP1C:'SPIC', T1CUNN:'T1C', OB140:'OBJ140', RHMB:'RHMBWT',
   PZ4D:'PZIVD', VK30P:'VK3001P', VK36H:'VK3601H', TIGER1:'TIGERI', TIGER2:'TIGERII',
-  VK100:'VK10001P', MAUSCH:'MAUSCHEN', T54O:'T54L'
+  VK100:'VK10001P', MAUSCH:'MAUSCHEN', T54O:'T54L', JPANTHER2:'JPANTHERII', T34_USA:'T34HEAVY'
 });
 function savedTankId(id) {
   if (typeof id !== 'string') return null;
   return Object.hasOwn(DB,id) ? id : Object.hasOwn(oldTankKeys,id) ? oldTankKeys[id] : null;
 }
 
+function decodeProgress(data) {
+  if (!isProgressObject(data)) throw new Error('Invalid save');
+  const defaults = initialProgress();
+  const restored = restoreField(defaults, data);
+  restored.owned = [...new Set(restored.owned.map(savedTankId).filter(Boolean))];
+  if (!restored.owned.length) restored.owned = defaults.owned;
+  restored.selected = savedTankId(restored.selected);
+  if (!restored.owned.includes(restored.selected)) restored.selected = restored.owned[0];
+  if (!PLAYABLE_NATIONS.includes(data.curNat)) {
+    const nat = DB[restored.selected].nat;
+    restored.curNat = PLAYABLE_NATIONS.includes(nat) ? nat : defaults.curNat;
+  }
+  restored.advent2026.dates = [...new Set(restored.advent2026.dates.filter(d =>
+    typeof d === 'string' && /^2026-12-(0[1-9]|[12][0-9]|3[01])$/.test(d)))].sort();
+  // Only supported equipment on existing tanks survives migration.
+  for (const key of ['modules', 'upgrades', 'upgradesBought']) {
+    const entries = restored[key];
+    restored[key] = Object.fromEntries(Object.entries(entries).flatMap(([id,v]) => {
+      const canonical = savedTankId(id);
+      return canonical && (id === canonical || !Object.hasOwn(entries,canonical)) ? [[canonical,v]] : [];
+    }));
+  }
+  restored.settings.lookSensitivity = Math.max(.3, Math.min(2.5, restored.settings.lookSensitivity));
+  restored.inventory = migrateSupplyBoxes(restored.inventory);
+  // The module UI expects arrays, not arbitrary nested save data.
+  for (const [id, slots] of Object.entries(restored.modules)) {
+    if (!Array.isArray(slots)) { delete restored.modules[id]; continue; }
+    restored.modules[id] = slots.slice(0,3).map(k => Object.hasOwn(CONFIG.MODULES,k) ? k : null);
+  }
+  for (const [id, levels] of Object.entries(restored.upgrades)) {
+    restored.upgrades[id] = Object.fromEntries(Object.keys(CONFIG.UPGRADES).filter(k =>
+      Number.isInteger(levels?.[k]) && levels[k] >= 0 && levels[k] < CONFIG.UPGRADES[k].length).map(k => [k,levels[k]]));
+  }
+  for (const [id, flags] of Object.entries(restored.upgradesBought)) {
+    restored.upgradesBought[id] = Object.fromEntries(Object.keys(CONFIG.UPGRADES).map(k =>
+      [k, CONFIG.UPGRADES[k].map((_,i) => i===0 || flags?.[k]?.[i] === true)]));
+  }
+  return restored;
+}
+
+function progressSnapshot() {
+  return JSON.stringify(Object.fromEntries(progressFields.map(key => [key, GameState[key]])));
+}
+
 function loadProgress() {
+  Object.assign(GameState, initialProgress());
   let raw;
   try {
     raw = localStorage.getItem(LOCAL_SAVE_KEY);
     const data = raw === null ? readLegacyProgress() : JSON.parse(raw);
-    if (!isProgressObject(data)) throw new Error('Invalid save');
-    const defaults = initialProgress();
-    const restored = restoreField(defaults, data);
-    restored.owned = [...new Set(restored.owned.map(savedTankId).filter(Boolean))];
-    if (!restored.owned.length) restored.owned = defaults.owned;
-    restored.selected = savedTankId(restored.selected);
-    if (!restored.owned.includes(restored.selected)) restored.selected = restored.owned[0];
-    if (!PLAYABLE_NATIONS.includes(data.curNat)) restored.curNat = DB[restored.selected].nat;
-    // Only supported equipment on existing tanks survives migration.
-    for (const key of ['modules', 'upgrades', 'upgradesBought']) {
-      const entries = restored[key];
-      restored[key] = Object.fromEntries(Object.entries(entries).flatMap(([id,v]) => {
-        const canonical = savedTankId(id);
-        return canonical && (id === canonical || !Object.hasOwn(entries,canonical)) ? [[canonical,v]] : [];
-      }));
-    }
-    restored.settings.lookSensitivity = Math.max(.3, Math.min(2.5, restored.settings.lookSensitivity));
-    restored.inventory = migrateSupplyBoxes(restored.inventory);
-    Object.assign(GameState, restored);
+    Object.assign(GameState, decodeProgress(data));
     canSaveProgress = true;
     lastSavedProgress = raw;
   } catch {
@@ -86,9 +113,10 @@ function loadProgress() {
 }
 
 function saveProgress() {
+  if (Accounts.active) { Accounts.capture(); return; }
   if (!canSaveProgress) return;
   try {
-    const snapshot = JSON.stringify(Object.fromEntries(progressFields.map(key => [key, GameState[key]])));
+    const snapshot = progressSnapshot();
     if (snapshot !== lastSavedProgress) {
       localStorage.setItem(LOCAL_SAVE_KEY, snapshot);
       lastSavedProgress = snapshot;

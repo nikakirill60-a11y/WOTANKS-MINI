@@ -143,7 +143,28 @@ const BRANCHES = Object.freeze({
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH)
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
-const DB = Object.freeze(Object.fromEntries(Object.values(BRANCHES).flatMap(b=>b.tanks.map(t=>[t.id,t]))));
+// Special vehicles have a real tier, but no XP price or research parent.
+// The three acquisition pools are disjoint (the two TL-7s are separate models).
+const SPECIAL_TANKS = Object.freeze([
+  // source, ID, name, nation, tier, class, slug, HP, full load, reload ms, pen, hull, turret, km/h, model limits
+  ['collection','M4A3E2','M4A3E2 Sherman Jumbo','usa',6,'mt','m4a3e2-sherman-jumbo',880,140,4000,138,102,152,35,{minPitch:-25,maxPitch:10}],
+  ['collection','T71DA','T71 DA','usa',7,'lt','t71-da',860,900,20000,175,25,25,64,{mag:6,weapon:'drum',oscillating:true,minPitch:-20,maxPitch:7}],
+  ['collection','JPANTHERII','Jagdpanther II','germany',8,'td','jagdpanther-ii',1200,490,10800,246,100,null,55,{yawLimits:[-10,10],minPitch:-15,maxPitch:6.5}],
+  ['collection','T62A','Т-62А','ussr',10,'mt','t-62a',1950,320,5600,255,102,240,50,{minPitch:-17,maxPitch:6}],
+  ['collection','TL7','TL-7','usa',9,'td','tl-7',1500,1440,32000,252,100,200,50,{mag:4,weapon:'drum',minPitch:-10,maxPitch:15}],
+  ['premium','IS6','ИС-6','ussr',8,'ht','is-6',1550,390,10800,196,100,150,35,{price:7000,minPitch:-20,maxPitch:6}],
+  ['premium','LOWE','Löwe','germany',8,'ht','lowe',1650,320,9200,234,150,120,35,{price:8000,minPitch:-17,maxPitch:8}],
+  ['premium','T34HEAVY','T34','usa',8,'ht','t34-heavy',1550,400,12200,248,102,279,35,{price:7600,minPitch:-15,maxPitch:10}],
+  ['premium','STA2','STA-2','japan',8,'mt','sta-2',1380,240,5700,212,45,70,55,{price:6100,minPitch:-10,maxPitch:13}],
+  ['premium','STRVS1','Strv S1','sweden',8,'td','strv-s1',1100,390,8800,288,30,null,50,{price:6500,stance:'hull',yawLimits:[0,0],minPitch:-11,maxPitch:11}],
+  ['advent','BT42','БТ-42','finland',4,'lt','bt-42',370,210,7500,75,22,15,54,{minPitch:-5,maxPitch:15}],
+  ['advent','TL7OLEN','TL-7 Олень','usa',9,'td','tl-7-olen',1500,1440,32000,252,100,200,50,{mag:4,weapon:'drum',minPitch:-10,maxPitch:15}]
+].map(([source,id,n,nat,tier,cls,slug,hp,alpha,reload,pen,armor,turretArmor,speed,extra]) => Object.freeze({
+  source,id,n,nat,tier,cls,file:slug+'.mesh.js',thumbnail:slug+'.webp',hp,alpha,reload,pen,armor,turretArmor,speed,
+  s:({lt:.86,mt:1,ht:1.12,td:1.04})[cls],vr:300+8*tier,camo:({lt:.32,mt:.22,ht:.09,td:.28})[cls],...extra
+})));
+const DB = Object.freeze(Object.fromEntries([...Object.values(BRANCHES).flatMap(b=>b.tanks),...SPECIAL_TANKS].map(t=>[t.id,t])));
+const TRAINING_NATIONS = Object.freeze([...new Set(Object.values(DB).map(t=>t.nat))]);
 const STARTER_TANK = 'MS1';
 const shotDamage = t => t.alpha / (t.mag || 1);
 const magazineName = t => t.weapon === 'machinegun' || t.weapon === 'drum' ? 'Барабан' : 'Кассета';

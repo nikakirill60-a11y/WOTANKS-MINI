@@ -281,6 +281,7 @@ function backToGarage() {
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
   renderTree();
   renderCarousel();
+  WinterSeason.refresh(true);
 }
 
 function leaveBattle() {

@@ -4,14 +4,21 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
-START = '''CITY TANKS — СССР, Германия, США и Швеция
+START = '''CITY TANKS — Северное депо · зимний сезон 2026
 
 Распакуйте архив целиком и откройте index.html в браузере.
 При обновлении используйте прежнюю папку и тот же браузер, чтобы сохранить доступ к прогрессу.
-Интернет и регистрация не нужны. Для 3D-боя нужен WebGL 2.
+Гость играет без интернета, прогресс в прежнем локальном ангаре. Для 3D-боя нужен WebGL 2.
+«Гость» → «Создать аккаунт» или «Войти» — отдельный личный ангар Wot-mini (нужен интернет).
+Придумайте позывной и пароль. Не теряйте их: игровому позывному не нужна почта.
+С 1 по 31 декабря 2026 UTC подарок начисляется за каждый новый день посещения.
+За 15 визитов — финский БТ-42, за 31 — TL-7 Олень. Пропуски не обнуляют прогресс.
+Премиум-магазин: три машины за игровое золото, смена в 00:00 UTC.
+Контейнеры → Коллекционный контейнер: одна из пяти ещё не полученных машин за 75 000 серебра.
+Дерево развития не изменилось. Прежнее депо сохранено в файлах, но скрыто в зимней версии.
 
 Вкладка «Мой танк» — депо выбранной открытой машины. У закрытого узла доступны иконка и ТТХ.
-Отдельных страниц моделей больше нет. В игре 92 машины, у каждой своя иконка.
+Отдельных страниц моделей больше нет. В игре 104 машины, у каждой своя иконка.
 Швеция: в дереве нажмите бесплатный Strv fm/21. С него начинаются два пути:
 через Strv m/38 к Kranvagn или через Pvlvv fm/42 к Strv 103B.
 Emil I: 3 × 320, Emil II и Kranvagn: 3 × 400. Полная перезарядка: 22 / 25 / 22 с.
@@ -70,7 +77,7 @@ class EntryAssets(HTMLParser):
 def runtime_files():
     assets = EntryAssets()
     assets.feed((ROOT / 'index.html').read_text(encoding='utf-8'))
-    files = {'index.html', 'README.md', 'vendor/three.LICENSE'} | assets.paths
+    files = {'index.html', 'README.md', 'vendor/three.LICENSE', 'vendor/supabase-auth.LICENSE', 'vendor/tslib.LICENSE', 'assets/northlight.webp'} | assets.paths
     for model in (ROOT / 'models').glob('*.mesh.js'):
         files.add('models/' + model.name)
         files.add('models/' + model.name.removesuffix('.mesh.js') + '.webp')

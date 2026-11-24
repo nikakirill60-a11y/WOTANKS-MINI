@@ -22,7 +22,7 @@ const usIds = ['T1C','T2MEDIUM','M2MEDIUM','M3LEE','M4SHERMAN','M4A3E8','T20','P
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
+const meshCounts = {BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
   PZ35T:2486,PZ38T:2637,PZIVD:3160,PZIVH:3263,VK3001P:2890,TIGERP:3161,VK10001P:2723,MAUSCHEN:3174,MAUS:2760,
   VK3601H:2659,TIGERI:2972,TIGERII:3394,E75:2944,E100:2986,T50:4700,MT25:2313,LTG:3221,LTTB:3339,T54L:2919,T100LT:3398,
   T150:2514,KV3:2866,KV4:3259,STI:3226,IS4:3284,
@@ -60,6 +60,8 @@ async function offlineGame(t, { seed, denyStorage, webgl = false, mobile = false
   await page.route(/^https?:/, route => { network.push(route.request().url()); return route.abort(); });
   await page.routeWebSocket('**/*', socket => { network.push(socket.url()); socket.close(); });
   page.on('dialog', dialog => { dialogs.push(dialog.message()); return dialog.dismiss(); });
+  // Pre-season baseline is independent of the date the regression suite is run.
+  await page.addInitScript(() => { const real = Date.now, offset = Date.parse('2026-11-22T13:00:00Z')-real(); Date.now = () => real()+offset; });
   if (seed) await page.addInitScript(entries => {
     if (window !== window.top || sessionStorage.fixtureLoaded) return;
     for (const [key, raw] of Object.entries(entries)) localStorage.setItem(key, raw);
@@ -82,7 +84,7 @@ const saved = page => page.evaluate(key => JSON.parse(localStorage.getItem(key))
 
 test('fresh garage, local rewards, selected tank and settings survive an immediate reload', async t => {
   const { page, click } = await offlineGame(t);
-  assert.equal(await page.locator('#login-screen, input[type=password], #tab-market, #tab-referral, #chat-panel, #leaderboard-modal').count(), 0);
+  assert.equal(await page.locator('#login-screen, input[type=password]:visible, #tab-market, #tab-referral, #chat-panel, #leaderboard-modal').count(), 0);
   assert.equal(await page.locator('#tank-carousel .tank-slot').count(), 1);
   assert.equal(await page.locator('#xp-val').textContent(), '500');
   await click('ОБМЕН');
@@ -95,12 +97,12 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
     assert.equal(await page.locator('#container-modal .tab-content:visible').count(), 1);
   }
   assert.deepEqual(await page.locator('#container-modal .tab-content').evaluateAll(els=>els.map(e=>e.id)),['tab-shop','tab-inventory']);
-  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Код','Контейнеры','Инвентарь','Модули','Прокачка','Награды','Обучение']);
+  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
   assert.equal(await page.locator('#battlepass-track,#features-modals-root,#quest-widget,#sixth-sense-lamp').count(),0);
   await click('В ангар');
-  await click('Награды');
-  await page.locator('#calendar-days button').nth(6).click();
-  assert.ok(await page.locator('#calendar-days button').nth(6).isDisabled());
+  await click('Адвент');
+  assert.equal(await page.locator('#calendar-days .future').count(),31);
+  assert.equal(await page.locator('#advent-count').innerText(),'0 / 31');
   await click('В ангар');
   await click('Дерево развития');
   assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ']);
@@ -113,15 +115,15 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.ok(await page.locator('#ui').isVisible());
   assert.equal(await page.locator('.tank-slot.selected .slot-name').innerText(), 'МС-1');
   assert.equal(await page.locator('.n-btn.active-n').innerText(), 'СССР');
-  assert.equal(await page.locator('#gold-val').innerText(), '510');
-  assert.equal(await page.locator('#charges-val').innerText(), '2');
+  assert.equal(await page.locator('#gold-val').innerText(), '10');
+  assert.equal(await page.locator('#charges-val').innerText(), '0');
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   await page.locator('button[onclick="showSettings()"]').click();
   assert.equal(await page.locator('#volume-slider').inputValue(), '0');assert.equal(await page.locator('#look-sensitivity').inputValue(),'2.5');
   assert.equal(await page.locator('#settings-modal input[type=checkbox]').isChecked(), false);
   await page.locator('button[onclick="hideSettings()"]').click();
-  await click('Награды');
-  assert.ok(await page.locator('#calendar-days button').nth(6).isDisabled());
+  await click('Адвент');
+  assert.equal(await page.locator('#calendar-days .received').count(),0);
   checkClean(await saved(page));
   assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), [saveKey]);
 });
@@ -139,7 +141,7 @@ test('one legacy local profile: keep earned progress, exclude credentials and re
   assert.equal(data.SILVER, 0);
   assert.equal(data.charges, 4);
   assert.equal(data.selected, 'PZII');assert.equal(data.curNat,'germany');
-  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN']); // no grants for similarly named tanks or a retired event boss
+  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T34HEAVY','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN']); // no grants for similarly named tanks or a retired event boss
   assert.deepEqual(data.modules,{T1C:['optics'],RHMBWT:['turbo'],STI:['optics'],T54L:['rammer']});assert.deepEqual(data.upgrades,{T1C:{engine:1},TIGERI:{gun:2}});
   checkClean(data);assert.equal(data.GOLD,2500);
   assert.doesNotMatch(JSON.stringify(data), /obsolete-test-marker|Former|old-code|mail_event/);
@@ -161,13 +163,13 @@ test('an unreadable save is not overwritten', async t => {
   assert.equal(await page.evaluate(key => localStorage.getItem(key), saveKey), '{broken');
 });
 
-test('the new MS-1 and both heavy tanks occupy the original depot; camera, rapid switching and cleanup work', async t => {
+test('the new MS-1 and both heavy tanks occupy the winter depot; camera, rapid switching and cleanup work', async t => {
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','IS','IS3'],selected:'MS1'})}});
   for(const [id,name] of [['MS1','МС-1'],['IS','ИС'],['IS3','ИС-3']]){
     await click('Выбрать для боя: '+name);
     await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
     const info = await page.evaluate(()=>DepotView.stats());
-    assert.equal(info.triangles,meshCounts[id]);assert.equal(info.room,'CITY TANKS · Депо 01');assert.ok(info.calls>5);
+    assert.equal(info.triangles,meshCounts[id]);assert.equal(info.room,'Северное депо · Полярная ночь');assert.ok(info.calls>5);
     assert.equal(await page.locator('#bay-open,#tree-inspect,#bay-picker').count(),0);
     await click('Сбоку');assert.notDeepEqual(await page.evaluate(()=>DepotView.stats().camera),info.camera);
     assert.equal(await page.locator('#bay-angles [data-view=side]').getAttribute('aria-pressed'),'true');
@@ -208,9 +210,9 @@ test('migration keeps earned late tiers, supplies, modules, settings and currenc
   await click('Дерево развития');assert.equal(await page.locator('.n-btn.active-n').innerText(),'ГЕРМАНИЯ');
   await click('СССР');assert.equal(await page.locator('#nodes .node.owned').count(),3);
   await click('Выбрать: Объект 257');assert.equal(await page.locator('#dispatch-name').innerText(),'Объект 257');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietIds.concat(is4Ids,mediumIds,scoutIds));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietIds.concat(is4Ids,mediumIds,scoutIds,['T62A','IS6']));
   const rewards=await page.evaluate(()=>{
-    for(const id of Object.keys(CONTAINERS))openContainerDirect(id);
+    for(const id of ['basic','supply','premium'])openContainerDirect(id);
     for(const code of ['BETA_TEST','WT220','START2025']){document.getElementById('promo-input').value=code;activatePromo();}
     saveProgress();
     return [typeof FeaturesHub,typeof EconomyEngine,typeof BattlePassSystem,typeof getCrewPerkValue,
@@ -447,6 +449,10 @@ test('research, icons and offline mesh loading: the complete line is visible; on
     return result;
   });
   assert.deepEqual(parts,meshCounts);
+  assert.ok(await page.evaluate(async()=>{
+    const signal=new AbortController().signal,a=await BattleModels.load('TL7',signal),b=await BattleModels.load('TL7OLEN',signal);
+    return a.height===b.height && a.aimHeight===b.aimHeight && a.hull.boundingBox.equals(b.hitHull) && a.turret.boundingBox.equals(b.hitTurret) && a.muzzle.every((v,i)=>v===b.muzzle[i]);
+  }),'holiday decorations are not extra armour, flotation, or a different muzzle');
   assert.equal(await page.locator('iframe').count(),0,'no WebGL renderer is required to load the original meshes');
 });
 
@@ -589,7 +595,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LEOPARD'],selected:'LEOPARD'})}});
   assert.equal(await page.locator('#dispatch-dmg-label').innerText(),'Урон кассеты');assert.equal(await page.locator('#dispatch-dmg').innerText(),'240 (8 × 30)');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('germany');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanIds.concat(tdIds,panzerIds,mausIds,e100Ids,['JPANTHERII','LOWE']));
   await page.locator('#enemy-select').selectOption('VK2801');await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);
   const units=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -628,7 +634,7 @@ test('US M3 Lee: real depot and mobile sortie, limited traverse, swipe to aim, t
   const {page,click}=await offlineGame(t,{webgl:true,mobile:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','M3LEE'],selected:'M3LEE'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.M3LEE);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('usa');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usIds);
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usIds.concat(['M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
   await page.locator('#enemy-select').selectOption('M4SHERMAN');await click('НАЧАТЬ');await chooseControls(page,'mobile');await ready(page);
   const models=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.hp,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -814,7 +820,7 @@ test('supplied Swedish rigs in combat: Kranvagn fires 3 × 400; hydraulic mounts
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','KRANVAGN','STRV103B','UDES03'],selected:'KRANVAGN'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.KRANVAGN);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('sweden');
-  assert.equal(await page.locator('#enemy-select option').count(),19);await page.locator('#enemy-select').selectOption('STRV103B');
+  assert.equal(await page.locator('#enemy-select option').count(),20);await page.locator('#enemy-select').selectOption('STRV103B');
   await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);await centerPractice(page);
   await lockedButton(page,true);await page.waitForFunction(()=>GameState.player.isReloading);await lockedButton(page,false);await page.waitForFunction(()=>!GameState.bullets.length);
   assert.deepEqual(await page.evaluate(()=>[GameState.player.reloadTime,GameState.player.curMag,GameState.battleDmg,GameState.units[1].hp]),[22000,0,1200,600]);
@@ -944,4 +950,23 @@ test('four-lane research on a phone: all three new routes charge each distinct n
   await page.reload(); const s=await saved(page);
   assert.deepEqual(s.owned,owned); assert.equal(s.XP,0); assert.equal(s.selected,'T100LT');
   assert.equal(await page.locator('#dispatch-speed').innerText(),'72 км/ч');
+});
+
+test('winter lineup: all 12 new 3D vehicles enter offline practice; Finnish/Japanese selection works without a research tree',async t=>{
+  const pairs=[['BT42','M4A3E2'],['STA2','LOWE'],['JPANTHERII','T62A'],['T71DA','IS6'],['TL7','T34HEAVY'],['TL7OLEN','STRVS1']];
+  const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1',...pairs.flat()],selected:'BT42'})}});
+  for (const [id,enemy] of pairs) {
+    await page.locator(`.tank-slot[data-tank-id="${id}"] .slot-select`).click();await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
+    if (!await page.locator('#enemy-select').isVisible()) await click('ТРЕНИРОВКА');
+    await page.locator('#train-nat-select').selectOption(await page.evaluate(id=>DB[id].nat,enemy));await page.locator('#enemy-select').selectOption(enemy);
+    await click('НАЧАТЬ');const result=await page.evaluate(async()=>{
+      if (!await selectControl('mobile')) throw Error(document.getElementById('battle-notice-text').textContent);
+      stopBattleLoop();const p=GameState.player,e=GameState.units[1];p.lookAtPoint(e.x,e.y,e.aimHeight);p.slewSight(Math.PI,Math.PI);
+      BattleView.syncCamera();BattleView.draw();firePlayer();const shot=GameState.bullets[0];
+      const result={models:GameState.units.map(u=>[u.id,['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]),
+        rounds:p.curMag,damage:shot.dmg,reload:p.reloadTime,visible:BattleView.stats().units};backToGarage();return result;
+    });assert.deepEqual(result.models,[[id,meshCounts[id]],[enemy,meshCounts[enemy]]]);assert.equal(result.visible,2);
+    const ttx=await page.evaluate(id=>[shotDamage(DB[id]),(DB[id].mag||1)-1,DB[id].reload],id);
+    assert.deepEqual([result.damage,result.rounds,result.reload],ttx);
+  }
 });

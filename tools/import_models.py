@@ -27,11 +27,14 @@ def extract(src):
             raise ValueError(f'{src}: {key}')
         return v
 
-    mesh = re.findall(r'\{kind:"(body|tracks|wheels|turret|gun)",position:"([A-Za-z0-9+/=]+)",index:"([A-Za-z0-9+/=]+)"\}', body)
-    if sorted(k for k, _, _ in mesh) != ['body','gun','tracks','turret','wheels']:
+    # Decorated exports may have several coloured submeshes attached to the same part.
+    chunks = re.findall(r'\{kind:"(body|tracks|wheels|turret|gun)",(?:color:"(#[a-fA-F0-9]{6})",)?position:"([A-Za-z0-9+/=]+)",index:"([A-Za-z0-9+/=]+)"\}', body)
+    if {k for k, paint, _, _ in chunks if not paint} != {'body','gun','tracks','turret','wheels'}:
         raise ValueError(f'{src}: missing/unrecognised mesh groups')
+    mesh = []
     count = 0
-    for kind, pos, idx in mesh:
+    for kind, paint, pos, idx in chunks:
+        mesh.append([kind, pos, idx, paint] if paint else [kind, pos, idx])
         xyz, ix = (base64.b64decode(s, validate=True) for s in (pos, idx))
         if not xyz or not ix or len(xyz)%6 or len(ix)%6 or max(i[0] for i in struct.iter_unpack('<H', ix)) >= len(xyz)//6:
             raise ValueError(f'{src}: invalid {kind} mesh')

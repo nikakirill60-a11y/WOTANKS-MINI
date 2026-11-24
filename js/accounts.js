@@ -2,12 +2,19 @@
 // Only the publishable key is distributed; PostgreSQL authorizes the authenticated UUID.
 const Accounts = (() => {
   const url = 'https://tkkpdtfhcwwondonfjsi.supabase.co', key = 'sb_publishable_payWOUHbHzhug84GdD4K6A_GxmcFf1X';
-  const table = 'city_tanks_saves_v1', tabKey = 'ct_account_tab_v1';
+  const table = 'city_tanks_saves_v1', tabKey = 'ct_account_tab_v1', guestKey = 'ct_guest_tab_v1';
   const el = id => document.getElementById(id);
-  let client, tab, player = null, busy = false, syncTimer;
+  const atEntry = () => !el('entry-screen').hidden;
+  let client, tab, player = null, busy = false, syncTimer, enterHangar;
   let serverTime = 0, timeAt = 0;
   const now = () => serverTime + performance.now() - timeAt;
-  const message = text => { el('account-message').textContent = text; };
+  function message(text) {
+    el(atEntry() && !el('account-modal').open ? 'entry-status' : 'account-message').textContent = text;
+  }
+  function rememberGuest(guest) {
+    try { if (guest) sessionStorage.setItem(guestKey,'1'); else sessionStorage.removeItem(guestKey); }
+    catch { /* The choice still works for this visit with storage blocked. */ }
+  }
   const authKey = () => 'ct_auth_v1_' + tab;
   function sdk() {
     if (client) return client;
@@ -126,8 +133,9 @@ const Accounts = (() => {
     el('account-mode').textContent = player ? 'Аккаунт' : 'Гость';
     el('profile-email').textContent = player?.email || '';
     el('account-modal').setAttribute('aria-busy', String(busy));
-    for (const node of el('account-modal').querySelectorAll('input,button')) node.disabled = busy;
-    if (player) status(player);
+    for (const node of document.querySelectorAll('#account-modal input,#account-modal button,.entry-actions button')) node.disabled = busy;
+    el('account-back').textContent = atEntry() ? 'Назад' : 'В ангар';
+    if (player) { el('profile-title').textContent = 'Профиль игрока'; status(player); }
   }
   function changedProfile() {
     TankSales.close(); el('sale-status').hidden = true;
@@ -140,8 +148,9 @@ const Accounts = (() => {
     const p = {id:session.user.id,email:session.user.email?.replace(/@players\.citytanks\.invalid$/,'') || 'Профиль',cached:false};
     const [row, ms] = await Promise.all([readRemote(p),readClock(p)]);
     const draft = findDraft(p), remote = JSON.stringify(row.data);
-    // All reads succeeded. Only now save the guest and atomically change the active profile.
-    saveProgress();
+    // On first entry the guest never started playing: don't migrate/write that slot behind the menu.
+    const fromEntry = atEntry();
+    if (!fromEntry) saveProgress();
     p.rev = row.rev; p.ack = row.rev ? remote : null; let data = row.data;
     if (draft) {
       const recovered = decodeProgress(draft.data);
@@ -150,16 +159,39 @@ const Accounts = (() => {
       } else forgetExact(draft.k,draft.raw);
     }
     player = p; serverTime = ms; timeAt = performance.now();
-    Object.assign(GameState,data); capture(); changedProfile();
+    Object.assign(GameState,data); rememberGuest(false); capture();
+    if (fromEntry) {
+      const dialog = el('account-modal');
+      if (dialog.open && !p.conflict) dialog.close();
+      enterHangar();
+      if (p.conflict && !dialog.open) dialog.showModal();
+    } else changedProfile();
     message(p.conflict ? 'Черновик сохранён отдельно. Выберите, какую версию оставить.' : 'Вы вошли. Гостевой ангар сохранён отдельно.');
   }
-  function open() {
-    if (GameState.gameActive) return;
+  function formMode(register) {
+    const form = el('account-form'), password = form.elements.password;
+    form.dataset.mode = register ? 'register' : 'login';
+    password.value = ''; password.autocomplete = register ? 'new-password' : 'current-password';
+    if (register) password.minLength = 8; else password.removeAttribute('minlength');
+    el('profile-title').textContent = register ? 'Регистрация' : 'Вход в аккаунт';
+    el('account-intro').textContent = register ? 'Создайте личный ангар с облачным сохранением. Почта не нужна.' : 'Войдите, чтобы продолжить игру в своём облачном ангаре.';
+    el('account-hint').textContent = register ? 'Позывной: 3–24 латинские буквы, цифры или _. Пароль — от 8 символов. Сохраните его: восстановление по почте недоступно.' : 'Для прежнего аккаунта Wot-mini вместо позывного можно указать почту.';
+    el('account-submit').textContent = register ? 'Создать аккаунт' : 'Войти';
+    el('account-switch').textContent = register ? 'Уже есть аккаунт' : 'Регистрация';
+    el('account-message').textContent = '';
+  }
+  function open(mode = 'login') {
+    if (GameState.gameActive || busy) return;
+    if (!player) formMode(mode === 'register');
+    el('entry-status').textContent = '';
     ui(); if (!el('account-modal').open) el('account-modal').showModal();
+    if (!player) el('profile-handle').focus();
   }
   function errorText(err) {
     if (err.code === 'email_not_confirmed') return 'Сначала подтвердите почту по ссылке из письма.';
-    if (err.code === 'invalid_credentials') return 'Не удалось войти. Проверьте позывной и пароль.';
+    // Some auth gateways do not expose the SDK's version header across origins.
+    if (err.code === 'invalid_credentials' || (err.status === 400 && err.message === 'Invalid login credentials'))
+      return 'Не удалось войти. Проверьте позывной и пароль.';
     if (err.code === 'weak_password') return 'Выберите более надёжный пароль (не менее 8 символов).';
     if (err.status === 429) return 'Слишком много запросов. Попробуйте чуть позже.';
     if (err.code === 'taken') return 'Этот позывной уже занят. Войдите или выберите другой.';
@@ -171,10 +203,10 @@ const Accounts = (() => {
       if (!player && tab) { try { sessionStorage.removeItem(authKey()); } catch { /* storage blocked */ } }
       message(errorText(e));
     }
-    finally { busy = false; ui(); WinterSeason.refresh(true); }
+    finally { busy = false; ui(); if (!atEntry()) WinterSeason.refresh(true); }
   }
   function submit(event) {
-    event.preventDefault(); const form = event.currentTarget, registering = event.submitter?.value === 'register';
+    event.preventDefault(); const form = event.currentTarget, registering = form.dataset.mode === 'register';
     const handle = form.elements.handle.value.trim().toLowerCase(), password = form.elements.password.value;
     const nickname = /^[a-z0-9_]{3,24}$/.test(handle);
     if (!nickname && (registering || !handle.includes('@'))) { message('Позывной: 3–24 латинские буквы, цифры или _.'); return; }
@@ -202,7 +234,8 @@ const Accounts = (() => {
       // Local scope only: logging out here must not revoke the player's other devices.
       try { await sdk().signOut({scope:'local'}); } catch { /* still close the local session offline */ }
       sessionStorage.removeItem(authKey()); client?.stopAutoRefresh(); client = null;
-      player = null; loadProgress(); changedProfile(); saveProgress();
+      player = null; rememberGuest(true); loadProgress(); changedProfile(); saveProgress();
+      formMode(false);
       message(p.snapshot === p.ack ? 'Вы вернулись в локальный гостевой ангар.' : 'Черновик аккаунта остался на устройстве до следующего входа. Вы играете как гость.');
     });
   }
@@ -219,24 +252,36 @@ const Accounts = (() => {
       Object.assign(GameState,row.data); p.snapshot = null; capture(); changedProfile(); message('Загружена облачная версия.');
     });
   }
-  function init() {
+  function enterGuest() {
+    if (busy || !atEntry()) return;
+    // Another tab may have played while the checkpoint was open. Read the guest slot now.
+    loadProgress(); rememberGuest(true); enterHangar();
+  }
+  function init(onEnter) {
+    enterHangar = onEnter;
+    el('entry-login').addEventListener('click',() => open('login'));
+    el('entry-register').addEventListener('click',() => open('register'));
+    el('entry-guest').addEventListener('click',enterGuest);
+    el('account-switch').addEventListener('click',() => open(el('account-form').dataset.mode === 'login' ? 'register' : 'login'));
     el('account-form').addEventListener('submit',submit);
     el('account-modal').addEventListener('cancel',e => { if (busy) e.preventDefault(); });
-    el('account-modal').addEventListener('close',() => { el('account-form').elements.password.value=''; });
+    el('account-modal').addEventListener('close',() => { el('account-form').reset(); });
     window.addEventListener('online',() => { if (player) { capture(); flush(player); } });
     window.addEventListener('focus',async () => {
       const p=player; if (!p || busy || performance.now()-timeAt < 60000) return;
       try { const ms=await readClock(p); if (p===player) { serverTime=ms; timeAt=performance.now(); WinterSeason.refresh(true); } } catch { /* keep the last server clock */ }
     });
+    let resumeAuth = false, resumeGuest = false;
     try {
-      tab=sessionStorage.getItem(tabKey);
-      if (tab && sessionStorage.getItem(authKey())) {
-        open(); run(async () => {
-          const {data,error}=await sdk().getSession(); if (error || !data.session) throw error || Error('session');
-          await activate(data.session); if (!player.conflict) el('account-modal').close();
-        });
-      }
+      tab = sessionStorage.getItem(tabKey);
+      resumeAuth = tab && sessionStorage.getItem(authKey());
+      resumeGuest = sessionStorage.getItem(guestKey) === '1';
     } catch { /* An offline guest can still play with all storage disabled. */ }
+    if (resumeAuth) run(async () => {
+      const {data,error} = await sdk().getSession(); if (error || !data.session) throw error || Error('session');
+      await activate(data.session);
+    });
+    else if (resumeGuest) enterGuest();
   }
   return {init,open,logout,recover,downloadDraft,capture,now,get active(){return !!player;},get switching(){return busy;}};
 })();

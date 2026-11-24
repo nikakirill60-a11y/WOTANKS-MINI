@@ -45,7 +45,7 @@ test('Germany: ten supplied stat lines, chosen primary loadouts, prices and inde
     ['SPIC',880,220,1,6800,175,15,15,58], ['HWK12',1100,240,1,6800,190,15,15,65],
     ['RU251',1350,250,1,5800,210,25,20,72], ['RHMPZW',1650,320,1,7200,235,30,20,75]
   ]);
-  assert.equal(Object.keys(DB).length,156);
+  assert.equal(Object.keys(DB).length,166);
   for(const [i,t] of rows.entries()){
     assert.ok(t.tier===i+1 && t.nat==='germany' && t.cls==='lt');assert.equal(t.xp,soviet[i].xp);
     assert.equal(researchParent(t.id),rows[i-1]?.id);const u=new Tank(t.id,0,0,'enemy');
@@ -53,9 +53,9 @@ test('Germany: ten supplied stat lines, chosen primary loadouts, prices and inde
   }
 });
 
-test('German, Swedish and American autoloaders: real independent projectiles, total base damage and full-clip cooldown for both sides',()=>{
+test('Autoloaders: real independent projectiles, total base damage and full-clip cooldown for both sides',()=>{
   const {Tank,GameState:g,at,resolveHit}=game();
-  for(const [id,n,alpha,reload] of [['PZII',5,15,4500],['PZIC',8,12,5000],['LUCHS',6,30,7500],['LEOPARD',8,30,9000],['WTE100',4,520,40000],['EMIL1',3,320,22000],['EMIL2',3,400,25000],['KRANVAGN',3,400,22000],['T69',4,240,22000],['T54E1',4,390,30000],['T57HEAVY',4,400,23000]]){
+  for(const [id,n,alpha,reload] of [['TOLDI1',4,20,4000],['PZII',5,15,4500],['PZIC',8,12,5000],['LUCHS',6,30,7500],['LEOPARD',8,30,9000],['WTE100',4,520,40000],['EMIL1',3,320,22000],['EMIL2',3,400,25000],['KRANVAGN',3,400,22000],['T69',4,240,22000],['T54E1',4,390,30000],['T57HEAVY',4,400,23000]]){
     for(const team of ['player','enemy']){
       g.bullets=[];const u=new Tank(id,0,0,team),t=new Tank('LTR',200,0,'enemy');
       u.modelAsset={groundY:0,pivot:[0,1,0],gunPivot:[0,.25,.7],muzzle:[0,0,2]};
@@ -203,7 +203,7 @@ test('each vehicle has its own transparent offline WebP and data-only mesh, neve
     const icon=fs.readFileSync(path.join(root,'models',t.thumbnail));assert.equal(icon.toString('ascii',8,12),'WEBP');
     assert.equal(icon.toString('ascii',12,16),'VP8X');assert.ok(icon[20]&16,t.id+' missing alpha');icons.add(require('crypto').createHash('sha256').update(icon).digest('hex'));
     const model=fs.readFileSync(path.join(root,'models',t.file),'utf8');assert.match(model,/^BattleModels\.receive\(\{/);
-    const data=JSON.parse(model.slice('BattleModels.receive('.length,-3));assert.equal(data.id,t.id);assert.equal(data.meshes.length,t.id==='TL7OLEN'?10:5);
+    const data=JSON.parse(model.slice('BattleModels.receive('.length,-3));assert.equal(data.id,t.id);assert.equal(data.meshes.length,({TAS:2,T55A:3,TL7OLEN:10})[t.id] ?? 5);
   }assert.equal(icons.size,Object.keys(DB).length);
   assert.ok(!fs.readdirSync(path.join(root,'models')).some(f=>f.endsWith('.html')));
 });
@@ -240,7 +240,7 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
   const route = (nation, end) => BRANCHES[nation].routes.find(r => r.at(-1).id === end);
   const maus = route('germany', 'MAUS'), e100 = route('germany', 'E100');
   const scout = route('ussr', 'T100LT'), medium = route('ussr', 'OBJ140');
-  assert.equal(Object.values(BRANCHES).reduce((n, tree) => n + tree.routes.length, 0), 21);
+  assert.equal(Object.values(BRANCHES).reduce((n, tree) => n + tree.routes.length, 0), 22);
   assert.equal(maus[0], DB.LTR);
   for (let i = 0; i < 5; i++) assert.equal(e100[i], maus[i]);
   for (let i = 0; i < 4; i++) assert.equal(scout[i], medium[i]);
@@ -288,7 +288,7 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
 
 test('12 special vehicles use the supplied combat stats, nonresearch acquisition and decorated submeshes',()=>{
   const {DB,BRANCHES,Tank,BATTLE_UNITS_PER_METRE:m}=game();
-  assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,144);
+  assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,154);
   const rows=[['M4A3E2',6,880,140,1,4000,138,102,152,35],['T71DA',7,860,150,6,20000,175,25,25,64],
     ['JPANTHERII',8,1200,490,1,10800,246,100,null,55],['T62A',10,1950,320,1,5600,255,102,240,50],
     ['TL7',9,1500,360,4,32000,252,100,200,50],['IS6',8,1550,390,1,10800,196,100,150,35],
@@ -380,4 +380,22 @@ test('batch5: all five fork prefixes are shared; 32 distinct tanks implement the
   assert.equal(seen.size,32); assert.equal(BRANCHES.usa.routes.length,5); assert.equal(BRANCHES.usa.tanks.length,33);
   assert.deepEqual(Array.from(BRANCHES.usa.tanks).filter(t=>t.parent==='T1HEAVY').map(t=>t.id),['M6','PAWLACK']);
   assert.equal(DB.T71DA.source,'collection'); assert.equal(DB.T71CMCD.mag,undefined);
+});
+
+test('Hungary: an independent free root and ten furnished models; both teams use the supplied table',()=>{
+  const {BRANCHES,Tank,DB,researchParent,BATTLE_UNITS_PER_METRE:m}=game(),tree=BRANCHES.hungary,rows=require('./fixtures/hungary.cjs');
+  assert.equal(tree.routes.length,1); assert.equal(tree.tanks.length,10);
+  for(const [i,t] of tree.routes[0].entries()){
+    assert.equal(DB[t.id],t); assert.equal(t.tier,i+1); assert.equal(t.nat,'hungary'); assert.equal(t.source,undefined);
+    assert.equal(t.xp,BRANCHES.ussr.routes[0][i].xp); assert.equal(researchParent(t.id),rows[i-1]?.[0]);
+    const data=JSON.parse(fs.readFileSync(path.join(root,'models',t.file),'utf8').slice('BattleModels.receive('.length,-3));
+    assert.equal(data.triangles,rows[i].at(-1)); assert.equal(data.color,'#474c2e');
+    assert.equal(data.tracks,t.id==='TAS'?'#1c2019':'#2c3126');
+    for(const team of ['player','enemy']){
+      const u=new Tank(t.id,0,0,team);
+      assert.deepEqual([u.id,u.name,u.hp,u.dmg,u.magSize,u.reloadTime,u.pen,u.armor,u.turretArmor,Math.round(u.baseSpeed*60*3.6/m)],rows[i].slice(0,-1));
+      assert.equal(u.canTraverseTo(Math.PI),t.id!=='TAS');
+    }
+  }
+  assert.ok(!BRANCHES.ussr.tanks.includes(DB.T54A));assert.notEqual(DB.T54.file,DB.T54A.file);
 });

@@ -229,8 +229,11 @@ function stopBattleLoop() {
   cancelAnimationFrame(battleFrame);
   battleFrame = 0;
 }
-function init() {
-  loadProgress();
+function enterHangar() {
+  const entry = document.getElementById('entry-screen');
+  if (entry.hidden) return;
+  entry.hidden = true;
+  document.getElementById('ui').hidden = false;
   applySettings();
   GarageViewer.init();
   MapChart.initPicker();
@@ -243,8 +246,11 @@ function init() {
   updateResources();
   updateInvCount();
   updateBoosterUI();
-  Accounts.init();
   WinterSeason.init();
   startAutosave();
+  document.getElementById('bay-inspect-tab').focus({preventScroll:true});
 }
-document.addEventListener('DOMContentLoaded', init, { once: true });
+document.addEventListener('DOMContentLoaded', () => {
+  // Don't start a garage, read/write a guest save or award an Advent visit behind the checkpoint.
+  Accounts.init(enterHangar);
+}, { once: true });

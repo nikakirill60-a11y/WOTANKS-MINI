@@ -1,7 +1,7 @@
 const test=require('node:test'), assert=require('node:assert/strict');
 const {openGame}=require('./winter-harness.cjs');
 
-test('resale desk: all 156 owned models can be quoted, only collectors pay gold; unknown, reserved and unowned tanks cannot be sold',async t=>{
+test('resale desk: all 166 owned models can be quoted, only collectors pay gold; unknown, reserved and unowned tanks cannot be sold',async t=>{
   const {page,saved}=await openGame(t,{seed:{GOLD:44,SILVER:32100}}),initial=await saved();
   const offers=await page.evaluate(()=>{
     const offers={};for(const tank of Object.values(DB)){
@@ -12,10 +12,10 @@ test('resale desk: all 156 owned models can be quoted, only collectors pay gold;
     GameState.owned=['MS1'];GameState.selected='MS1';GameState.pendingVehicles=['T62A'];
     for(const id of ['constructor','fake','IS6','T62A']){sellTank(id);if(document.getElementById('sale-modal').open)throw Error(id);}
     GameState.pendingVehicles=[];return offers;
-  });assert.equal(Object.keys(offers).length,156);
+  });assert.equal(Object.keys(offers).length,166);
   assert.deepEqual(Object.keys(offers).filter(k=>offers[k][0]==='GOLD').sort(),['JPANTHERII','M4A3E2','T62A','T71DA','TL7']);
   for(const id of ['IS6','LOWE','STA2','STRVS1','T34HEAVY'])assert.deepEqual(offers[id],['SILVER',40000]);
-  assert.deepEqual(offers.BT42,['SILVER',20000]);assert.deepEqual(offers.TL7,['GOLD',900]);assert.deepEqual(offers.MS1,['SILVER',0]);
+  assert.deepEqual(offers.BT42,['SILVER',20000]);assert.deepEqual(offers.TL7,['GOLD',900]);assert.deepEqual(offers.MS1,['SILVER',0]);assert.deepEqual(offers.V440,['SILVER',0]);
   assert.deepEqual(await saved(),initial);
 });
 

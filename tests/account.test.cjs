@@ -37,6 +37,8 @@ function service() {
 }
 async function form(p,handle,password,button) {
   if(!await p.locator('#account-modal').isVisible())await p.getByRole('button',{name:'Профиль игрока'}).click();
+  const register=button==='Создать аккаунт';
+  if((await p.locator('#account-form').getAttribute('data-mode')==='register')!==register)await p.locator('#account-switch').click();
   await p.getByLabel('Позывной игрока').fill(handle);await p.getByLabel('Пароль',{exact:true}).fill(password);
   await p.getByRole('button',{name:button,exact:true}).click();
 }
@@ -101,4 +103,47 @@ test('a last-vehicle gold sale syncs the empty fleet and its balance, never pays
   await click('Продать: Т-62А');await click('Подтвердить продажу');await synced(page);const row=api.rows.get(uid).progress;
   assert.deepEqual([row.owned,row.selected,row.GOLD,row.SILVER,row.garageSlots],[[],null,1080,7000,12]);assert.deepEqual(await saved(),guest);
   await page.reload();await active(page);assert.equal(await page.locator('#fleet-count').innerText(),'0 / 12');await logout(page);assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#dispatch-name').innerText(),'МС-1');
+});
+
+test('entry menu: guest below both online actions, cancellable forms, no request/save/Advent reward until guest enters',async t=>{
+  const {page,click,saved}=await openGame(t,{mobile:true,enterGuest:false,date:'2026-12-05T12:00:00Z'});
+  const entry=page.locator('#entry-screen'),dialog=page.locator('#account-modal');
+  assert.deepEqual(await entry.getByRole('button').allTextContents().then(a=>a.map(v=>v.replace('→','').trim())),['ВХОД','РЕГИСТРАЦИЯ','ГОСТЬ']);
+  const pos=await entry.locator('button').evaluateAll(ns=>ns.map(n=>[n.offsetTop,n.offsetHeight]));
+  assert.ok(pos[2][0]>=Math.max(pos[0][0]+pos[0][1],pos[1][0]+pos[1][1]));
+  assert.ok(await page.locator('#ui').isHidden());assert.equal(await saved(),null);assert.equal(await page.locator('#depot-canvas').count(),0);
+  await click('ВХОД');assert.equal(await dialog.getByRole('heading').innerText(),'Вход в аккаунт');assert.equal(await page.locator('#profile-pass').getAttribute('autocomplete'),'current-password');
+  await page.keyboard.press('Escape');assert.ok(await dialog.isHidden());assert.ok(await entry.isVisible());
+  await click('РЕГИСТРАЦИЯ');assert.equal(await dialog.getByRole('heading').innerText(),'Регистрация');assert.equal(await page.locator('#profile-pass').getAttribute('autocomplete'),'new-password');
+  await page.getByLabel('Позывной игрока').fill('bad name');await page.getByLabel('Пароль',{exact:true}).fill('example guest password');await page.locator('#profile-pass').press('Enter');
+  assert.match(await page.locator('#account-message').innerText(),/3–24/);await click('Назад');assert.equal(await saved(),null);
+  // Model a newer local save written while the player was still at the checkpoint.
+  await page.evaluate(()=>localStorage.setItem('ct_progress_v1',JSON.stringify({GOLD:13,owned:['T55A'],selected:'T55A'})));
+  await click('ГОСТЬ');assert.ok(await entry.isHidden());assert.equal((await saved()).GOLD,63);assert.deepEqual((await saved()).owned,['T55A']);assert.deepEqual((await saved()).advent2026.dates,['2026-12-05']);
+  const once=await saved();await page.reload();assert.deepEqual(await saved(),once);assert.ok(await page.locator('#ui').isVisible());
+  assert.ok(await page.evaluate(()=>Object.keys(sessionStorage).every(k=>!k.startsWith('ct_auth')&&!k.startsWith('ct_account'))));
+  const next=await page.context().newPage();await next.goto(page.url());assert.ok(await next.getByRole('button',{name:'ГОСТЬ',exact:true}).isVisible());await next.close();
+});
+
+test('register and sign in directly from the checkpoint using Enter; failed sign-in/restore leaves the dormant guest untouched',async t=>{
+  const api=service(),dormant={owned:['T55A'],selected:'T55A',GOLD:101,XP:310};
+  const {page,click,saved}=await openGame(t,{mobile:true,enterGuest:false,route:api.route,seed:dormant,date:'2026-12-08T12:00:00Z'});
+  const post=async (p,pass)=>{await p.getByLabel('Позывной игрока').fill('checkpoint');await p.getByLabel('Пароль',{exact:true}).fill(pass);await p.locator('#profile-pass').press('Enter');};
+  await click('РЕГИСТРАЦИЯ');await post(page,'test passphrase');await active(page);await synced(page);
+  assert.ok(await page.locator('#account-modal').isHidden());assert.ok(await page.locator('#entry-screen').isHidden());assert.deepEqual(await saved(),dormant);
+  const uid=api.users.get('checkpoint@players.citytanks.invalid').id;assert.deepEqual(api.rows.get(uid).progress.owned,['MS1']);assert.equal(api.users.size,1);
+  await page.reload();await active(page);assert.ok(await page.locator('#ui').isVisible());assert.deepEqual(await saved(),dormant);
+  // No active auth on this new tab. The user's local guest is shared, NOT the account session.
+  const other=await page.context().newPage();await other.route(/^https?:/,api.route);await other.goto(page.url());await other.getByRole('button',{name:'ВХОД',exact:true}).click();
+  await post(other,'incorrect phrase');await other.waitForFunction(()=>!Accounts.switching);assert.match(await other.locator('#account-message').innerText(),/Проверьте позывной/);assert.deepEqual(await saved(),dormant);
+  await post(other,'test passphrase');await active(other);assert.ok(await other.locator('#account-modal').isHidden());assert.equal(api.users.size,1);await other.close();
+  api.failRead=true;await page.reload();await page.waitForFunction(()=>!Accounts.switching && document.getElementById('entry-status').textContent.includes('Не удалось'));
+  assert.deepEqual(await saved(),dormant);assert.ok(await page.locator('#ui').isHidden());await click('ГОСТЬ');assert.equal(await page.locator('#bay-name').innerText(),'T-55A');
+  assert.deepEqual((await saved()).owned,['T55A']);assert.equal(api.rows.get(uid).progress.GOLD,50);assert.deepEqual(api.forbidden,[]);
+});
+
+test('blocking both storage areas does not block offline guest entry',async t=>{
+  const {page,click}=await openGame(t,{enterGuest:false});
+  await page.addInitScript(()=>{for(const k of ['sessionStorage','localStorage'])Object.defineProperty(window,k,{get(){throw new DOMException('Blocked','SecurityError');}});});
+  await page.reload();await click('ГОСТЬ');assert.equal(await page.locator('#dispatch-name').innerText(),'МС-1');assert.match(await page.locator('#save-status').innerText(),/без сохранения/);
 });

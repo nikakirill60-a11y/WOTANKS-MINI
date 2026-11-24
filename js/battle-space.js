@@ -87,6 +87,9 @@ function rayBox(x, y, h, dx, dy, dh, x0, y0, h0, x1, y1, h1, limit) {
 function localBox(box, scale, x, h, z, dx, dh, dz, limit) {
   const lo = box.min,
     hi = box.max;
+  // An export with the casemate in its hull has an empty turret group (e.g. 44M Tas).
+  // Its +Infinity/-Infinity bounds are NOT a plate the ray can intersect.
+  if (lo.x > hi.x) return Infinity;
   return rayBox(
     x,
     z,

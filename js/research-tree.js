@@ -129,7 +129,7 @@ function renderTree() {
     inset = 22,
     firstRow = 36,
     rowStep = height + 18,
-    mapHeight = firstRow + (route ? 0 : Math.max(2, routes.length) - 1) * rowStep + height + 17;
+    mapHeight = firstRow + (routes.length - 1) * rowStep + height + 17;
   container.style.setProperty('--tree-height', mapHeight + 9 + 'px');
   const ctx = canvas.getContext('2d');
   ctx.font = getComputedStyle(nodes).getPropertyValue('--node-name-font').trim();
@@ -160,9 +160,7 @@ function renderTree() {
   const pos = new Map();
   for (const t of line) {
     const lanes = routes.flatMap((lane, i) => (lane[t.tier - 1] === t ? [i] : []));
-    const y = route ? firstRow : routes.length === 1
-      ? ({ lt: 112, mt: 87, ht: 62 }[t.cls] ?? 87)
-      : firstRow + (lanes[0] + lanes.at(-1)) * rowStep / 2;
+    const y = firstRow + (lanes[0] + lanes.at(-1)) * rowStep / 2;
     pos.set(t.id, { ...columns[t.tier - 1], y });
   }
   ctx.font = '11px Consolas, monospace';

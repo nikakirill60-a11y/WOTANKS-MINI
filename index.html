@@ -12,8 +12,28 @@
   <link rel="stylesheet" href="css/battle.css">
   <link rel="stylesheet" href="css/winter.css">
   <link rel="stylesheet" href="css/supplies.css">
+  <link rel="stylesheet" href="css/entry.css">
 </head>
 <body data-hangar="winter">
+
+<main id="entry-screen" aria-labelledby="entry-title">
+  <header class="entry-mast">
+    <div class="entry-brand"><svg viewBox="0 0 36 38" fill="none" aria-hidden="true"><path d="m18 1 15 6v15l-15 14L3 22V7z" stroke="currentColor" stroke-width="2"/><path d="m9 12 9 4 9-4v4l-9 4-9-4zm0 8 9 4 9-4-9 9z" fill="currentColor"/></svg><b>CITY TANKS</b></div>
+    <span class="entry-season">ЗИМНИЙ СЕЗОН <b>2026</b></span>
+  </header>
+  <section class="entry-content">
+    <p class="entry-eyebrow"><i aria-hidden="true"></i> КОНТРОЛЬНЫЙ ПУНКТ <span>/ 01</span></p>
+    <h1 id="entry-title">Северное<br> депо</h1>
+    <p class="entry-intro">Выберите способ входа в ангар.</p>
+    <div class="entry-actions" role="group" aria-label="Вход в игру">
+      <div class="entry-online"><button type="button" id="entry-login">ВХОД <span aria-hidden="true">→</span></button><button type="button" id="entry-register">РЕГИСТРАЦИЯ</button></div>
+      <button type="button" id="entry-guest"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3"/><path d="M3 17c0-6 14-6 14 0"/></svg>ГОСТЬ</button>
+      <small>Без аккаунта · прогресс в этом браузере</small>
+    </div>
+    <p id="entry-status" role="status"></p>
+  </section>
+  <footer class="entry-foot"><span class="entry-update"><i aria-hidden="true"></i> НОВАЯ ВЕТКА</span><b>Венгрия</b><span class="entry-model">X УРОВЕНЬ <i>/</i> <strong>T-55AM</strong></span></footer>
+</main>
 
 <!-- ========== ВЫБОР УПРАВЛЕНИЯ ========== -->
 <div id="control-modal">
@@ -82,13 +102,13 @@
 
 <dialog id="account-modal" class="winter-dialog" aria-labelledby="profile-title">
   <header class="winter-dialog-head"><div><p class="season-kicker">CITY TANKS / ЛИЧНЫЙ АНГАР</p><h2 id="profile-title">Профиль игрока</h2></div>
-    <button type="button" class="winter-back" onclick="this.closest('dialog').close()">В ангар</button></header>
-  <form id="account-form">
-    <p class="winter-intro">Вы играете как гость. Войдите, чтобы открыть свой ангар на другом устройстве. Гостевой прогресс останется в этом браузере отдельно.</p>
+    <button type="button" class="winter-back" id="account-back" onclick="this.closest('dialog').close()">Назад</button></header>
+  <form id="account-form" data-mode="login">
+    <p class="winter-intro" id="account-intro"></p>
     <label for="profile-handle">Позывной игрока</label><input id="profile-handle" name="handle" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Например, polaris_27" required>
     <label for="profile-pass">Пароль</label><input id="profile-pass" name="password" type="password" autocomplete="current-password" required>
-    <div class="profile-actions"><button class="winter-action" type="submit" value="login">Войти</button><button class="winter-back" type="submit" value="register">Создать аккаунт</button></div>
-    <p class="profile-foot">Новый позывной: 3–24 латинские буквы, цифры или _. Пароль — от 8 символов. Почта не нужна; сохраните пароль — восстановить его по письму нельзя. Для входа в прежний аккаунт Wot-mini можно указать почту вместо позывного.</p>
+    <p class="profile-foot" id="account-hint"></p>
+    <div class="profile-actions"><button class="winter-action" id="account-submit" type="submit">Войти</button><button class="winter-back" id="account-switch" type="button">Создать аккаунт</button></div>
   </form>
   <section id="cloud-profile" hidden><p class="winter-intro">Аккаунт Wot-mini</p><strong id="profile-email"></strong><p id="profile-sync"></p>
     <div class="profile-actions"><button type="button" class="winter-action" onclick="Accounts.logout()">Выйти в гостевой ангар</button>
@@ -123,7 +143,7 @@
 <div id="upgrade-modal" class="upgrade-modal"></div>
 
 <!-- ========== ГЛАВНЫЙ ИНТЕРФЕЙС ========== -->
-<div id="ui">
+<div id="ui" hidden>
   <header id="top-bar">
     <div class="hangar-topline">
       <div class="garage-brand">

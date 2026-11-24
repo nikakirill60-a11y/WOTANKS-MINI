@@ -213,6 +213,20 @@ const SWEDISH_TD_BRANCH=defineLine('sweden',[
   ['STRV1030','Strv 103-0','td','strv-103-0',1500,390,7400,295,40,null,50,1,380,.34,{yawLimits:[0,0],minPitch:-11,maxPitch:11,stance:'hull'}],
   ['STRV103B','Strv 103B','td','strv-103b',1800,390,6500,308,40,null,50,1.04,395,.33,{yawLimits:[0,0],minPitch:-11,maxPitch:11,stance:'hull'}]
 ],SWEDISH_BRANCH.slice(0,1));
+// Hungary has its own free root. Display names/armour follow the supplied I–X sheet;
+// the 44M Tas export has a fixed superstructure and a limited gun, not a moving turret.
+const HUNGARIAN_BRANCH = defineLine('hungary', [
+  ['V440','Straussler V-4','lt','straussler-v4-40',115, 35,2200, 38, 13, 13,35, .66,270,.33,{minPitch:-8,maxPitch:15}],
+  ['TOLDI1','38M Toldi I','lt','toldi-i',          165, 80,4000, 45, 13, 13,50, .72,285,.33,{mag:4,weapon:'drum',minPitch:-9,maxPitch:20}],
+  ['TOLDI3','43M Toldi III','lt','toldi-iii',      250, 50,2400, 64, 35, 35,50, .76,305,.31,{minPitch:-9,maxPitch:13}],
+  ['TURAN1','40M Turán I','mt','turan-i',          390, 60,2500, 85, 50, 50,47, .86,320,.27,{minPitch:-8,maxPitch:15}],
+  ['TURAN2','41M Turán II','mt','turan-ii',        580,140,4400,105, 60, 60,43, .90,335,.24,{minPitch:-8,maxPitch:15}],
+  ['TURAN3','43M Turán III','mt','turan-iii',      820,145,3900,145, 80, 80,43, .96,345,.23,{minPitch:-8,maxPitch:15}],
+  ['TAS','44M Tas','td','tas',                    1180,220,5600,190,120,120,45,1.00,355,.28,{yawLimits:[-10,10],minPitch:-8,maxPitch:12}],
+  ['T54A','T-54A','mt','t-54a',                   1380,280,6800,200,100,200,50,1.04,370,.22,{minPitch:-6,maxPitch:17}],
+  ['T55A','T-55A','mt','t-55a',                   1680,320,6800,225,100,205,50,1.07,385,.22,{minPitch:-6,maxPitch:17}],
+  ['T55AM1','T-55AM','mt','t-55am-1',            2000,330,5900,262,160,250,50,1.10,395,.21,{minPitch:-6,maxPitch:17}]
+]);
 function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});
 }
@@ -224,7 +238,8 @@ const BRANCHES = Object.freeze({
     GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH),
   usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
     US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
-  sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH)
+  sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
+  hungary: nationTree('05','Путь к танку: T-55AM',HUNGARIAN_BRANCH)
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
 // Special vehicles have a real tier, but no XP price or research parent.

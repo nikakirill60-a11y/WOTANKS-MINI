@@ -16,7 +16,7 @@ const CONFIG = {
     japan: 'Япония',
     china: 'Китай',
     france: 'Франция',
-    sweden: 'Швеция', finland: 'Финляндия'
+    sweden: 'Швеция', hungary: 'Венгрия', finland: 'Финляндия'
   },
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
   PROMOCODES: {

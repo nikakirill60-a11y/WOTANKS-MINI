@@ -32,7 +32,8 @@ const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausId
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
+const meshCounts = {...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
+  ...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
   A43:4665,A44:5232,OBJ416:6798,OBJ430II:6909,K91:7883,OBJ430:7137,OBJ430U:5790,
   VK3002M:5762,PANTHER:5830,PANTHERII:4691,E50:4989,E50M:4825,GRILLE15:7315,
   HETZER:5233,STUG3G:4502,JGPZIV:3638,JAGDP:5681,FERDINAND:4022,JAGDTIGER:5341,JGPZE100:5780,
@@ -85,7 +86,8 @@ async function offlineGame(t, { seed, denyStorage, webgl = false, mobile = false
     Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Storage blocked', 'SecurityError'); } });
   });
   await page.goto(index, {timeout: webgl ? 90000 : 15000});
-  assert.deepEqual(dialogs, [], 'no registration or tutorial prompt on entry');
+  assert.deepEqual(dialogs, [], 'no native blocking prompt on entry');
+  await page.getByRole('button',{name:'ГОСТЬ',exact:true}).click();
   assert.ok(await page.locator('#ui').isVisible());
   await page.locator('.tank-slot.selected').waitFor();
   await page.waitForFunction(()=>DepotView.stats() || !document.getElementById('bay-poster').hidden);
@@ -118,7 +120,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.equal(await page.locator('#advent-count').innerText(),'0 / 31');
   await click('В ангар');
   await click('Дерево развития');
-  assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ']);
+  assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ']);
   await click('Выбрать для боя: МС-1');
   await page.locator('button[onclick="showSettings()"]').click();
   await page.locator('#volume-slider').press('Home');await page.locator('#look-sensitivity').press('End');
@@ -624,7 +626,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
         return info;
       },{id,size});
       const label=id+' '+size+'×'+size;
-      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','sweden','usa','ussr']);assert.ok(info.mirrored);
+      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','hungary','sweden','usa','ussr']);assert.ok(info.mirrored);
       assert.equal(info.id,id);assert.ok(info.sizeOK && info.hudOK,label);plans.add(info.plan);
       assert.ok(info.mesh.triangles>1000 && info.mesh.units===size*2,label+' scene');
       assert.deepEqual(info.initialScore,[size,size],label+' initial HUD counts the actual line-ups');

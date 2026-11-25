@@ -63,7 +63,7 @@ const BattleInput = (() => {
       waiting = s === 'waiting' || s === 'requesting';
     gate.hidden = !(paused || waiting);
     gate.classList.toggle('waiting', waiting);
-    el('input-title').textContent = paused ? 'Бой на паузе' : 'Готовы к выезду';
+    el('input-title').textContent = paused ? (g.platoon ? 'Меню · бой взвода продолжается' : 'Бой на паузе') : 'Готовы к выезду';
     el('resume-input').textContent = paused
       ? 'Продолжить'
       : s === 'requesting'
@@ -75,7 +75,7 @@ const BattleInput = (() => {
     if (running()) {
       BattleClock.resume();
       resetFrameTime();
-    } else BattleClock.pause();
+    } else if (!g.platoon) BattleClock.pause();
   }
   function invalidate() {
     request++;
@@ -172,7 +172,7 @@ const BattleInput = (() => {
           name = document.createElement('span'),
           hp = document.createElement('b');
         name.className = 'roster-name';
-        name.textContent = (u === g.player ? '★ ' : '') + u.name;
+        name.textContent = (u === g.player ? '★ ' : '') + (u.callsign ? u.callsign + ' · ' : '') + u.name;
         row.append(icon, name, hp);
         el(u.team === 'enemy' ? 'roster-enemies' : 'roster-allies').append(row);
         return { u, row, hp };
@@ -199,14 +199,17 @@ const BattleInput = (() => {
     showSignals(false);
     if (!running() || BattleClock.now() - lastSignal < 2000) return;
     lastSignal = BattleClock.now();
-    combatMessage(g.player.name + ' · ' + signals[code], '#bce4d3');
+    if (g.platoon) g.platoon.signal(code);
+    else combatMessage(g.player.name + ' · ' + signals[code], '#bce4d3');
   }
   function toggleSight() {
     if (g.player.isSPG) consumeLook();
     BattleView.toggleScope();
   }
   function calibrate() {
-    if (running() && g.gameActive && g.player?.toggleCalibration()) ShellUI.status(g.player, BattleClock.now());
+    if (!running() || !g.gameActive || !g.player?.calibration) return;
+    if (g.platoon && !g.platoon.host) g.platoon.action('calibrate');
+    else if (g.player.toggleCalibration()) ShellUI.status(g.player, BattleClock.now());
   }
   function autoAim() {
     consumeLook();

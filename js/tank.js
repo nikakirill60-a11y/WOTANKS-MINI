@@ -78,6 +78,11 @@ class Tank {
     this.nextShot = 0;
   }
 
+  slewDriver(dt) {
+    const rate = ({lt:52, mt:42, ht:30, td:34, spg:34})[DB[this.id].cls] || 42;
+    this.slewSight(rate * Math.PI / 180 * dt, 28 * Math.PI / 180 * dt);
+  }
+
   roundFor(index) {
     if (this.calibration) return KPZ_CALIBRATION[this.calibration.active ? 'calibrated' : 'standard'][index];
     return this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[this.usesMagazine ? 0 : index];
@@ -121,7 +126,7 @@ class Tank {
     const speed = 14 * sh.sMul * this.shellSpeedMul;
     const base = sh.alpha === undefined ? this.dmg * sh.dMul : Math.floor(sh.alpha * this.calibration.damageScale);
     const damage = base * getCritMultiplier(this, 'dmg') *
-      (this === GameState.player && GameState.paiokActive ? 1.05 : 1);
+      ((this.fieldKit?.paiokActive || (this === GameState.player && GameState.paiokActive)) ? 1.05 : 1);
     const tips = this.modelAsset.muzzles || [this.modelAsset.muzzle];
     for (const tip of tips) {
       const ray = this.barrelRay(tip);
@@ -139,12 +144,13 @@ class Tank {
       kick = Math.min(0.16, 0.035 + this.dmg * 0.0002);
     this.pitchVel += kick * Math.cos(yaw);
     this.rollVel -= kick * Math.sin(yaw);
+    this.shotsFired = (this.shotsFired || 0) + 1;
     this.lastShot = BattleClock.date();
     this.justFired = true;
     this.fireTimer = this.lastShot + 3000;
     this.curMag--;
     const multiplier =
-      (this === GameState.player && GameState.adrenalineActive ? 0.5 : 1) * getCritMultiplier(this, 'reload');
+      ((this.fieldKit?.adrenalineTimer > BattleClock.date() || (this === GameState.player && GameState.adrenalineActive)) ? 0.5 : 1) * getCritMultiplier(this, 'reload');
     this.nextShot = now + (this.curMag ? this.shotDelay : this.reloadTime * multiplier);
     this.isReloading = !this.curMag;
     snd(this.usesMagazine ? 'rapidfire' : 'shot');

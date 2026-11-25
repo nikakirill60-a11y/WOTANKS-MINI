@@ -2,3 +2,4 @@
 # the upstream tslib copyright notice uses CRLF. Do not reformat these on checkout.
 vendor/auth-2.79.min.js -text -whitespace linguist-generated=true
 vendor/tslib.LICENSE -text -whitespace
+vendor/realtime-2.79.min.js -text -whitespace linguist-generated=true

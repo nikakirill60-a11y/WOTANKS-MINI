@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/supplies.css">
   <link rel="stylesheet" href="css/vehicle-cards.css">
   <link rel="stylesheet" href="css/entry.css">
+  <link rel="stylesheet" href="css/platoons.css">
 </head>
 <body data-hangar="winter">
 
@@ -58,6 +59,28 @@
   </div>
   <button class="battle-cancel" onclick="document.getElementById('control-modal').classList.remove('show')">Назад в ангар</button>
 </div>
+
+<dialog id="platoon-desk" aria-labelledby="platoon-title">
+  <header><p class="platoon-kicker">СЕВЕРНОЕ ДЕПО &nbsp;/&nbsp; СОВМЕСТНЫЙ ВЫЕЗД</p>
+    <h2 id="platoon-title">Взводы</h2><p>2–3 игрока в одной команде. Остальные машины в бою 7×7 — боты.</p></header>
+  <div id="platoon-guest" hidden><p>Взводы доступны только зарегистрированным игрокам. Войдите в аккаунт или создайте его.</p>
+    <button type="button" class="btn" id="platoon-login">Войти в аккаунт</button></div>
+  <div id="platoon-setup" hidden>
+    <p class="platoon-sub" id="platoon-vehicle"></p>
+    <button type="button" class="btn" id="platoon-create">Создать взвод</button>
+    <form id="platoon-join"><label for="platoon-key">Есть код командира?</label>
+      <div><input id="platoon-key" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Код взвода" maxlength="8" required pattern="[a-fA-F0-9]{8}">
+      <button type="submit" class="btn">Вступить</button></div></form>
+  </div>
+  <div id="platoon-room" hidden>
+    <div class="platoon-invite"><label for="platoon-code">Код взвода</label><input id="platoon-code" readonly><button type="button" class="btn" id="platoon-copy">Скопировать код</button></div>
+    <p class="platoon-sub" id="platoon-map"></p><ol id="platoon-members" aria-label="Участники взвода"></ol>
+    <label class="platoon-device">Моё управление <select id="platoon-device"><option value="pc">ПК / ноутбук</option><option value="mobile">Сенсорное</option></select></label>
+    <button type="button" class="btn" id="platoon-deploy">В бой взводом</button>
+  </div>
+  <p id="platoon-status" role="status" aria-live="polite"></p>
+  <button type="button" class="winter-back" id="platoon-back">В ангар</button>
+</dialog>
 
 <!-- ========== КОНТЕЙНЕРЫ ========== -->
 <dialog id="container-modal" aria-labelledby="supply-title">
@@ -298,6 +321,7 @@
               <button class="btn" onclick="showControlModal(7)">7×7</button>
               <button class="btn" onclick="showControlModal(10)">10×10</button>
               <button class="btn" onclick="toggleTraining()">ТРЕНИРОВКА</button>
+              <button type="button" id="platoon-open" class="btn" onclick="Platoons.open()"><span aria-hidden="true">◇◇</span> Взводы</button>
             </div>
 
             <!-- ТРЕНИРОВКА -->
@@ -356,6 +380,7 @@
       <button class="btn btn-sm" onclick="CombatMechanics.deploySmokeScreen(GameState.player)">Дым <kbd>7</kbd></button>
       <button class="btn btn-sm" onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">Артподдержка <kbd>8</kbd></button>
     </div>
+    <div id="combat-callsign" hidden></div>
     <div class="armor-readout"><b id="combat-tank"></b><span id="hp-text"></span></div>
     <div id="hp-ui"><div id="hp-bar"></div></div>
     <div class="drive-readout"><span id="drive-speed">0 км/ч</span><span id="drive-surface">Грунт</span></div>
@@ -426,7 +451,7 @@
 <section id="input-menu" hidden aria-labelledby="input-title">
   <div class="input-panel"><small class="combat-eyebrow">УПРАВЛЕНИЕ · CITY TANKS</small>
     <h2 id="input-title">Готовы к выезду</h2>
-    <p class="pc-help">Мышь вращает обзор, башня следует за прицелом. Удерживайте ПКМ, чтобы осмотреться. Shift — смена прицела, E — автоприцел, Esc — пауза.</p>
+    <p class="pc-help">Мышь вращает обзор, башня следует за прицелом. Удерживайте ПКМ, чтобы осмотреться. Shift — смена прицела, E — автоприцел, Esc — меню.</p>
     <p class="touch-help">Слева тяните джойстик, справа ведите пальцем для обзора. Можно наводиться и на самой кнопке огня.</p>
     <p class="spg-help">Арт-прицел показывает поле сверху. Ведите прицел мышью или пальцем. Корпус довернётся сам, а при остановке круг сузится.</p>
     <button type="button" id="resume-input" class="btn">Взять управление</button><button type="button" class="battle-cancel" onclick="leaveBattle()">В ангар</button>
@@ -484,7 +509,10 @@
     <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
     <script src="vendor/auth-2.79.min.js"></script>
     <script src="js/referrals.js"></script>
+    <script src="vendor/realtime-2.79.min.js"></script>
     <script src="js/accounts.js"></script>
+    <script src="js/platoon-match.js"></script>
+    <script src="js/platoons.js"></script>
     <script src="js/local-profile.js"></script>
     <script src="js/shell-ui.js"></script>
     <script src="js/garage-viewer.js"></script>

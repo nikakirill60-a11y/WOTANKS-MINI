@@ -9,6 +9,12 @@ START = '''CITY TANKS — Северное депо · зимний сезон 2
 Распакуйте архив целиком и откройте index.html в браузере.
 При обновлении используйте прежнюю папку и тот же браузер, чтобы сохранить доступ к прогрессу.
 Гость играет без интернета, прогресс в прежнем локальном ангаре. Для 3D-боя нужен WebGL 2.
+Взводы только для вошедших в аккаунт игроков. Оба игрока открывают одинаковую версию игры.
+В ангаре выберите танк. Командир выбирает карту, открывает «Взводы → Создать взвод» и передаёт код.
+Один или два союзника вводят его в «Взводы → Вступить» и нажимают «Готов к бою». Командир — «В бой взводом».
+Это общий бой 7×7 против ботов. Позывные над HP только у игроков. Меню не ставит взвод на паузу;
+при выходе участника общий бой отменяется. Для взводов нужен интернет, для гостя по-прежнему нет.
+
 При первом входе во вкладку выберите ВХОД или РЕГИСТРАЦИЯ для облачного ангара Wot-mini (нужен интернет).
 Кнопка ГОСТЬ расположена под ними. При обновлении страницы в той же вкладке игра продолжится.
 Придумайте позывной и пароль. Не теряйте их: игровому позывному не нужна почта.
@@ -145,7 +151,7 @@ class EntryAssets(HTMLParser):
 def runtime_files():
     assets = EntryAssets()
     assets.feed((ROOT / 'index.html').read_text(encoding='utf-8'))
-    files = {'index.html', 'README.md', 'assets/depot-entry.webp', 'vendor/three.LICENSE', 'vendor/supabase-auth.LICENSE', 'vendor/tslib.LICENSE'} | assets.paths
+    files = {'index.html', 'README.md', 'assets/depot-entry.webp', 'vendor/three.LICENSE', 'vendor/supabase-auth.LICENSE', 'vendor/realtime.LICENSE', 'vendor/tslib.LICENSE'} | assets.paths
     files.update(p.relative_to(ROOT).as_posix() for p in (ROOT / 'assets/flags').glob('*.webp'))
     for crate in ('basic', 'premium', 'supply', 'collection'):
         for pose in ('', '-open', '-motion'):

@@ -3,13 +3,19 @@
 const {PGlite}=require('@electric-sql/pglite'), {randomUUID,webcrypto}=require('node:crypto');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{stripTypeScriptTypes}=require('node:module');
 const source=file=>fs.readFileSync(path.join(__dirname,'../..',file),'utf8');
-async function database(t) {
+async function database(t,{platoons=false}={}) {
   const db=await PGlite.create(); t.after(()=>db.close());
   await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth;
     create table auth.users(id uuid primary key,email text unique,is_anonymous boolean default false,deleted_at timestamptz,raw_app_meta_data jsonb,raw_user_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth to anon,authenticated,service_role;`);
   for(const file of ['winter_player_saves','player_signup_limits','player_referrals'])await db.exec(source(`db/${file}.sql`));
+  if(platoons) {
+    await db.exec(`create schema realtime; create table realtime.messages(extension text); alter table realtime.messages enable row level security;
+      create function realtime.topic() returns text language sql stable as $$select current_setting('realtime.topic',true)$$;
+      grant usage on schema realtime to authenticated; grant select,insert on realtime.messages to authenticated;`);
+    await db.exec(source('db/player_platoons.sql'));
+  }
   const rows=async(sql,args=[]) => (await db.query(sql,args)).rows;
   // GoTrue admin creation: INSERT, then update trusted metadata in the same transaction.
   async function identity(email,code) {
@@ -26,8 +32,8 @@ async function database(t) {
   const rpc=async(uid,name,args=[],service=false)=>(await as(uid,`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args,service))[0].result;
   return {rows,identity,as,rpc};
 }
-async function bridge(t) {
-  const pg=await database(t), passwords=new Map(),sessions=new Map(),errors=[];
+async function bridge(t,options) {
+  const pg=await database(t,options), passwords=new Map(),sessions=new Map(),errors=[];
   let handler;const origin='https://tkkpdtfhcwwondonfjsi.supabase.co';
   vm.runInNewContext(stripTypeScriptTypes(source('supabase/functions/city-tanks-register/index.ts')),{
     Deno:{serve:f=>handler=f,env:{get:k=>k==='SUPABASE_URL'?origin:'fixture-not-a-key'}},TextEncoder,TextDecoder,Response,crypto:webcrypto,
@@ -55,6 +61,8 @@ async function bridge(t) {
       if(u.pathname==='/rest/v1/rpc/city_tanks_invite_preview_v1')return reply(200,await pg.rpc(null,'city_tanks_invite_preview_v1',[body.code]));
       if(!uid)return reply(401,{});
       if(u.pathname==='/auth/v1/logout')return reply(200,{});
+      if(options?.platoons && u.pathname.endsWith('/rpc/city_tanks_platoon_frame_v1'))return reply(200,await pg.rpc(uid,'city_tanks_platoon_frame_v1',[body.ticket,body.packet]));
+      if(options?.platoons && u.pathname.endsWith('/rpc/city_tanks_platoon_v1'))return reply(200,await pg.rpc(uid,'city_tanks_platoon_v1',[body.op,body.ticket,body.args]));
       if(u.pathname.endsWith('/rpc/city_tanks_clock_v1'))return reply(200,'2026-11-22T12:00:00Z');
       if(u.pathname.endsWith('/rpc/city_tanks_invite_v1'))return reply(200,await pg.rpc(uid,'city_tanks_invite_v1',[body.payout,body.gift]));
       if(u.pathname.endsWith('/rpc/city_tanks_referral_collect_v1')){
@@ -69,6 +77,6 @@ async function bridge(t) {
       throw Error(method);
     } catch(e){errors.push(e.message);return reply(500,{});}
   };
-  t.after(()=>require('node:assert/strict').deepEqual(errors,[]));return {pg,route,state};
+  t.after(()=>require('node:assert/strict').deepEqual(errors,[]));return {pg,route,state,identityFor:token=>sessions.get(token)};
 }
 module.exports={database,bridge};

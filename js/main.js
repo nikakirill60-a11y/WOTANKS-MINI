@@ -11,20 +11,22 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 function firePlayer() {
   const g = GameState,
     p = g.player;
-  if (!g.gameActive || !BattleInput.running || !p || p.dead) return;
+  if (!g.gameActive || !BattleInput.running || g.platoon?.result || !p || p.dead) return;
   const sight = BattleView.artillery;
   if (sight) BattleInput.consumeLook();
-  p.fire(g.curShell, sight);
+  if (g.platoon && !g.platoon.host) g.platoon.action('fire');
+  else p.fire(g.curShell, sight);
 }
-function updatePlayer() {
-  const g = GameState,
-    p = g.player,
-    j = g.joystickData,
-    k = g.keys,
-    mountYaw = wrapAngle(p.tAngle - p.angle);
+function driveIntent() {
+  const g = GameState, j = g.joystickData, k = g.keys;
   const forward = Number(!!(k.KeyW || k.ArrowUp)) - Number(!!(k.KeyS || k.ArrowDown)) || -j.dy;
   const turn = Number(!!(k.KeyD || k.ArrowRight)) - Number(!!(k.KeyA || k.ArrowLeft)) || j.dx;
   const brake = k.Space || ((k.KeyW || k.ArrowUp) && (k.KeyS || k.ArrowDown));
+  return {forward,turn,brake:!!brake};
+}
+function updatePlayer() {
+  const g = GameState, p = g.player, mountYaw = wrapAngle(p.tAngle - p.angle);
+  const {forward,turn,brake} = driveIntent();
   const assist = !turn && !forward && !brake && !g.holdTurret && !p.isMoving ? BattleView.artillery?.steer(p) : 0;
   TrackDrive.step(p, forward, turn || assist || 0, brake);
   BattleInput.consumeLook();
@@ -34,6 +36,18 @@ function updatePlayer() {
     smoke(p.x - 14 * Math.cos(p.angle), p.y - 14 * Math.sin(p.angle));
     snd('eng');
   }
+}
+// In a shared sortie, attribute each hit to its driver; never put a wingman's
+// damage or kill XP in the commander's garage. Settle only the final receipt.
+function creditDamage(source, damage) {
+  const g = GameState;
+  if (g.platoon) g.platoon.credit(source,damage,0,0);
+  else if (source === g.player) g.battleDmg += damage;
+}
+function creditKill(source, bonus = 0) {
+  const g = GameState;
+  if (g.platoon) g.platoon.credit(source,0,1,bonus);
+  else if (source === g.player) { g.battleKills++; g.XP += bonus; }
 }
 function damageUnit(b, u, part, incidenceCos) {
   const { dmg, zone, ricochet } = resolveHit(b, u, part, incidenceCos);
@@ -55,8 +69,8 @@ function damageUnit(b, u, part, incidenceCos) {
     u.trackRepairAt = BattleClock.date() + 7000;
     if (u === GameState.player) combatMessage('Сбита гусеница · ремонт 7 с', '#f28b68');
   }
+  creditDamage(b.shooter, dealt);
   if (b.shooter === GameState.player) {
-    GameState.battleDmg += dealt;
     dmgLog('−' + Math.ceil(dealt) + ' · ' + CONFIG.ARMOR_ZONES[zone].label, '#ffd38a');
   }
   if (u === GameState.player) {
@@ -73,9 +87,8 @@ function finishUnit(u, source) {
   u.dead = true;
   boom(u.x, u.y);
   snd('boom');
+  if (u.team === 'enemy') creditKill(source,u.tier * 500);
   if (source === GameState.player && u.team === 'enemy') {
-    GameState.XP += u.tier * 500;
-    GameState.battleKills++;
     combatMessage('Цель уничтожена', '#ffe3ae');
   }
   updateScoreboard();
@@ -84,8 +97,8 @@ function motionDamage(u, amount, source) {
   if (u.dead || amount <= 0) return;
   const lost = Math.min(amount, u.hp);
   u.hp -= lost;
+  if (u.team === 'enemy') creditDamage(source,lost);
   if (source === GameState.player && u.team === 'enemy') {
-    GameState.battleDmg += lost;
     dmgLog('Таран · −' + Math.ceil(lost), '#ffd38a');
   }
   if (u === GameState.player)
@@ -136,7 +149,9 @@ function update() {
     u.updateReload(gunTime);
     if (u.calibration) u.updateCalibration(gunTime);
     u.justFired = now < u.fireTimer;
-    if (u === p) updatePlayer();
+    if (u === p && g.platoon && (!BattleInput.running || document.hidden)) TrackDrive.step(p,0,0,true);
+    else if (u === p) updatePlayer();
+    else if (u.driverSeat != null) g.platoon.stepDriver(u);
     else BotAI.step(u, ticks);
     if (u.landingSpeed > 7)
       motionDamage(u, Math.round((u.landingSpeed - 7) ** 2 * TrackDrive.profile(u).mass * 0.35), null);
@@ -168,6 +183,14 @@ function update() {
   TrackContact.pairs(g.units, ticks, ramContact);
   updateBullets();
   CombatMechanics.update(TICK / 1000);
+  updateVisualEffects();
+  const enemies = g.units.some((u) => u.team === 'enemy' && !u.dead);
+  if (g.platoon) {
+    if (!enemies || !g.units.some(u=>u.driverSeat != null && !u.dead)) g.platoon.finish(!enemies);
+  } else if (p.dead || !enemies) endBattle(!p.dead);
+}
+function updateVisualEffects() {
+  const g = GameState;
   for (const x of g.particles) {
     x.x += x.vx;
     x.y += x.vy;
@@ -176,7 +199,6 @@ function update() {
   g.particles = g.particles.filter((x) => x.life > 0);
   g.tracks = g.tracks.filter((tr) => --tr.life > 0);
   updateCasings();
-  if (p.dead || !g.units.some((u) => u.team === 'enemy' && !u.dead)) endBattle(!p.dead);
 }
 function updateHUD() {
   const p = GameState.player,
@@ -203,6 +225,7 @@ function updateHUD() {
   const water = document.getElementById('water-warning');
   water.hidden = p.drownTimer == null || p.dead;
   if (!water.hidden) water.textContent = `Глубокая вода · до затопления ${Math.ceil(p.drownTimer)} с`;
+  if (g.platoon && p.dead) ammo.textContent = 'Машина потеряна · взвод продолжает бой';
   MapChart.drawHUD(minimap, mCtx, g);
 }
 function resetFrameTime() {
@@ -220,7 +243,10 @@ function startBattleLoop() {
       // that started a long WebGL upload and predate performance.now() at launch.
       const dt = lastFrame === null ? TICK : clamp(now - lastFrame, 0, 100);
       BattleView.budget(dt);
-      accumulated = BattleInput.running ? accumulated + dt : 0;
+      const net = GameState.platoon;
+      if (net && !net.host) net.stepView(dt);
+      // The host steps from its own timer, not the renderer or the pointer-lock gate.
+      accumulated = !net && BattleInput.running ? accumulated + dt : 0;
       while (accumulated >= TICK && GameState.gameActive) {
         update();
         accumulated -= TICK;

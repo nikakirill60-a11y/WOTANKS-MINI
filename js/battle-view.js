@@ -116,9 +116,27 @@ const BattleView = (() => {
       flag.position.set(0, 3.7, 0);
       flag.scale.setScalar(2.9);
       flag.rotation.z = Math.PI / 4;
-      marker.add(flag);
+      let plate;
+      if (u.callsign && u !== GameState.player) {
+        // The callsign sits above numerical HP and the ordinary bar. Same billboard,
+        // depth test and visibility as the bar; allocate one texture, not one per hit.
+        const image = document.createElement('canvas'), ctx = image.getContext('2d');
+        ctx.font = 'bold 40px sans-serif'; image.width = Math.min(600,Math.ceil(Math.max(168,ctx.measureText(u.callsign).width+20))); image.height=96;
+        const map = new T.CanvasTexture(image); map.colorSpace = T.SRGBColorSpace;
+        const label = new T.Mesh(quad,new T.MeshBasicMaterial({map,transparent:true,depthWrite:false}));
+        label.name='callsign:'+u.callsign; label.position.y=6; label.scale.set(9*image.width/96,9,1); marker.add(label);
+        plate={hp:null,refresh(hp) {
+          if (plate.hp===hp) return; plate.hp=hp;
+          const w=image.width; ctx.clearRect(0,0,w,96); ctx.textAlign='center'; ctx.lineJoin='round';
+          ctx.lineWidth=6; ctx.strokeStyle='#102320';
+          for (const [text,y,font,color] of [[u.callsign,41,'bold 40px sans-serif','#c3fff0'],[hp+' / '+u.maxHp,80,'bold 30px sans-serif','#fff']]) {
+            ctx.font=font; ctx.fillStyle=color; ctx.strokeText(text,w/2,y,w-8); ctx.fillText(text,w/2,y,w-8);
+          }
+          map.needsUpdate=true;
+        }};
+      } else marker.add(flag);
       scene.add(marker);
-      avatars.set(u, { root, hull, cradle, treads, turret, gun, shade, marker, hp, wreck });
+      avatars.set(u, { root, hull, cradle, treads, turret, gun, shade, marker, plate, hp, wreck });
     }
     bodyMat.dispose();
     const cube = new T.BoxGeometry(),
@@ -321,16 +339,15 @@ const BattleView = (() => {
   }
   // Advance the mount only on simulation ticks. A click or a slow/fast display
   // must never add an extra slew step or snap a shot to the camera ray.
-  const traverseDegrees = { lt: 52, mt: 42, ht: 30, td: 34, spg: 34 }; // class defaults for the local vehicle catalogue
-  function stepPlayer(dt, mountYaw) {
+  function stepPlayer(dt, mountYaw, aimOnly = false) {
     if (!look || !camera) return; // non-rendered battle simulation
     const g = GameState,
       p = g.player;
-    p.tAngle = wrapAngle(p.angle + mountYaw);
+    if (!aimOnly) p.tAngle = wrapAngle(p.angle + mountYaw);
     p.constrainTraverse();
     syncCamera(dt);
     if (artillery) {
-      artillery.step(p, dt, g.holdTurret);
+      if (!aimOnly) artillery.step(p, dt, g.holdTurret);
       return;
     }
     const q = pickSight();
@@ -341,8 +358,7 @@ const BattleView = (() => {
         flight = Math.hypot(u.x - p.x, u.y - p.y) / (14 * p.roundFor(g.curShell).sMul * p.shellSpeedMul);
       p.lookAtPoint(u.x + u.vx * flight, u.y + u.vy * flight, u.aimHeight);
     } else p.lookAtPoint(q.x, q.y, q.h);
-    const rate = traverseDegrees[DB[p.id].cls] || traverseDegrees.mt;
-    p.slewSight(((rate * Math.PI) / 180) * dt, ((28 * Math.PI) / 180) * dt);
+    if (!aimOnly) p.slewDriver(dt);
   }
   function aim() {
     const g = GameState,
@@ -437,6 +453,7 @@ const BattleView = (() => {
       }
       v.marker.visible = !u.dead && u !== g.player && (u.team !== 'enemy' || u.visible);
       if (v.marker.visible) {
+        v.plate?.refresh(Math.ceil(u.hp));
         v.marker.position.set(u.x, u.rideHeight + u.modelScale * u.modelAsset.height + 3, u.y);
         v.marker.scale.setScalar(markerScale);
         if (artillery) v.marker.position.z -= 20 + 2 * markerScale; // clear the silhouette in plan view
@@ -597,6 +614,7 @@ const BattleView = (() => {
           wallDistance: look?.wallDistance,
           autoTarget: autoTarget?.id || null,
           units: avatars.size,
+          nameplates: [...avatars.values()].flatMap(v => v.marker.children.filter(c=>c.name.startsWith('callsign:')).map(c=>c.name.slice(9))),
           triangles: renderer.info.render.triangles,
           calls: renderer.info.render.calls,
           camera: camera.position.toArray(),

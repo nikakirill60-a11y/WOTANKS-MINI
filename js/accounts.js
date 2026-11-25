@@ -179,7 +179,7 @@ const Accounts = (() => {
   }
   async function activate(session, welcome) {
     if (!session?.user || !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(session.user.id)) throw Error('session');
-    const p = {id:session.user.id,email:session.user.email?.replace(/@players\.citytanks\.invalid$/,'') || 'Профиль',cached:false};
+    const p = {id:session.user.id, registered:!session.user.is_anonymous, email:session.user.email?.replace(/@players\.citytanks\.invalid$/,'') || 'Профиль',cached:false};
     const draft = findDraft(p); let rewards;
     const load = async () => {
       // Don't advance a server revision underneath an unsent draft. On a clean login read the
@@ -333,5 +333,27 @@ const Accounts = (() => {
     else if (Referrals.incoming) open('register');
     else if (resumeGuest) enterGuest();
   }
-  return {init,open,logout,recover,downloadDraft,capture,now,get active(){return !!player;},get switching(){return busy;}};
+  // Bind the transport to this particular login. Never use a guest save or the next
+  // account in the same tab. A legacy email address is not a public callsign.
+  function platoonConnection() {
+    const p = player;
+    if (!p?.registered || busy) return null;
+    const check = () => { if (p !== player) throw Error('account'); };
+    return {
+      async sync() {
+        check(); capture(); await flush(p); check();
+        if (p.conflict || p.snapshot !== p.ack) throw Error('save');
+      },
+      rpc(op,ticket,args={}) { check(); return rest(p,'rpc/city_tanks_platoon_v1','POST',{op,ticket,args}); },
+      frame(ticket,packet) { check(); return rest(p,'rpc/city_tanks_platoon_frame_v1','POST',{ticket,packet}); },
+      async socket() {
+        check(); const socket = new CTRealtime.RealtimeClient(url.replace('https:', 'wss:')+'/realtime/v1', {
+          params:{apikey:key}, accessToken:() => { check(); return token(p); }
+        });
+        await socket.setAuth(); check(); return socket;
+      }
+    };
+  }
+  return {init,open,logout,recover,downloadDraft,capture,now,platoonConnection,
+    get callsign(){return player?.registered ? (/^[a-z0-9_]{3,24}$/.test(player.email) ? player.email : 'Танкист-'+player.id.slice(0,6)) : '';},get active(){return !!player;},get switching(){return busy;}};
 })();

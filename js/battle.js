@@ -1,6 +1,5 @@
 // ========== БОНУСЫ ==========
-function getModBonuses(tankId) {
-  const mods = GameState.modules[tankId] || [null, null, null];
+function getModBonuses(tankId, mods = GameState.modules[tankId] || []) {
   const b = { hp: 0, dmg: 0, vr: 0, camo: 0, reload: 0, shell_speed: 0, speed: 0, armor: 0 };
   mods.forEach((m) => {
     if (m && CONFIG.MODULES[m]) {
@@ -11,8 +10,7 @@ function getModBonuses(tankId) {
   return b;
 }
 
-function getUpgradeBonuses(tankId) {
-  const u = GameState.upgrades[tankId] || { gun: 0, engine: 0, turret: 0 };
+function getUpgradeBonuses(tankId, u = GameState.upgrades[tankId] || {}) {
   const gun = CONFIG.UPGRADES.gun[u.gun] || CONFIG.UPGRADES.gun[0];
   const eng = CONFIG.UPGRADES.engine[u.engine] || CONFIG.UPGRADES.engine[0];
   const tur = CONFIG.UPGRADES.turret[u.turret] || CONFIG.UPGRADES.turret[0];
@@ -86,7 +84,7 @@ function makeRosters(playerId, size, random = Math.random) {
   }
   return [allies, enemies];
 }
-async function launchBattle(teamSize) {
+async function launchBattle(teamSize, net = null) {
   if (GameState.gameActive || battleLaunch || !GameState.owned.includes(GameState.selected)) return false;
   const ticket = (battleLaunch = new AbortController());
   GarageViewer.suspend();
@@ -97,12 +95,13 @@ async function launchBattle(teamSize) {
     );
     const g = GameState,
       training = teamSize === 1;
-    const map = document.getElementById('map-select').value;
+    const map = net?.room.map || document.getElementById('map-select').value;
     const arena = BattleMaps.create(map),
       navigation = new BattleNavigation(arena);
-    const playerId = g.selected;
-    const teams = training ? [[playerId], [document.getElementById('enemy-select').value]] : makeRosters(playerId, teamSize);
-    const formation = battleFormation(arena, navigation, teams);
+    const playerId = net ? net.drivers.get(net.me).tank : g.selected;
+    if (!g.owned.includes(playerId)) throw Error('Машина больше не в ангаре.');
+    const teams = net ? net.teams : training ? [[playerId], [document.getElementById('enemy-select').value]] : makeRosters(playerId, teamSize);
+    const formation = battleFormation(arena, navigation, teams, net?.drivers);
     // Load only unique meshes, four at a time even with two different 15-vehicle teams.
     const assets = new Map(),
       ids = [...new Set(formation.map((slot) => modelKey(slot.id)))];
@@ -129,24 +128,29 @@ async function launchBattle(teamSize) {
     g.navigation = navigation;
     g.walls = arena.walls;
     g.terrainZones = arena.zones;
-    WeatherEngine.initWeatherForBattle(arena);
-    g.units = formation.map((slot) => {
+    WeatherEngine.initWeatherForBattle(arena, net?.random);
+    g.platoon = net;
+    g.units = formation.map((slot, index) => {
+      const driver = net?.drivers.get(index);
+      const mine = index === (net?.me ?? 0);
       const u = new Tank(
         slot.id,
         slot.x,
         slot.y,
-        slot.team,
-        slot.team === 'player' ? getAllBonuses(slot.id) : null
+        mine ? 'player' : slot.team === 'player' ? 'ally' : slot.team,
+        driver ? {mod:getModBonuses(slot.id,driver.mods), upg:getUpgradeBonuses(slot.id,driver.upgrades)} : mine ? getAllBonuses(slot.id) : null
       );
       u.angle = u.tAngle = u.lookYaw = slot.angle;
       u.modelAsset = assets.get(modelKey(slot.id));
       TrackDrive.place(u);
       u.practiceTarget = !!slot.practice;
       u.visible = slot.team !== 'enemy' || training;
-      if (slot.team !== 'player' && !u.practiceTarget) BotAI.attach(u, slot, navigation);
+      if (driver) { u.driverSeat = index; u.callsign = driver.nick; u.fieldKit = {}; }
+      else if (mine) u.callsign = Accounts.callsign;
+      else if (!u.practiceTarget) BotAI.attach(u, slot, navigation);
       return u;
     });
-    g.player = g.units[0];
+    g.player = g.units[net?.me ?? 0];
     navigation.recon?.sample(g.units, 0);
     updateScale();
     const drum = g.player.usesMagazine;
@@ -165,28 +169,38 @@ async function launchBattle(teamSize) {
     document.getElementById('result-screen').classList.remove('show');
     document.getElementById('mobile-controls').classList.toggle('show', g.controlMode === 'mobile');
     document.getElementById('combat-sector').textContent =
-      `СЕКТОР ${arena.spec.sector}  /  ${training ? 'ТРЕНИРОВКА' : teamSize + ' × ' + teamSize}`;
+      `СЕКТОР ${arena.spec.sector}  /  ${net ? 'ВЗВОД · 7 × 7' : training ? 'ТРЕНИРОВКА' : teamSize + ' × ' + teamSize}`;
     document.getElementById('combat-map').textContent = arena.spec.name;
     document.getElementById('combat-tank').textContent = DB[playerId].n;
-    document.getElementById('battle-notice').hidden = true;
-    g.gameActive = true;
-    updateScoreboard();
-    updateHUD();
-    startPerfMonitor();
-    BattleInput.begin();
-    startBattleLoop();
-    // Count a successfully launched match, not a click, failed load, result or exit.
-    // Persist now so closing the tab cannot refund it. The fourth match plays normally.
-    if (HangarSlots.useRentalBattle(playerId)) {
-      g.player.rented = true;
-      saveProgress();
-    }
+    const nameplate = document.getElementById('combat-callsign');
+    nameplate.hidden = !g.player.callsign; nameplate.textContent = g.player.callsign || '';
+    if (net) battleNotice('Сбор взвода', 'Местность готова. Ждём загрузки остальных участников…');
+    else beginSortie();
     return true;
   } catch (error) {
     if (!ticket.signal.aborted) battleFailed(error.message || 'Не удалось открыть поле боя.');
     return false;
   } finally {
     if (battleLaunch === ticket) battleLaunch = null;
+  }
+}
+
+// For a platoon, all drivers must have loaded their assets AND joined their private
+// channels. Waiting at the barrier (or a failed partner load) never spends a rental.
+function beginSortie() {
+  const g = GameState, playerId = g.player.id;
+  document.getElementById('battle-notice').hidden = true;
+  g.gameActive = true;
+  updateScoreboard();
+  updateHUD();
+  startPerfMonitor();
+  BattleInput.begin();
+  startBattleLoop();
+  // Count a successfully launched match, not a click, failed load, result or exit.
+  // Persist now so closing the tab cannot refund it. The fourth match plays normally.
+  if (HangarSlots.useRentalBattle(playerId)) {
+    g.player.rented = true;
+    saveProgress();
   }
 }
 
@@ -267,6 +281,8 @@ function endBattle(won) {
 }
 
 function backToGarage() {
+  if (typeof Platoons !== 'undefined') Platoons.detach();
+  GameState.platoon = null;
   document.body.classList.remove('drum-equipped', 'spg-equipped');
   if (battleLaunch) {
     battleLaunch.abort();
@@ -309,7 +325,7 @@ function backToGarage() {
 }
 
 function leaveBattle() {
-  if (GameState.gameActive && confirm('Выйти в ангар без награды за бой?')) backToGarage();
+  if (GameState.gameActive && confirm(GameState.platoon ? 'Покинуть взвод? Общий бой завершится для всех без награды.' : 'Выйти в ангар без награды за бой?')) backToGarage();
 }
 
 // ========== ЭФФЕКТЫ ==========

@@ -225,7 +225,7 @@ class BattleNavigation {
   }
 }
 
-function battleFormation(arena, nav, teams) {
+function battleFormation(arena, nav, teams, drivers = null) {
   if (teams[0].length === 1)
     return [
       { id: teams[0][0], x: -148, y: 0, team: 'player', angle: 0 },
@@ -247,17 +247,18 @@ function battleFormation(arena, nav, teams) {
     // base artillery out of survey duty, even if the SPG has a high top speed.
     const scouts = new Map();
     for (let i = 1; i < roster.length; i++) {
-      if (DB[roster[i]].cls === 'spg') continue;
+      if ((!side && drivers?.has(i)) || DB[roster[i]].cls === 'spg') continue;
       const lane = lanes[i % lanes.length], prior = scouts.get(lane);
       if (prior === undefined || mobility(roster[i]) > mobility(roster[prior])) scouts.set(lane, i);
     }
     for (const [i, id] of roster.entries()) {
       const lane = lanes[i % lanes.length], row = Math.floor(i / lanes.length);
       const team = side ? 'enemy' : i ? 'ally' : 'player';
-      const guard = team !== 'player' && DB[id].cls === 'spg';
+      const driver = !side && drivers?.has(i);
+      const guard = !driver && team !== 'player' && DB[id].cls === 'spg';
       // Bot artillery gets a legal berth by its base marker, not a distant scout lane.
       const back = (side ? 1 : -1) * (guard ? 110 : row * 96);
-      const offset = guard ? (side ? -85 : 85) : orientation * (lane - middle) * arena.spread + (row % 2 ? 38 : 0);
+      const offset = driver ? [0, -1, 1][i] * (2 * BOT_CLEARANCE + 20) : guard ? (side ? -85 : 85) : orientation * (lane - middle) * arena.spread + (row % 2 ? 38 : 0);
       const x = arena.bases[side].x + back * ahead.x + offset * across.x,
         y = arena.bases[side].y + back * ahead.y + offset * across.y;
       const n = nav.nearest(x, y, (p) => units.every((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 >= (2 * BOT_CLEARANCE) ** 2));

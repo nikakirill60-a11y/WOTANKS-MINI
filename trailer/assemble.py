@@ -2,13 +2,12 @@
 See README.md here. No game files are written and no network access is used.
 """
 import argparse
-import base64
 from functools import lru_cache
 import json
 import math
 from pathlib import Path
 import subprocess
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from theatre import render
 
 import imageio_ffmpeg
 import numpy as np
@@ -173,25 +172,18 @@ class Edit:
         return im
 
 
-def uri(mime,payload):return 'data:'+mime+';base64,'+base64.b64encode(payload).decode('ascii')
-
-
 def package(work,zip_path):
-    src=(HERE/'player.html.in').read_text(encoding='utf-8');movie=(work/'film.mp4').read_bytes()
-    for key,value in {'@MOVIE@':uri('video/mp4',movie),'@POSTER@':uri('image/webp',(ROOT/'assets/depot-entry.webp').read_bytes()),
-                      '@FONT@':uri('font/ttf',OSWALD.read_bytes()),'@FONTLICENSE@':(HERE/'fonts/OFL.txt').read_text(encoding='utf-8')}.items():
-        if src.count(key)!=1:raise ValueError('Missing or duplicated '+key)
-        src=src.replace(key,value)
-    html=src.encode('utf-8');release=work/'release';release.mkdir(exist_ok=True);(release/'index.html').write_bytes(html)
-    if zip_path.resolve()==ROOT/'CITY-TANKS.zip':raise ValueError('The game archive is not a trailer output')
-    entry=ZipInfo('index.html',date_time=(1980,1,1,0,0,0));entry.create_system=3;entry.external_attr=0o100644<<16
-    with ZipFile(zip_path,'w') as z:z.writestr(entry,html,compress_type=ZIP_DEFLATED,compresslevel=8)
-    with ZipFile(zip_path) as z:assert z.namelist()==['index.html'] and not z.testzip() and z.read('index.html')==html
-    print(f'{zip_path}: {zip_path.stat().st_size:,} bytes; one offline index.html',flush=True)
+    # Archival winter teaser: never displace the current full trailer by default.
+    meta=dict(kind='winter',title='Двойной залп',edition='ЗИМНИЙ ВЫПУСК',mark='2026',
+              accent='#f2c17b',seconds=40,tag='ЗИМНИЙ ТРЕЙЛЕР / 01',cover=['Двойной','залп'],
+              subtitle='Северное депо · CITY TANKS',description=['СТ-II в зимнем ангаре и в тренировке: один залп, два попадания, 880 урона.'],
+              chapters=[(0,'Депо'),(5,'Ангар'),(10,'Leopard 1'),(15,'Две нации'),(20,'Двойной залп'),(27.5,'15 × 15'),(35,'Финал')])
+    render(work,zip_path,meta,work/'film.mp4',ROOT/'assets/depot-entry.webp')
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('work',type=Path);p.add_argument('--stills',action='store_true');p.add_argument('--package-only',action='store_true');p.add_argument('--zip',type=Path,default=ROOT/'CITY-TANKS-TRAILER.zip');a=p.parse_args();work=a.work
+    p=argparse.ArgumentParser();p.add_argument('work',type=Path);p.add_argument('--stills',action='store_true');p.add_argument('--package-only',action='store_true');p.add_argument('--zip',type=Path,default=None);a=p.parse_args();work=a.work
+    if a.zip is None:a.zip=work/'CITY-TANKS-WINTER-TEASER.zip'
     if a.package_only:package(work,a.zip);return
     e=Edit(work,a.stills)
     if a.stills:

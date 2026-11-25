@@ -105,18 +105,33 @@ const BattleModels = (() => {
     const p = groups.gun.find(part => !part.decorative).position;
     let z = -Infinity;
     for (let i = 2; i < p.length; i += 3) z = Math.max(z, p[i]);
+    // The export is quantized to whole mm, then stored as Float32 metres.
+    // For twins, include the full 12 mm slice of BOTH rims: a half-quantum
+    // margin admits the boundary vertices but never those 13 mm from the tip.
+    const twin = DB[data.id].salvo === 2, rimZ = z - (twin ? .0125 : .012);
     let x0 = Infinity,
       x1 = -Infinity,
       y0 = Infinity,
       y1 = -Infinity;
     for (let i = 0; i < p.length; i += 3)
-      if (p[i + 2] >= z - 0.012) {
+      if (p[i + 2] >= rimZ) {
         x0 = Math.min(x0, p[i]);
         x1 = Math.max(x1, p[i]);
         y0 = Math.min(y0, p[i + 1]);
         y1 = Math.max(y1, p[i + 1]);
       }
     a.muzzle = [(x0 + x1) / 2, (y0 + y1) / 2, z];
+    if (twin) {
+      // Both coplanar rims are in ONE gun mesh. The sight uses their midpoint,
+      // but each projectile/muzzle flash starts at its own actual barrel tip.
+      const rims = [new THREE.Box3(), new THREE.Box3()], v = new THREE.Vector3();
+      for (let i = 0; i < p.length; i += 3) if (p[i + 2] >= rimZ) {
+        rims[Number(p[i] > a.muzzle[0])].expandByPoint(v.fromArray(p,i));
+      }
+      if (rims.some(r => r.isEmpty())) throw Error('Не найдены два ствола модели.');
+      a.muzzles = rims.map(r => [(r.min.x+r.max.x)/2, (r.min.y+r.max.y)/2, r.max.z]);
+      a.muzzle = a.muzzles[0].map((c,i) => (c+a.muzzles[1][i])/2);
+    }
     // Coloured add-ons (antlers, spots) are visual only. Their boxes are not armour,
     // and must not change track contacts, aim height, or the depth at which a tank floods.
     if (data.meshes.some(m => m[3])) {
@@ -148,7 +163,9 @@ const BattleModels = (() => {
   function receive(data) {
     waiters.get(document.currentScript)?.(data);
   }
-  function load(id, signal) {
+  function load(vehicleId, signal) {
+    // A tier variant can share a physical asset, never a save slot or gun stats.
+    const id = modelKey(vehicleId);
     if (signal.aborted) return Promise.reject(signal.reason);
     if (cache.has(id)) return Promise.resolve(cache.get(id));
     return new Promise((resolve, reject) => {

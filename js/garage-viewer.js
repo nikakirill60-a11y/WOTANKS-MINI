@@ -46,7 +46,7 @@ const GarageViewer = (() => {
     el('bay-kind').textContent = ({collection:'КОЛЛЕКЦИОННАЯ МАШИНА',premium:'ПРЕМИУМ-МАШИНА',advent:'НАГРАДА АДВЕНТА'})[tank.source] || 'ИССЛЕДУЕМАЯ МАШИНА';
     el('bay-name').textContent = tank.n;
     el('bay-meta').textContent =
-      description(tank) + (tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');
+      description(tank) + (tank.salvo ? ` · Залп: ${tank.salvo} × ${shotDamage(tank)}` : tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');
     if (showingId === selectedId) return;
     request?.abort();
     const ticket = new AbortController();
@@ -110,10 +110,11 @@ const GarageViewer = (() => {
     el('dispatch-hp').textContent = tank.hp;
     el('dispatch-dmg-label').textContent = damageLabel(tank);
     el('dispatch-dmg').textContent = damageSummary(tank);
-    el('dispatch-drum').hidden = !tank.mag && tank.cls !== 'spg';
+    el('dispatch-drum').hidden = !tank.mag && !tank.salvo && tank.cls !== 'spg';
     if (tank.cls === 'spg') el('dispatch-drum').textContent = 'Арт-прицел · Shift на ПК или кнопка «Арт-прицел» на телефоне. Остановитесь для сведения.';
+    if (tank.salvo) el('dispatch-drum').textContent = 'Два ствола · одно нажатие выпускает оба снаряда одновременно';
     if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · удерживайте огонь для очереди`;
-    el('dispatch-reload-label').textContent = tank.mag ? 'Полная перезарядка' : 'Перезарядка';
+    el('dispatch-reload-label').textContent = reloadLabel(tank);
     el('dispatch-reload').textContent = (tank.reload / 1000).toLocaleString('ru-RU') + ' с';
     el('dispatch-pen').textContent = tank.pen + ' мм';
     el('dispatch-armor').textContent = armorLabel(tank) + ' мм';

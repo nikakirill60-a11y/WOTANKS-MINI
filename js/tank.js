@@ -46,6 +46,7 @@ class Tank {
     this.maxPitch = d.maxPitch == null ? 0.58 : (d.maxPitch * Math.PI) / 180;
     this.lastShot = 0;
     this.dead = false;
+    this.salvoSize = d.salvo || 1; // rounds per trigger, not magazine capacity
     this.magSize = d.mag || 1;
     this.usesMagazine = this.magSize > 1;
     this.curMag = this.magSize;
@@ -88,24 +89,23 @@ class Tank {
     if (this.dead || this.isReloading || now < this.nextShot || !this.modelAsset) return false;
     if (this.usesMagazine) shellType = 0; // One clip type, including for AI and touch input.
     if (sight && (!this.isSPG || (this === GameState.player && GameState.holdTurret) || !sight.aligned(this))) return false;
-    const sh = this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[shellType],
-      ray = this.barrelRay();
+    const sh = this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[shellType];
     const speed = 14 * sh.sMul * this.shellSpeedMul;
-    const damage = this.dmg * sh.dMul * getCritMultiplier(this, 'dmg');
-    const shell = {
-      ...ray,
-      a: Math.atan2(ray.dy, ray.dx),
-      team: this.team,
-      shooter: this,
-      speed,
-      traveled: 0,
-      color: sh.color,
-      dmg: damage * (this === GameState.player && GameState.paiokActive ? 1.05 : 1),
-      pen: this.pen * sh.penMul,
-      st: this.isSPG ? 1 : shellType
-    };
-    if (sight) shell.arc = sight.plot(shell);
-    GameState.bullets.push(shell);
+    const damage = this.dmg * sh.dMul * getCritMultiplier(this, 'dmg') *
+      (this === GameState.player && GameState.paiokActive ? 1.05 : 1);
+    const tips = this.modelAsset.muzzles || [this.modelAsset.muzzle];
+    for (const tip of tips) {
+      const ray = this.barrelRay(tip);
+      const shell = {
+        ...ray, a: Math.atan2(ray.dy, ray.dx), team: this.team, shooter: this,
+        speed, traveled: 0, color: sh.color, dmg: damage,
+        pen: this.pen * sh.penMul, st: this.isSPG ? 1 : shellType
+      };
+      if (sight) shell.arc = sight.plot(shell);
+      GameState.bullets.push(shell);
+      spawnParticles(ray.x, ray.y, '#ffb24c', 5, 1.2, 8, ray.h);
+      spawnShellCasing(this);
+    }
     const yaw = this.tAngle - this.angle,
       kick = Math.min(0.16, 0.035 + this.dmg * 0.0002);
     this.pitchVel += kick * Math.cos(yaw);
@@ -118,8 +118,6 @@ class Tank {
       (this === GameState.player && GameState.adrenalineActive ? 0.5 : 1) * getCritMultiplier(this, 'reload');
     this.nextShot = now + (this.curMag ? this.shotDelay : this.reloadTime * multiplier);
     this.isReloading = !this.curMag;
-    spawnParticles(ray.x, ray.y, '#ffb24c', 5, 1.2, 8, ray.h);
-    spawnShellCasing(this);
     snd(this.usesMagazine ? 'rapidfire' : 'shot');
     return true;
   }
@@ -185,20 +183,20 @@ class Tank {
     this.setLook(this.angle + yaw, pitch);
     return wrapAngle(this.angle + yaw); // bearing before any mount stop; a fixed gun turns with the hull
   }
-  barrelRay() {
+  barrelRay(tip) {
     const flat = Math.cos(this.aimPitch),
       yaw = this.tAngle - this.angle;
     const d = bodyVector(this, -Math.sin(yaw) * flat, Math.sin(this.aimPitch), Math.cos(yaw) * flat);
-    return { ...this.muzzle(), dx: d.x, dy: d.y, dh: d.h };
+    return { ...this.muzzle(tip), dx: d.x, dy: d.y, dh: d.h };
   }
-  sightHit(range = BATTLE_RANGE, includeAllies = false, visibleOnly = false) {
-    const r = this.barrelRay();
+  sightHit(range = BATTLE_RANGE, includeAllies = false, visibleOnly = false, tip) {
+    const r = this.barrelRay(tip);
     return traceBattleRay(r.x, r.y, r.h, r.dx, r.dy, r.dh, range, this, false, includeAllies, visibleOnly);
   }
 
   // Same hull → turret → gun transforms as the renderer, in simulation coordinates (x,y,height).
-  gunPoint(atMuzzle) {
-    const { pivot, gunPivot, muzzle, groundY } = this.modelAsset,
+  gunPoint(atMuzzle, muzzle = this.modelAsset.muzzle) {
+    const { pivot, gunPivot, groundY } = this.modelAsset,
       s = this.modelScale;
     const yaw = this.tAngle - this.angle,
       c = Math.cos(yaw),
@@ -220,8 +218,8 @@ class Tank {
     }
     return bodyPoint(this, (pivot[0] + c * side - sn * forward) * s, (groundY + up) * s, z * s);
   }
-  muzzle() {
-    return this.gunPoint(true);
+  muzzle(tip) {
+    return this.gunPoint(true, tip);
   }
 }
 

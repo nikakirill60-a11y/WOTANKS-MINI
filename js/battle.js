@@ -100,7 +100,7 @@ async function launchBattle(teamSize) {
     const formation = battleFormation(arena, navigation, teams);
     // Load only unique meshes, four at a time even with two different 15-vehicle teams.
     const assets = new Map(),
-      ids = [...new Set(formation.map((slot) => slot.id))];
+      ids = [...new Set(formation.map((slot) => modelKey(slot.id)))];
     for (let i = 0; i < ids.length; i += 4) {
       if (ticket.signal.aborted) return false;
       await Promise.all(
@@ -134,7 +134,7 @@ async function launchBattle(teamSize) {
         slot.team === 'player' ? getAllBonuses(slot.id) : null
       );
       u.angle = u.tAngle = u.lookYaw = slot.angle;
-      u.modelAsset = assets.get(slot.id);
+      u.modelAsset = assets.get(modelKey(slot.id));
       TrackDrive.place(u);
       u.practiceTarget = !!slot.practice;
       u.visible = slot.team !== 'enemy' || training;

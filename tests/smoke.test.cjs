@@ -25,14 +25,19 @@ const e50Ids = ['VK3002M','PANTHER','PANTHERII','E50','E50M'];
 const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGPZE100'];
 const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
+const sovger = require('./fixtures/soviet-german.cjs');
+const newIds = end => sovger.find(path=>path.end===end).rows.map(row=>row[0]);
 const usTreeIds = usIds.concat(additions('usa'));
-const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'));
-const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids);
+const sovietTreeIds = sovietIds.concat(newIds('OBJ-277'),newIds('OBJ-705A'),newIds('ST-II'),is4Ids,newIds('TET-100'),
+  mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'));
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,newIds('PZKPFW-VII'),
+  newIds('VK-7201-K'),e50Ids,newIds('LEOPARD-1'),e100Ids,newIds('KPZ-67'));
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {GPZ:2823,...Object.fromEntries(require('./fixtures/japan.cjs').unique.map(row=>[row[0],row.at(-1)])),
+const meshCounts = {GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
+  ...Object.fromEntries(require('./fixtures/japan.cjs').unique.map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
   A43:4665,A44:5232,OBJ416:6798,OBJ430II:6909,K91:7883,OBJ430:7137,OBJ430U:5790,
@@ -157,7 +162,7 @@ test('one legacy local profile: keep earned progress, exclude credentials and re
   assert.equal(data.SILVER, 0);
   assert.equal(data.charges, 4);
   assert.equal(data.selected, 'PZII');assert.equal(data.curNat,'germany');
-  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T34HEAVY','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN']); // no grants for similarly named tanks or a retired event boss
+  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T34HEAVY','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN','VK-4502-A']); // no grants for similarly named tanks or a retired event boss
   assert.deepEqual(data.modules,{T1C:['optics'],RHMBWT:['turbo'],STI:['optics'],T54L:['rammer']});assert.deepEqual(data.upgrades,{T1C:{engine:1},TIGERI:{gun:2}});
   checkClean(data);assert.equal(data.GOLD,2500);
   assert.doesNotMatch(JSON.stringify(data), /obsolete-test-marker|Former|old-code|mail_event/);
@@ -1108,7 +1113,7 @@ test('twenty supplied meshes for the five new routes deploy offline in ten 3D tr
 test('renamed legacy vehicles migrate by identity without confusing the 430s, Panthers or E 100s',async t=>{
   const legacy=['OB430II','OB430U','PANTHER2','GRILLE','STUG3','JGPZ4','JPANTHER','JPANTHER2','JAGTIGER','JGE100','VK30D2'];
   const {page}=await offlineGame(t,{seed:{[saveKey]:JSON.stringify({owned:legacy,selected:'OB430II',XP:150,modules:{JPANTHER:['optics'],JPANTHER2:['turbo']}})}});
-  const s=await saved(page);assert.deepEqual(s.owned,['OBJ430II','OBJ430U','PANTHERII','GRILLE15','STUG3G','JGPZIV','JAGDP','JPANTHERII','JAGDTIGER','JGPZE100']);
+  const s=await saved(page);assert.deepEqual(s.owned,['OBJ430II','OBJ430U','PANTHERII','GRILLE15','STUG3G','JGPZIV','JAGDP','JPANTHERII','JAGDTIGER','JGPZE100','VK-3002-D']);
   assert.equal(s.selected,'OBJ430II');assert.equal(s.XP,150);assert.deepEqual(s.modules,{JAGDP:['optics'],JPANTHERII:['turbo']});
   await page.reload();assert.deepEqual(await saved(page),s);
 });

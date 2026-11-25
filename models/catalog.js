@@ -1,5 +1,5 @@
 // Each route starts at I and ends at its last supplied tier; forks reuse their entire shared prefix. Alpha is the TOTAL
-// damage of a full load; a clip/machine gun fires mag independent projectiles.
+// damage of a full load; mag counts sequential rounds, salvo counts simultaneous barrels.
 const RESEARCH_XP = Object.freeze([0,150,350,1500,4000,8000,25000,60000,120000,195000]);
 function defineLine(nat, rows, prefix = []) {
   const line = [...prefix];
@@ -252,15 +252,70 @@ const JAPANESE_HEAVY_BRANCH = defineLine('japan', [
   ['TYPE-4-H','Type 4 Heavy','ht','type-4-h',    2350,550,14500,245,250,250,20,1.20,370,.06,{minPitch:-10,maxPitch:20}],
   ['TYPE-5-H','Type 5 Heavy','ht','type-5-h',    2900,600,15000,255,260,260,25,1.22,385,.05,{minPitch:-10,maxPitch:20}]
 ], JAPANESE_MEDIUM_BRANCH.slice(0,1));
+// These forks reuse the existing parent records. The sheets give damage per
+// projectile: a salvo fires both barrels now; a drum fires on successive inputs.
+const USSR_277_BRANCH = defineLine('ussr', [
+  ['T-10','Т-10','ht','t-10',                 1850,440,10800,258,120,250,50,1.07,380,.08,{minPitch:-5,maxPitch:15}],
+  ['OBJ-277','Объект 277','ht','obj-277',     2200,490,11200,265,140,290,55,1.10,390,.07,{minPitch:-5.5,maxPitch:15.5}]
+], USSR_BRANCH.slice(0,8));
+const USSR_705A_BRANCH = defineLine('ussr', [
+  ['IS-M','ИС-М','ht','is-m',                 1600,390,11200,212,130,250,35,1.08,350,.08,{minPitch:-5,maxPitch:20}],
+  ['OBJ-705','Объект 705','ht','obj-705',     2000,490,12800,250,155,300,40,1.12,370,.07,{minPitch:-5,maxPitch:20}],
+  ['OBJ-705A','Объект 705А','ht','obj-705a',  2450,650,15800,256,175,330,40,1.18,385,.07,{minPitch:-5,maxPitch:20}]
+], USSR_BRANCH.slice(0,7));
+const USSR_STII_BRANCH = defineLine('ussr', [
+  ['IS-2-II','ИС-2-II','ht','is-2-ii',        1550,600,15000,221,110,220,38,1.08,350,.09,{salvo:2,minPitch:-7,maxPitch:20}],
+  ['IS-3-II','ИС-3-II','ht','is-3-ii',        1900,780,19000,243,130,250,38,1.12,370,.08,{salvo:2,minPitch:-8,maxPitch:20}],
+  ['ST-II','СТ-II','ht','st-ii',              2500,880,20500,258,150,250,35,1.15,385,.07,{salvo:2,minPitch:-8,maxPitch:20}]
+], USSR_BRANCH.slice(0,7));
+const USSR_268V4_BRANCH = defineLine('ussr', [
+  ['SU-100M1','СУ-100М1','td','su-100m1',       880,250, 6200,212,120,null,54,1.00,345,.29,{yawLimits:[-8,8],minPitch:-4,maxPitch:20}],
+  ['SU-101','СУ-101','td','su-101',            1200,440,10500,258,120,null,54,1.04,360,.27,{yawLimits:[-10,10],minPitch:-3,maxPitch:18.3}],
+  ['OBJ-263','Объект 263','td','obj-263',      1700,550,11800,270,250,null,50,1.14,380,.22,{yawLimits:[-10,10],minPitch:-4,maxPitch:18}],
+  ['OBJ-2684','Объект 268 Вариант 4','td','obj-2684',2100,650,14500,293,260,null,50,1.16,390,.21,{yawLimits:[-12,12],minPitch:-5,maxPitch:15}]
+], USSR_268_BRANCH.slice(0,6));
+// The tier-X 263 uses the same supplied mesh, not the tier-IX ownership ID,
+// research parent, armour record or weapon stats.
+const USSR_263X_BRANCH = defineLine('ussr', [
+  ['SU-122-54','СУ-122-54','td','su-122-54',      1450,400,7600,258,100,null,48,1.05,370,.25,{yawLimits:[-8,8],minPitch:-4,maxPitch:16}],
+  ['OBJ-263-X','Объект 263 (10 ур.)','td','obj-263',1850,460,7800,290,250,null,55,1.14,390,.21,{modelId:'OBJ-263',yawLimits:[-10,10],minPitch:-4,maxPitch:18}]
+], USSR_268V4_BRANCH.slice(0,8));
+const USSR_TET_BRANCH = defineLine('ussr', [
+  ['KV-4F','КВ-4 Федоренко','ht','kv-4f',     1450, 750,22000,185,140,180,30,1.12,340,.08,{mag:3,weapon:'drum',minPitch:-9,maxPitch:20}],
+  ['KV-4M','КВ-4 Михайлова','ht','kv-4m',     1800, 960,24000,220,220,240,25,1.18,350,.07,{mag:3,weapon:'drum',minPitch:-8,maxPitch:20}],
+  ['KV-90','КВ-90','ht','kv-90',              2200,1470,33000,243,250,280,25,1.24,370,.06,{mag:3,weapon:'drum',minPitch:-8,maxPitch:20}],
+  ['TET-100','ТЭТ-100','ht','tet-100',        2900,1470,31000,258,250,280,25,1.30,385,.05,{mag:3,weapon:'drum',minPitch:-8,maxPitch:30}]
+], USSR_IS4_BRANCH.slice(0,6));
+const GERMAN_LEOPARD1_BRANCH = defineLine('germany', [
+  ['VK-3001-D','VK 30.01 (D)','mt','vk-3001-d', 790,135,3600,150,60, 80,56, .97,345,.23,{minPitch:-8,maxPitch:20}],
+  ['VK-3002-D','VK 30.02 (D)','mt','vk-3002-d',1120,220,5800,145,80,120,56,1.01,355,.22,{minPitch:-8,maxPitch:20}],
+  ['INDIEN-PZ','Indien-Panzer','mt','indien-pz', 1350,250,6200,212,90,130,50,1.04,370,.21,{minPitch:-10,maxPitch:20}],
+  ['LEOPARD-PT-A','Leopard PT A','mt','leopard-pt-a',1600,420,8800,268,70,65,65,1.06,390,.22,{minPitch:-8,maxPitch:20}],
+  ['LEOPARD-1','Leopard 1','mt','leopard-1',    1850,420,7800,278,70, 65,70,1.08,405,.21,{minPitch:-9,maxPitch:20}]
+], GERMAN_MAUS_BRANCH.slice(0,5));
+const GERMAN_PZVII_BRANCH = defineLine('germany', [
+  ['VK-4502-A','VK 45.02 (P) Ausf. A','ht','vk-4502-a',1580,320, 8200,215,120,185,38,1.14,350,.09,{minPitch:-8,maxPitch:15}],
+  ['VK-4502-B','VK 45.02 (P) Ausf. B','ht','vk-4502-b',2050,490,12600,246,200,252,30,1.20,375,.07,{minPitch:-7,maxPitch:18}],
+  ['PZKPFW-VII','Pz.Kpfw. VII','ht','pzkpfw-vii',     2500,560,13500,258,200,260,33,1.25,390,.06,{minPitch:-7,maxPitch:17}]
+], GERMAN_MAUS_BRANCH.slice(0,7));
+const GERMAN_VK72_BRANCH = defineLine('germany', [
+  ['VK-7201-K','VK 72.01 (K)','ht','vk-7201-k',2550,680,16500,250,200,260,33,1.25,390,.06,{minPitch:-7,maxPitch:17}]
+], GERMAN_PZVII_BRANCH.slice(0,9));
+const GERMAN_KPZ67_BRANCH = defineLine('germany', [
+  ['PZ-55','Pz.Kpfw. 55','ht','pz-55',          1700,360,9500,230,135,280,40,1.12,355,.09,{minPitch:-8,maxPitch:15}],
+  ['VPZ-57','Versuchspanzer 57','ht','vpz-57',   2000,390,9200,255,105,320,40,1.16,375,.08,{minPitch:-9,maxPitch:15}],
+  ['KPZ-67','Kampfpanzer 67','ht','kpz-67',      2250,420,9200,270,120,340,40,1.20,395,.07,{minPitch:-10,maxPitch:18}]
+], GERMAN_E100_BRANCH.slice(0,7));
 function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});
 }
 const BRANCHES = Object.freeze({
-  ussr: nationTree('01','ИС-7, ИС-4, Объект 140, Объект 430У, К-91, Т-100 ЛТ и Объект 268',
-    USSR_BRANCH, USSR_IS4_BRANCH, USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH),
-  germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Grille 15, Jagdpanzer E 100, Maus, E 50 Ausf. M и E 100',
+  ussr: nationTree('01','ИС-7, ИС-4, СТ-II и другие ветки СССР',
+    USSR_BRANCH, USSR_277_BRANCH, USSR_705A_BRANCH, USSR_STII_BRANCH, USSR_IS4_BRANCH, USSR_TET_BRANCH,
+    USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH, USSR_268V4_BRANCH, USSR_263X_BRANCH),
+  germany: nationTree('02','Rhm. Panzerwagen, Leopard 1, Maus и другие ветки Германии',
     GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH,
-    GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH),
+    GERMAN_MAUS_BRANCH, GERMAN_PZVII_BRANCH, GERMAN_VK72_BRANCH, GERMAN_E50M_BRANCH, GERMAN_LEOPARD1_BRANCH, GERMAN_E100_BRANCH, GERMAN_KPZ67_BRANCH),
   usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
     US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
@@ -292,10 +347,12 @@ const SPECIAL_TANKS = Object.freeze([
 const DB = Object.freeze(Object.fromEntries([...Object.values(BRANCHES).flatMap(b=>b.tanks),...SPECIAL_TANKS].map(t=>[t.id,t])));
 const TRAINING_NATIONS = Object.freeze([...new Set(Object.values(DB).map(t=>t.nat))]);
 const STARTER_TANK = 'MS1';
-const shotDamage = t => t.alpha / (t.mag || 1);
+const modelKey = id => DB[id].modelId || id;
+const shotDamage = t => t.alpha / (t.salvo || t.mag || 1);
 const magazineName = t => t.weapon === 'machinegun' || t.weapon === 'drum' ? 'Барабан' : 'Кассета';
-const damageLabel = t => !t.mag ? 'Урон за выстрел' : magazineName(t) === 'Барабан' ? 'Урон барабана' : 'Урон кассеты';
-const damageSummary = t => t.mag ? `${t.alpha} (${t.mag} × ${shotDamage(t)})` : String(t.alpha);
+const damageLabel = t => t.salvo ? 'Урон залпа' : !t.mag ? 'Урон за выстрел' : magazineName(t) === 'Барабан' ? 'Урон барабана' : 'Урон кассеты';
+const damageSummary = t => (t.salvo || t.mag) ? `${t.alpha} (${t.salvo || t.mag} × ${shotDamage(t)})` : String(t.alpha);
+const reloadLabel = t => t.salvo ? 'Перезарядка залпа' : t.mag ? 'Полная перезарядка' : 'Перезарядка';
 const armorLabel = t => `${t.armor}${t.markedHull ? '*' : ''} / ${t.turretArmor ?? '—'}${t.markedTurret ? '*' : ''}`;
 const speedLabel = t => t.roadSpeed ? `${t.speed}–${t.roadSpeed}` : String(t.speed);
 const researchParent = id => DB[id].parent;

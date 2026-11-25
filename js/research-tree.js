@@ -29,7 +29,7 @@ function showTreeCard(id) {
   const stats = [
     ['Прочность', t.hp + ' HP'],
     [damageLabel(t), damageSummary(t)],
-    [t.mag ? 'Полная перезарядка' : 'Перезарядка', (t.reload / 1000).toLocaleString('ru-RU') + ' с'],
+    [reloadLabel(t), (t.reload / 1000).toLocaleString('ru-RU') + ' с'],
     ['Пробитие', t.pen + ' мм'],
     ['Лоб корпуса / башни', armorLabel(t) + ' мм'],
     ['Скорость', speedLabel(t) + ' км/ч']

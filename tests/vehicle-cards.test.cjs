@@ -51,7 +51,7 @@ test('mobile: every research and special vehicle keeps its own cut-out over its 
     const ids = await checkCards(page.locator('#nodes .node img'));
     assert.ok(ids.length >= 10); ids.forEach(id => seen.add(id));
   }
-  assert.equal(seen.size,186);
+  assert.equal(seen.size,216);
   assert.equal(await page.locator('.tank-slot[data-tank-id="T54"] .slot-bg').getAttribute('data-card-nation'), 'ussr');
   assert.equal(await page.locator('.tank-slot[data-tank-id="T54A"] .slot-bg').getAttribute('data-card-nation'), 'hungary');
   await click('Характеристики: Type 5 Heavy');

@@ -191,7 +191,7 @@ function updateHUD() {
   ammo.textContent =
     (p.usesMagazine
       ? `${magazineName(DB[p.id]).toUpperCase()} ${p.curMag}/${p.magSize}`
-      : p.isSPG ? CONFIG.SPG_ROUND.name : CONFIG.SHELLS[g.curShell].name) +
+      : p.isSPG ? CONFIG.SPG_ROUND.name : (p.salvoSize > 1 ? `ЗАЛП ×${p.salvoSize} · ` : '') + CONFIG.SHELLS[g.curShell].name) +
     '  /  ' +
     (p.isReloading
       ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - BattleClock.now()) / 1000).toFixed(1)} с`

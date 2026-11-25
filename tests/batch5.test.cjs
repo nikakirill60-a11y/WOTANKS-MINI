@@ -48,7 +48,7 @@ test('batch5 legacy keys migrate ownership and equipment by identity, not by tie
   const {page, saved} = await openGame(t, {seed:{owned:prev,selected:'M6YOH',XP:4321,
     modules:{M5YOH:['optics'],T71:['optics'],OB268:['rammer']}, upgrades:{T57HVY:{gun:1}}}});
   const s=await saved(); assert.deepEqual(s.owned,['T1HEAVY','T57HEAVY','MIIIY','MVY','MVIY','M3ST','M5ST','M24','SHERIDAN',
-    'SU85B','SU85','SU100','SU152','OBJ704','OBJ268','T49','T71DA']);
+    'SU85B','SU85','SU100','SU152','OBJ704','OBJ268','T49','T71DA','SU-100M1']);
   assert.equal(s.selected,'MVIY'); assert.equal(s.XP,4321);
   assert.deepEqual(s.modules,{MVY:['optics'],OBJ268:['rammer']}); assert.deepEqual(s.upgrades,{T57HEAVY:{gun:1}});
   await page.reload(); assert.deepEqual(await saved(),s);

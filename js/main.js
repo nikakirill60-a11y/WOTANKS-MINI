@@ -35,14 +35,14 @@ function updatePlayer() {
     snd('eng');
   }
 }
-function damageUnit(b, u, part) {
-  const { dmg, zone } = resolveHit(b, u, part);
+function damageUnit(b, u, part, incidenceCos) {
+  const { dmg, zone, ricochet } = resolveHit(b, u, part, incidenceCos);
   if (!dmg) {
     BotAI.onBlockedHit(b.shooter, u);
     sparks(b.x, b.y, b.h);
     snd('rico');
     if (b.shooter === GameState.player) {
-      combatMessage('Не пробито: ' + (part === 'turret' ? 'башня' : 'корпус'), '#eabb70');
+      combatMessage((ricochet ? 'Рикошет: ' : 'Не пробито: ') + (part === 'turret' ? 'башня' : 'корпус'), '#eabb70');
     }
     return;
   }
@@ -100,12 +100,12 @@ function updateBullets() {
   for (let i = GameState.bullets.length - 1; i >= 0; i--) {
     const b = GameState.bullets[i];
     const length = b.arc ? artilleryStep(b) : b.speed;
-    const step = traceBattleRay(b.x, b.y, b.h, b.dx, b.dy, b.dh, length, b.shooter);
+    const step = traceBattleRay(b.x, b.y, b.h, b.dx, b.dy, b.dh, length, b.shooter, false, false, false, b.round?.ricochetDeg !== undefined);
     b.x = step.x;
     b.y = step.y;
     b.h = step.h;
     b.traveled += step.distance;
-    if (step.hit instanceof Tank) damageUnit(b, step.hit, step.part);
+    if (step.hit instanceof Tank) damageUnit(b, step.hit, step.part, step.incidenceCos);
     else if (step.hit) {
       spawnParticles(b.x, b.y, '#e2bc7b', 8, 2, 11, b.h);
       if (step.hit.type === 'building') damageWall(step.hit, b.dmg, GameState.walls.indexOf(step.hit));
@@ -132,7 +132,9 @@ function update() {
   BotAI.beginTick(g.navigation, ticks);
   for (const u of g.units) {
     if (u.dead) continue;
-    u.updateReload(BattleClock.now());
+    const gunTime = BattleClock.now();
+    u.updateReload(gunTime);
+    if (u.calibration) u.updateCalibration(gunTime);
     u.justFired = now < u.fireTimer;
     if (u === p) updatePlayer();
     else BotAI.step(u, ticks);
@@ -188,14 +190,16 @@ function updateHUD() {
   document.getElementById('drive-surface').textContent =
     CONFIG.TERRAIN[p.currentTerrain].name +
     (p.airborne ? ' · в воздухе' : Math.abs(grade) >= 2 ? ' · ' + (grade > 0 ? '+' : '') + grade + '%' : '');
+  const gunTime = BattleClock.now();
+  if (p.calibration) ShellUI.status(p, gunTime);
   ammo.textContent =
     (p.usesMagazine
       ? `${magazineName(DB[p.id]).toUpperCase()} ${p.curMag}/${p.magSize}`
-      : p.isSPG ? CONFIG.SPG_ROUND.name : (p.salvoSize > 1 ? `ЗАЛП ×${p.salvoSize} · ` : '') + CONFIG.SHELLS[g.curShell].name) +
+      : p.isSPG ? CONFIG.SPG_ROUND.name : (p.salvoSize > 1 ? `ЗАЛП ×${p.salvoSize} · ` : '') + p.roundFor(g.curShell).name) +
     '  /  ' +
     (p.isReloading
-      ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - BattleClock.now()) / 1000).toFixed(1)} с`
-      : 'ГОТОВ');
+      ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - gunTime) / 1000).toFixed(1)} с`
+      : p.calibration?.until != null ? 'ПЕРЕКЛЮЧЕНИЕ' : 'ГОТОВ');
   const water = document.getElementById('water-warning');
   water.hidden = p.drownTimer == null || p.dead;
   if (!water.hidden) water.textContent = `Глубокая вода · до затопления ${Math.ceil(p.drownTimer)} с`;

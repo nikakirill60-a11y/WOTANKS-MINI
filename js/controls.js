@@ -205,6 +205,9 @@ const BattleInput = (() => {
     if (g.player.isSPG) consumeLook();
     BattleView.toggleScope();
   }
+  function calibrate() {
+    if (running() && g.gameActive && g.player?.toggleCalibration()) ShellUI.status(g.player, BattleClock.now());
+  }
   function autoAim() {
     consumeLook();
     BattleView.toggleAutoAim();
@@ -226,6 +229,7 @@ const BattleInput = (() => {
     if (e.code === 'Tab') showRoster(true);
     else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleSight();
     else if (e.code === 'KeyE') autoAim();
+    else if (e.code === 'KeyG') calibrate();
     else if (Object.hasOwn(signals, e.code)) signal(e.code);
     else if (/^Digit[1-3]$/.test(e.code)) setShell(Number(e.code.slice(-1)) - 1);
     else if (Object.hasOwn(consumables, e.code)) useCons(consumables[e.code]);
@@ -385,6 +389,7 @@ const BattleInput = (() => {
     tap(el('score-toggle'), () => {
       if (running()) showRoster(el('battle-roster').hidden);
     });
+    tap(el('calibrate-btn'), calibrate);
     tap(el('battle-exit'), pause);
   }
   return {

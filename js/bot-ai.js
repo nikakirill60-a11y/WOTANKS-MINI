@@ -140,7 +140,10 @@ const BotAI = (() => {
   function onBlockedHit(u, t) {
     const b = u.bot;
     if (b?.target !== t || !t.spotted || b.post) return;
-    b.shell = u.usesMagazine ? 0 : 2;
+    if (u.calibration) {
+      b.shell = 1; // This loadout's alternate is КС, not the ordinary slot-3 Подкал.
+      if (!u.calibration.active) u.toggleCalibration();
+    } else b.shell = u.usesMagazine ? 0 : 2;
     b.shift = true;
   }
   function steer(u, b, p, nav, now) {

@@ -24,6 +24,8 @@ class Tank {
     this.hp = Math.floor(d.hp * hpMul * (1 + (mb.hp || 0)));
     this.maxHp = this.hp;
     this.dmg = Math.floor(shotDamage(d) * dmgMul * (1 + (mb.dmg || 0)));
+    this.calibration = d.weapon === 'calibration'
+      ? { active:false, until:null, damageScale:dmgMul * (1 + (mb.dmg || 0)) } : null;
     this.s = d.s;
     this.tier = d.tier;
     this.vr = Math.floor((d.vr || 350) * vrMul * (1 + (mb.vr || 0)));
@@ -76,6 +78,27 @@ class Tank {
     this.nextShot = 0;
   }
 
+  roundFor(index) {
+    if (this.calibration) return KPZ_CALIBRATION[this.calibration.active ? 'calibrated' : 'standard'][index];
+    return this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[this.usesMagazine ? 0 : index];
+  }
+
+  updateCalibration(now) {
+    const c = this.calibration;
+    if (c && c.until !== null && now >= c.until) {
+      c.active = !c.active;
+      c.until = null;
+    }
+  }
+
+  toggleCalibration(now = BattleClock.now()) {
+    if (!this.calibration || this.dead) return false;
+    this.updateCalibration(now);
+    if (this.calibration.until !== null) return false;
+    this.calibration.until = now + KPZ_CALIBRATION.switchMs;
+    return true; // independent of the gun's existing reload deadline
+  }
+
   updateReload(now) {
     if (this.isReloading && now >= this.nextShot) {
       this.curMag = this.magSize;
@@ -86,19 +109,25 @@ class Tank {
   fire(shellType = 0, sight = null) {
     const now = BattleClock.now();
     this.updateReload(now);
+    if (this.calibration) {
+      this.updateCalibration(now);
+      if (this.calibration.until !== null) return false;
+    }
     if (this.dead || this.isReloading || now < this.nextShot || !this.modelAsset) return false;
     if (this.usesMagazine) shellType = 0; // One clip type, including for AI and touch input.
     if (sight && (!this.isSPG || (this === GameState.player && GameState.holdTurret) || !sight.aligned(this))) return false;
-    const sh = this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[shellType];
+    const sh = this.roundFor(shellType);
+    if (!sh) return false;
     const speed = 14 * sh.sMul * this.shellSpeedMul;
-    const damage = this.dmg * sh.dMul * getCritMultiplier(this, 'dmg') *
+    const base = sh.alpha === undefined ? this.dmg * sh.dMul : Math.floor(sh.alpha * this.calibration.damageScale);
+    const damage = base * getCritMultiplier(this, 'dmg') *
       (this === GameState.player && GameState.paiokActive ? 1.05 : 1);
     const tips = this.modelAsset.muzzles || [this.modelAsset.muzzle];
     for (const tip of tips) {
       const ray = this.barrelRay(tip);
       const shell = {
         ...ray, a: Math.atan2(ray.dy, ray.dx), team: this.team, shooter: this,
-        speed, traveled: 0, color: sh.color, dmg: damage,
+        speed, traveled: 0, round: sh, color: sh.color, dmg: damage,
         pen: this.pen * sh.penMul, st: this.isSPG ? 1 : shellType
       };
       if (sight) shell.arc = sight.plot(shell);

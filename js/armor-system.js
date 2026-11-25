@@ -63,11 +63,21 @@ function rollCritical(shooter, target) {
 }
 
 // A bounced/blocked round is still spent. Only successful hits roll criticals.
-function resolveHit(bullet, target, part = 'hull') {
+function resolveHit(bullet, target, part = 'hull', incidenceCos = 1) {
   const zone = getArmorZone(bullet, target, part);
   const plate = part === 'turret' ? target.turretArmor : target.armor;
   const effective = plate * CONFIG.ARMOR_ZONES[zone].mul;
-  if (bullet.pen < effective) return {zone, dmg:0};
+  const round = bullet.round; // selected at launch, never read the shooter's current mode here
+  let pen = bullet.pen;
+  if (round?.ricochetDeg !== undefined) {
+    const angle = Math.acos(bounded(incidenceCos, 0, 1)) * 180 / Math.PI;
+    if (angle >= round.ricochetDeg - 1e-9) return {zone, dmg:0, ricochet:true};
+    pen *= Math.cos(Math.max(0, angle - round.normalizationDeg) * Math.PI / 180);
+  } else if (round?.lossPct !== undefined) {
+    // CITY TANKS has a single armour check per impact (no separate screen layers).
+    pen *= 1 - round.lossPct / 100;
+  }
+  if (pen < effective) return {zone, dmg:0};
   rollCritical(bullet.shooter, target);
   return {zone, dmg:bullet.dmg};
 }

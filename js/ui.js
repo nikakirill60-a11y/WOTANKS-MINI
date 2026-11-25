@@ -74,14 +74,6 @@ function setNat(nat) {
   if (focused) document.querySelector(`.n-btn[data-nation="${nat}"]`)?.focus({preventScroll:true});
 }
 
-// ========== Выбор снаряда ==========
-function setShell(i) {
-  if (GameState.player?.usesMagazine || GameState.player?.isSPG) i = 0;
-  GameState.curShell = i;
-  document.querySelectorAll('.shell-opt').forEach(function(e, j) { e.classList.toggle('active', j === i); });
-  document.querySelectorAll('.m-shell').forEach(function(e, j) { e.classList.toggle('active', j === i); });
-}
-
 // ========== Расходники ==========
 function useCons(i) {
   if (!GameState.gameActive || !GameState.player || GameState.player.dead || GameState.consumables[i]) return;

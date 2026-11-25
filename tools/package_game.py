@@ -45,6 +45,10 @@ START = '''CITY TANKS — Северное депо · зимний сезон 2
 Германия: после Pz.Kpfw. IV Ausf. H → VK 30.01 (D) → VK 30.02 (D) → Indien-Panzer → Leopard PT A → Leopard 1.
 После Tiger (P): VK 45.02 (P) Ausf. A → VK 45.02 (P) Ausf. B, затем Pz.Kpfw. VII или VK 72.01 (K).
 После Tiger I: Pz.Kpfw. 55 → Versuchspanzer 57 → Kampfpanzer 67.
+Только KPz 67: «Снаряды · KPz 67» в ангаре показывает сравнение и задаёт снаряд на выезд.
+В бою 1 — БП, 2 — КС, 3 — ОФ. G или кнопка «Калибровка»: вход и выход по 1 с без выстрела, КД не сбрасывается.
+БП и КС: базовый урон 420 → 380. БП: рикошет 70° → 75°, нормализация 2° → 7°.
+КС: потеря пробития при попадании 5% → 2%. ОФ без изменений.
 Япония: откройте «Дерево развития» → «Япония» и бесплатно возьмите Renault Otsu. Дальше два пути:
   Type 95 Ha-Go → Type 97 Chi-Ha → Type 1 Chi-He → Type 3 Chi-Nu → Type 4 Chi-To → Type 5 Chi-Ri → STA-1 → Type 61 → STB-1;
   Type 89 I-Go → Type 91 Heavy → Type 95 Heavy → Mitsu 108 → O-I → O-Ni → O-Ho → Type 4 Heavy → Type 5 Heavy.

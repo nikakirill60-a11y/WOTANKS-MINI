@@ -153,7 +153,7 @@ async function launchBattle(teamSize) {
     document.body.classList.toggle('drum-equipped', drum);
     document.body.classList.toggle('spg-equipped', g.player.isSPG);
     document.getElementById('scope-btn').textContent = g.player.isSPG ? 'Арт-прицел' : 'Прицел';
-    setShell(drum ? 0 : g.curShell);
+    ShellUI.start(g.player);
     document.getElementById('ui').style.display = 'none';
     BattleView.build();
     document.querySelectorAll('.cons-btn').forEach((b) => {
@@ -279,6 +279,7 @@ function backToGarage() {
   stopPerfMonitor();
   BattleView.dispose();
   GameState.aim = { x: 0, y: 0, h: 0 };
+  if (GameState.player?.calibration) GameState.curShell = 0; // KPz slots are a different loadout
   GameState.player = null;
   GameState.units = [];
   GameState.arena = GameState.navigation = null;

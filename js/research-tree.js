@@ -34,6 +34,7 @@ function showTreeCard(id) {
     ['Лоб корпуса / башни', armorLabel(t) + ' мм'],
     ['Скорость', speedLabel(t) + ' км/ч']
   ];
+  if (t.weapon === 'calibration') stats.push(['Особенность', KPZ_CALIBRATION.name]);
   if (t.cls === 'spg') stats.push(['Особенность', 'Арт-прицел · вид сверху']);
   if (t.yawLimits) {
     const [right, left] = t.yawLimits;

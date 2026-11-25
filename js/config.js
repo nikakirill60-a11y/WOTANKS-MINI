@@ -100,6 +100,18 @@ const CONFIG = {
   }
 };
 
+// KPz 67 has its own three ammo slots. The immutable mode profiles are shared by
+// the ammo selector and the simulation; a shell keeps the profile it was fired with.
+const KPZ_CALIBRATION = (() => {
+  const loadout = (alpha, ricochetDeg, normalizationDeg, lossPct) => Object.freeze([
+    Object.freeze({ name:'БП', alpha, ricochetDeg, normalizationDeg, sMul:CONFIG.SHELLS[2].sMul, penMul:1, color:CONFIG.SHELLS[2].color }),
+    Object.freeze({ name:'КС', alpha, lossPct, sMul:1, penMul:1, color:'#eead71' }),
+    CONFIG.SHELLS[1] // The ordinary HE round is identical in both modes.
+  ]);
+  return Object.freeze({ name:'Система калибровки снаряда', switchMs:1000,
+    standard:loadout(DB['KPZ-67'].alpha, 70, 2, 5), calibrated:loadout(380, 75, 7, 2) });
+})();
+
 // Только эти поля переживают перезапуск. Бой, снаряды и ввод остаются в памяти.
 const BASE_GARAGE_SLOTS = 10;
 function initialProgress() {

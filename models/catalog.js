@@ -304,7 +304,7 @@ const GERMAN_VK72_BRANCH = defineLine('germany', [
 const GERMAN_KPZ67_BRANCH = defineLine('germany', [
   ['PZ-55','Pz.Kpfw. 55','ht','pz-55',          1700,360,9500,230,135,280,40,1.12,355,.09,{minPitch:-8,maxPitch:15}],
   ['VPZ-57','Versuchspanzer 57','ht','vpz-57',   2000,390,9200,255,105,320,40,1.16,375,.08,{minPitch:-9,maxPitch:15}],
-  ['KPZ-67','Kampfpanzer 67','ht','kpz-67',      2250,420,9200,270,120,340,40,1.20,395,.07,{minPitch:-10,maxPitch:18}]
+  ['KPZ-67','Kampfpanzer 67','ht','kpz-67',      2250,420,9200,270,120,340,40,1.20,395,.07,{weapon:'calibration',minPitch:-10,maxPitch:18}]
 ], GERMAN_E100_BRANCH.slice(0,7));
 function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});

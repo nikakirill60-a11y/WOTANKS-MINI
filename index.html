@@ -243,6 +243,17 @@
             <div><dt>Обзор</dt><dd id="dispatch-view"></dd></div>
           </dl>
           <p id="dispatch-drum" hidden></p>
+          <details id="kpz-guide" class="sector-brief" hidden>
+            <summary>Снаряды · KPz 67</summary>
+            <div class="kpz-guide-body"><strong>Система калибровки снаряда</strong>
+              <label for="kpz-ammo">Снаряд на выезд</label>
+              <select id="kpz-ammo" onchange="ShellUI.guide()">
+                <option>БП · Подкалиберный</option><option>КС · Кумулятивный</option><option>ОФ · Осколочно-фугасный</option>
+              </select>
+              <table id="kpz-comparison" aria-label="Параметры выбранного снаряда"><thead><tr><th>Параметр</th><th>Обычный</th><th>Калибровка</th></tr></thead><tbody></tbody></table>
+              <p id="kpz-ammo-note"></p><p><b>G</b> или кнопка «Калибровка» в бою. Вход и выход — по 1 с. Во время перехода выстрел недоступен.</p>
+            </div>
+          </details>
           <!-- УПРАВЛЕНИЕ БОЕМ -->
           <div id="battle-controls">
             <div class="dispatch-heading">3D-БОЙ С БОТАМИ</div>
@@ -322,11 +333,17 @@
     <div id="hp-ui"><div id="hp-bar"></div></div>
     <div class="drive-readout"><span id="drive-speed">0 км/ч</span><span id="drive-surface">Грунт</span></div>
     <div id="ammo-ui"><span id="ammo-val">ЗАРЯЖЕНО</span></div>
-    <div id="shell-ui">
-      <span class="shell-opt active" onclick="setShell(0)">1:ББ</span>
-      <span class="shell-opt" onclick="setShell(1)">2:ОФ</span>
-      <span class="shell-opt" onclick="setShell(2)">3:Подкал</span>
+    <div id="shell-ui" role="group" aria-label="Выбор снаряда">
+      <button type="button" class="shell-opt active" onclick="setShell(0)">1:ББ</button>
+      <button type="button" class="shell-opt" onclick="setShell(1)">2:ОФ</button>
+      <button type="button" class="shell-opt" onclick="setShell(2)">3:Подкал</button>
     </div>
+    <section id="calibration-controls" hidden aria-label="Система калибровки снаряда">
+      <button type="button" id="calibrate-btn" aria-label="Калибровка" aria-keyshortcuts="G" aria-pressed="false"><span><kbd>G</kbd> Калибровка</span><b id="calibration-state"></b></button>
+      <details id="calibration-info"><summary id="calibration-info-label">Параметры снаряда</summary>
+        <div id="calibration-stats" aria-label="Обычный режим → калибровка"></div>
+      </details>
+    </section>
     <div id="cons-ui">
       <span class="cons-btn ready" id="cons1" onclick="useCons(0)">5/Q:Ремкомплект</span>
       <span class="cons-btn ready" id="cons2" onclick="useCons(1)">4:Аптечка</span>
@@ -364,10 +381,10 @@
     <button id="scope-btn" type="button" aria-pressed="false">Прицел</button>
     <button id="zoom-btn" type="button" hidden aria-label="Следующая кратность">×2</button>
   </div>
-  <div id="mobile-shells">
-    <div class="m-shell active" onclick="setShell(0)">ББ</div>
-    <div class="m-shell" onclick="setShell(1)">ОФ</div>
-    <div class="m-shell" onclick="setShell(2)">ПК</div>
+  <div id="mobile-shells" role="group" aria-label="Выбор снаряда">
+    <button type="button" class="m-shell active" onclick="setShell(0)">ББ</button>
+    <button type="button" class="m-shell" onclick="setShell(1)">ОФ</button>
+    <button type="button" class="m-shell" onclick="setShell(2)">ПК</button>
   </div>
   <div id="mobile-cons">
     <div class="m-cons" id="mcons1" onclick="useCons(0)">РЕМ</div>
@@ -441,6 +458,7 @@
     <script src="vendor/auth-2.79.min.js"></script>
     <script src="js/accounts.js"></script>
     <script src="js/local-profile.js"></script>
+    <script src="js/shell-ui.js"></script>
     <script src="js/garage-viewer.js"></script>
     <script src="js/research-tree.js"></script>
     <script src="js/ui.js"></script>

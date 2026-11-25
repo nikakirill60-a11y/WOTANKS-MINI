@@ -338,7 +338,7 @@ const BattleView = (() => {
     if (g.holdTurret) return;
     if (autoTarget) {
       const u = autoTarget,
-        flight = Math.hypot(u.x - p.x, u.y - p.y) / (14 * CONFIG.SHELLS[g.curShell].sMul * p.shellSpeedMul);
+        flight = Math.hypot(u.x - p.x, u.y - p.y) / (14 * p.roundFor(g.curShell).sMul * p.shellSpeedMul);
       p.lookAtPoint(u.x + u.vx * flight, u.y + u.vy * flight, u.aimHeight);
     } else p.lookAtPoint(q.x, q.y, q.h);
     const rate = traverseDegrees[DB[p.id].cls] || traverseDegrees.mt;
@@ -367,7 +367,7 @@ const BattleView = (() => {
       return;
     }
     reticle.classList.toggle('locked', picked.hit?.team === 'enemy');
-    reticle.classList.toggle('loading', p.isReloading);
+    reticle.classList.toggle('loading', p.isReloading || p.calibration?.until != null);
     const actual = p.sightHit(BATTLE_RANGE, false, true),
       marker = el('gun-marker');
     temp.set(actual.x, actual.h, actual.y).project(camera);

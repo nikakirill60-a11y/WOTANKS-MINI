@@ -230,3 +230,10 @@
 .sale-vehicle { margin-block:16px; padding:10px; justify-content:start; border-radius:6px; background:#1a2c36; }.sale-vehicle .vehicle-thumb { width:36%; height:66px; flex:none; }
 .sale-vehicle small,.sale-total span { color:#bfd2de; }.sale-vehicle h3 { font-size:21px; line-height:1.2; }.sale-total b { color:#f1cc88; font:700 21px Consolas,monospace; }
 .sale-actions { justify-content:end; flex-wrap:wrap; }.sale-actions button { min-height:39px; }
+
+#kpz-guide { margin:0 0 10px; }#kpz-guide summary { color:var(--bay-gold); font-weight:600; }
+.kpz-guide-body { display:grid; gap:6px; padding:6px 8px 9px; font:12px/1.4 'Segoe UI',sans-serif; }
+.kpz-guide-body strong { color:#e8d4aa; }.kpz-guide-body p { margin:0; }
+.kpz-guide-body select { width:100%; min-width:0; padding:5px; background:#15242c; color:#e2e8df; border:1px solid var(--bay-line); }
+#kpz-comparison { width:100%; border-collapse:collapse; font-size:11px; text-align:right; font-variant-numeric:tabular-nums; }
+#kpz-comparison :is(th,td) { padding:3px 2px; border-bottom:1px solid var(--bay-line); }#kpz-comparison :is(th,td):first-child { text-align:left; }#kpz-comparison :is(th,td):last-child { color:#e8cf94; }

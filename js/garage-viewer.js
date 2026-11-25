@@ -87,6 +87,7 @@ const GarageViewer = (() => {
     if (selectedId !== id) {
       selectedId = id;
       const empty = !id;
+      ShellUI.garage(DB[id]);
       el('empty-depot').hidden = !empty;
       for (const key of ['vehicle-spec-heading','vehicle-spec','battle-controls']) el(key).hidden = empty;
       for (const btn of document.querySelectorAll('[data-needs-tank],#battle-controls button')) btn.disabled = empty;

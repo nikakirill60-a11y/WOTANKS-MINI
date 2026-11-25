@@ -54,32 +54,41 @@ function buildBattleWorld(scene, state) {
       );
     }
   }
-  const skyTop = night
-    ? '#435e79'
-    : overcast
-      ? '#7c8f96'
-      : frost
-        ? '#789cab'
-        : port
-          ? '#719bb0'
-          : sand
-            ? '#7cabb4'
-            : '#779eae';
-  const horizon = night
-    ? '#b6b7ab'
-    : frost
-      ? '#dce6e5'
-      : overcast
-        ? '#c6ccbe'
-        : sand
-          ? '#ead6a4'
-          : quarry
-            ? '#d9bd9a'
+  const skyTop =
+    spec.sky && !night && !overcast
+      ? spec.sky[0]
+      : night
+        ? '#435e79'
+        : overcast
+          ? '#7c8f96'
+          : frost
+            ? '#789cab'
             : port
-              ? '#cfdfdf'
-              : '#ded7b9';
+              ? '#719bb0'
+              : sand
+                ? '#7cabb4'
+                : '#779eae';
+  const horizon =
+    spec.sky && !night && !overcast
+      ? spec.sky[1]
+      : night
+        ? '#b6b7ab'
+        : frost
+          ? '#dce6e5'
+          : overcast
+            ? '#c6ccbe'
+            : sand
+              ? '#ead6a4'
+              : quarry
+                ? '#d9bd9a'
+                : port
+                  ? '#cfdfdf'
+                  : '#ded7b9';
   scene.background = new T.Color(horizon);
-  scene.fog = new T.FogExp2(horizon, weather === 'sandstorm' ? 0.00095 : overcast ? 0.0006 : 0.00041);
+  scene.fog = new T.FogExp2(
+    horizon,
+    weather === 'sandstorm' ? 0.00095 : overcast ? 0.0006 : spec.haze || 0.00041
+  );
   const sky = new T.Mesh(
     new T.SphereGeometry(diagonal + 2300, 32, 16),
     new T.ShaderMaterial({
@@ -200,11 +209,60 @@ function buildBattleWorld(scene, state) {
 
   // Baked terrain layer, including road paint, to avoid z-fighting at road junctions.
   const tile = 1536;
+  const cobbled =
+    arena.zones.some((z) => z.type === 'cobble') || arena.paths.some((p) => p.type === 'cobble');
+  const pathStroke = (ctx, p) => {
+    ctx.beginPath();
+    p.points.forEach(({ x, y }, i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+  };
+  // The kilometre-scale paint cannot resolve individual stones under the tracks.
+  // Bake the street mask once, then sample a separate bevelled tile in local metres.
+  const stoneMask =
+    cobbled &&
+    texture(512, 512, (ctx) => {
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, 512, 512);
+      ctx.fillStyle = ctx.strokeStyle = 'white';
+      ctx.setTransform(256 / W, 0, 0, 256 / H, 256, 256);
+      for (const z of arena.zones) if (z.type === 'cobble') ctx.fillRect(z.x, z.y, z.w, z.h);
+      ctx.lineJoin = ctx.lineCap = 'round';
+      for (const p of arena.paths)
+        if (p.type === 'cobble') {
+          ctx.lineWidth = p.radius * 2;
+          pathStroke(ctx, p);
+        }
+    });
+  const stoneTile =
+    cobbled &&
+    texture(192, 192, (ctx) => {
+      ctx.fillStyle = '#645f5a';
+      ctx.fillRect(0, 0, 192, 192);
+      for (let j = 0; j < 12; j++)
+        for (let i = -1; i < 8; i++) {
+          const x = i * 24 + (j % 2) * 12,
+            y = j * 16,
+            c = ['#918d82', '#a39c8e', '#9e998d', '#938e85'][Math.floor(random() * 4)];
+          ctx.fillStyle = c;
+          ctx.fillRect(x + 1, y + 1, 22, 14);
+          ctx.fillStyle = '#dbd2bc77';
+          ctx.fillRect(x + 2, y + 1, 19, 1);
+          ctx.fillRect(x + 1, y + 2, 1, 11);
+          ctx.fillStyle = '#625e5788';
+          ctx.fillRect(x + 3, y + 14, 19, 1);
+          ctx.fillRect(x + 22, y + 3, 1, 11);
+        }
+      noise(ctx, 192, 2300, 0.55);
+    });
   const surface = texture(tile, tile, (ctx) => {
     ctx.setTransform(tile / (2 * W), 0, 0, tile / (2 * H), tile / 2, tile / 2);
     for (const z of state.terrainZones) {
       ctx.fillStyle = {
         asphalt: '#626967',
+        cobble: '#99968b',
+        rail: '#817a6d',
+        runway: '#667071',
+        paving: '#a7a396',
         ice: '#9fbfc6',
         mud: '#686147',
         sand: '#cfb37d',
@@ -223,6 +281,45 @@ function buildBattleWorld(scene, state) {
         ctx.lineTo(z.x + (horiz ? z.w : z.w / 2), z.y + (horiz ? z.h / 2 : z.h));
         ctx.stroke();
         ctx.setLineDash([]);
+      } else if (z.type === 'paving') {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#8d8a8066';
+        ctx.beginPath();
+        for (let x = z.x; x <= z.x + z.w; x += 60) {
+          ctx.moveTo(x, z.y);
+          ctx.lineTo(x, z.y + z.h);
+        }
+        for (let y = z.y; y <= z.y + z.h; y += 60) {
+          ctx.moveTo(z.x, y);
+          ctx.lineTo(z.x + z.w, y);
+        }
+        ctx.stroke();
+      } else if (z.type === 'rail') {
+        const cx = z.x + z.w / 2,
+          m = BATTLE_UNITS_PER_METRE;
+        ctx.fillStyle = '#66523e';
+        for (let y = z.y; y < z.y + z.h; y += 1.8 * m) ctx.fillRect(cx - 1.55 * m, y, 3.1 * m, 0.55 * m);
+        ctx.fillStyle = '#b5b6a8';
+        for (const s of [-1, 1]) ctx.fillRect(cx + s * 0.88 * m, z.y, 0.32 * m, z.h);
+      } else if (z.type === 'runway') {
+        const m = BATTLE_UNITS_PER_METRE,
+          cy = z.y + z.h / 2;
+        ctx.fillStyle = '#dddac7';
+        for (let x = z.x + 80 * m; x < z.x + z.w - 66 * m; x += 24 * m)
+          ctx.fillRect(x, cy - 0.7 * m, 10 * m, 1.4 * m);
+        for (const s of [-1, 1]) {
+          const end = s < 0 ? z.x : z.x + z.w;
+          ctx.fillRect(z.x, cy + s * (z.h / 2 - 1.2 * m), z.w, 0.65 * m);
+          for (let i = -3; i <= 3; i++)
+            ctx.fillRect(end + (s < 0 ? 5 : -16) * m, cy + (i * 4 - 1) * m, 11 * m, 2 * m);
+          ctx.save();
+          ctx.translate(end - s * 38 * m, cy);
+          ctx.rotate((-s * Math.PI) / 2);
+          ctx.textAlign = 'center';
+          ctx.font = 'bold ' + 11 * m + 'px monospace';
+          ctx.fillText(s < 0 ? '09' : '27', 0, 3 * m);
+          ctx.restore();
+        }
       } else if (z.type === 'stubble') {
         ctx.fillStyle = '#8f905c';
         for (let y = z.y + 6; y < z.y + z.h; y += 12) ctx.fillRect(z.x, y, z.w, 2.5);
@@ -248,6 +345,29 @@ function buildBattleWorld(scene, state) {
           ctx.lineTo(x + 24, y + 28);
           ctx.stroke();
         }
+      }
+    }
+    ctx.lineJoin = ctx.lineCap = 'round';
+    for (const p of arena.paths) {
+      ctx.strokeStyle = p.type === 'cobble' ? '#beb7a3' : '#827c64';
+      ctx.lineWidth = 2 * p.radius + 3;
+      pathStroke(ctx, p);
+      ctx.strokeStyle = { cobble: '#99968b', trail: '#a39670', gravel: '#ad9e83', timber: '#907458' }[p.type];
+      ctx.lineWidth = 2 * p.radius;
+      pathStroke(ctx, p);
+      if (p.type === 'timber') {
+        const [a, b] = p.points,
+          dx = b.x - a.x,
+          dy = b.y - a.y,
+          length = Math.hypot(dx, dy);
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(Math.atan2(dy, dx));
+        ctx.fillStyle = '#665543';
+        for (let x = 0; x < length; x += 10) ctx.fillRect(x, -p.radius, 2, p.radius * 2);
+        ctx.fillStyle = '#bda178';
+        for (const s of [-1, 1]) ctx.fillRect(0, s * (p.radius - 7), length, 4);
+        ctx.restore();
       }
     }
     for (const w of arena.water) {
@@ -292,7 +412,18 @@ function buildBattleWorld(scene, state) {
   mesh.setAttribute('color', new T.BufferAttribute(colors, 3));
   const soil = new T.MeshLambertMaterial({ map: surface, vertexColors: true });
   const tint = new T.Color(spec.ground);
+  if (cobbled)
+    soil.addEventListener('dispose', () => {
+      stoneMask.dispose();
+      stoneTile.dispose();
+    });
   soil.onBeforeCompile = (shader) => {
+    if (cobbled) {
+      shader.uniforms.stoneMask = { value: stoneMask };
+      shader.uniforms.stoneTile = { value: stoneTile };
+      shader.fragmentShader =
+        'uniform sampler2D stoneMask; uniform sampler2D stoneTile;\n' + shader.fragmentShader;
+    }
     shader.uniforms.soilTile = { value: groundMap };
     shader.uniforms.tileCount = { value: new T.Vector2((2 * W) / 64, (2 * H) / 64) };
     shader.uniforms.baseLight = { value: tint.r * 0.299 + tint.g * 0.587 + tint.b * 0.114 };
@@ -304,11 +435,22 @@ function buildBattleWorld(scene, state) {
       vec3 grain=texture2D(soilTile,vMapUv*tileCount).rgb;
       vec4 paint=texture2D(map,vMapUv);
       float value=clamp(dot(grain,vec3(.299,.587,.114))/baseLight,.68,1.28);
-      diffuseColor.rgb *= mix(grain,paint.rgb*mix(1.,value,.35),paint.a);
+      vec3 ground = mix(grain,paint.rgb*mix(1.,value,.35),paint.a);
+      ${cobbled ? 'ground=mix(ground,texture2D(stoneTile,vMapUv*tileCount*1.8).rgb,texture2D(stoneMask,vMapUv).r);' : ''}
+      diffuseColor.rgb *= ground;
     `
       );
   };
   scene.add(new T.Mesh(mesh, soil));
+  if (arena.id === 'cape') {
+    const sea = new T.Mesh(
+      new T.PlaneGeometry(edge - W, edge * 2),
+      new T.MeshLambertMaterial({ color: '#638c96' })
+    );
+    sea.rotation.x = -Math.PI / 2;
+    sea.position.set((edge + W) / 2, 0.035, 0);
+    scene.add(sea);
+  }
   if (arena.water.length) {
     const pool = new T.InstancedMesh(
       new T.PlaneGeometry(),
@@ -396,11 +538,11 @@ function buildBattleWorld(scene, state) {
           return new T.MeshLambertMaterial({ map });
         })
       : [];
-  function buildingPart(wall, geo, mat, x, y, z, width, height, depth, rotX = 0) {
+  function buildingPart(wall, geo, mat, x, y, z, width, height, depth, rotX = 0, yaw = 0) {
     const key = geo.id + ':' + mat.id;
     if (!buildings.has(key)) buildings.set(key, { geo, mat, parts: [], mesh: null });
     matrix.position.set(x, wall.baseHeight + y, z);
-    matrix.rotation.set(rotX, 0, 0);
+    matrix.rotation.set(rotX, yaw, 0);
     matrix.scale.set(width, height, depth);
     matrix.updateMatrix();
     buildings.get(key).parts.push({ wall, transform: matrix.matrix.clone() });
@@ -458,7 +600,9 @@ function buildBattleWorld(scene, state) {
     return g;
   }
   const strata = quarry || sand ? ledgeGeometry() : null;
-  const staticShadows = [];
+  const staticShadows = [],
+    landmarkGeos = new Map(),
+    landmarkPaint = new T.MeshLambertMaterial({ vertexColors: true });
   for (const [i, w] of state.walls.entries()) {
     baseHeight = w.baseHeight;
     const x = w.x + w.w / 2,
@@ -466,6 +610,39 @@ function buildBattleWorld(scene, state) {
       h = w.height,
       d = w.h,
       a = w.w;
+    if (w.model) {
+      const key = w.model + ':' + w.variant,
+        odd = w.turn % 2 !== 0;
+      if (!landmarkGeos.has(key)) landmarkGeos.set(key, makeLandmarkGeometry(w.model, w.variant));
+      buildingPart(
+        w,
+        landmarkGeos.get(key),
+        landmarkPaint,
+        x,
+        0,
+        z,
+        odd ? d : a,
+        h,
+        odd ? a : d,
+        0,
+        (w.turn * Math.PI) / 2
+      );
+      if (w.type === 'building')
+        buildingPart(
+          w,
+          floorQuad,
+          shadowMat,
+          x - a * 0.06,
+          0.1,
+          z + d * 0.06,
+          a * 1.4,
+          d * 1.4,
+          1,
+          -Math.PI / 2
+        );
+      else staticShadows.push(w);
+      continue;
+    }
     if (w.type === 'building') {
       buildingPart(
         w,
@@ -577,7 +754,11 @@ function buildBattleWorld(scene, state) {
   // Tree belts and industrial silhouettes are outside the driveable area.
   function tree(x, z, h) {
     place(cylinder, x, h * 0.22, z, h * 0.1, h * 0.45, h * 0.1, '#716757');
-    if (frost || (!city && random() < 0.52)) {
+    if (arena.id === 'sawmill') {
+      const leaves = ['#bc823f', '#bd994c', '#b3693f', '#98894b'][Math.floor(random() * 4)];
+      place(crown, x, h * 0.69, z, h * 0.53, h * 0.78, h * 0.58, leaves, random() * 6);
+      place(crown, x + h * 0.13, h * 0.54, z - h * 0.07, h * 0.37, h * 0.48, h * 0.4, leaves);
+    } else if (frost || (!city && random() < 0.52)) {
       place(pine, x, h * 0.63, z, h * 0.48, h * 0.82, h * 0.46, '#596c59');
       place(pine, x, h * 0.84, z, h * 0.31, h * 0.53, h * 0.31, frost ? '#d2dfd8' : '#637665');
     } else {
@@ -590,6 +771,7 @@ function buildBattleWorld(scene, state) {
       x = Math.cos(a) * (W + 100 + random() * 330),
       z = Math.sin(a) * (H + 105 + random() * 340);
     if (Math.abs(x) < W + 32 && Math.abs(z) < H + 32) continue;
+    if (arena.id === 'cape' && x > W) continue; // open sea beyond the coves
     if (sand) place(crown, x, 3, z, 22 + random() * 33, 10 + random() * 16, 25, '#ae8c6b', a);
     else tree(x, z, 29 + random() * 46);
   }
@@ -673,9 +855,14 @@ function buildBattleWorld(scene, state) {
     );
     tops = new T.InstancedMesh(
       frost ? pine : crown,
-      new T.MeshLambertMaterial({ color: frost ? '#92aa94' : '#75835a' }),
+      new T.MeshLambertMaterial({
+        color: frost ? '#92aa94' : arena.id === 'sawmill' ? '#ffffff' : '#75835a'
+      }),
       arena.trees.length
     );
+    if (arena.id === 'sawmill')
+      for (let i = 0; i < arena.trees.length; i++)
+        tops.setColorAt(i, new T.Color(['#c58b48', '#b27a45', '#c2a150', '#a36d43', '#8e8a53'][i % 5]));
     scene.add(trunks, tops);
   }
   function syncTrees() {

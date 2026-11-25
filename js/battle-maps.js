@@ -21,7 +21,12 @@ const BattleMaps = (() => {
       ground: '#858675',
       ink: '#a69a87',
       seed: 3709,
-      detail: 'Холм литейных цехов и приподнятые окраины связывают пологие улицы.',
+      detail:
+        'Кирпичные литейные цеха с зубчатыми крышами выходят на главный проспект. За ним улицы поднимаются к заводским окраинам.',
+      sights: [
+        [-175, -109, 'Литейные цеха'],
+        [0, 0, 'Заводской проспект']
+      ],
       hills: [
         [-162, -125, 235, 185, 24, 18],
         [151, 119, 235, 188, -24, 19],
@@ -34,14 +39,26 @@ const BattleMaps = (() => {
         for (const y of [-213, -150, -71, 0, 71, 150, 213]) b.zone('asphalt', 0, y, 720, y === 0 ? 17 : 13);
         for (const [j, y] of [-241, -179, -109, -35, 35, 109, 179, 241].entries())
           for (const [i, x] of [-315, -246, -173, -107, -36, 36, 107, 173, 246, 315].entries()) {
-            b.prop(
-              'building',
-              x + (j % 2 ? 2 : -2),
-              y,
-              31 + (i % 3) * 4,
-              23 + (j % 2) * 7,
-              7 + ((i + j) % 3) * 2
-            );
+            if ((i + j) % 4 === 0)
+              b.model(
+                'works',
+                x + (j % 2 ? 2 : -2),
+                y,
+                31 + (i % 3) * 4,
+                23 + (j % 2) * 7,
+                10 + ((i + j) % 3) * 2,
+                i % 2,
+                true
+              );
+            else
+              b.prop(
+                'building',
+                x + (j % 2 ? 2 : -2),
+                y,
+                31 + (i % 3) * 4,
+                23 + (j % 2) * 7,
+                7 + ((i + j) % 3) * 2
+              );
             if ((i + j) % 3 === 0) b.prop('crate', x + 22, y + 13, 6, 7, 3);
           }
       }
@@ -64,7 +81,12 @@ const BattleMaps = (() => {
       ground: '#839361',
       ink: '#a9b984',
       seed: 5903,
-      detail: 'Между высокими травянистыми грядами лежат фермы и низкие берега прудов.',
+      detail:
+        'По обе стороны долины — ветряные мельницы и стога. Просёлки между фермами огибают низкие берега прудов.',
+      sights: [
+        [44, 44, 'Южная мельница'],
+        [-42, -107, 'Фермерский пруд']
+      ],
       hills: [
         [-165, -118, 302, 226, -20, 33],
         [163, 120, 298, 223, -20, 32],
@@ -80,6 +102,8 @@ const BattleMaps = (() => {
           b.zone('stubble', s * 322, s * 108, 150, 82);
           b.zone('stubble', s * 169, -s * 232, 176, 76);
           b.water(s * 278, -s * 116, 62, 34);
+          b.model('hay', s * 322, s * 112, 15, 8, 4);
+          b.model('hay', s * 176, -s * 235, 13, 7, 3.6, 1);
           for (const [x, y] of [
             [335, 220],
             [266, -63],
@@ -110,7 +134,8 @@ const BattleMaps = (() => {
           [165, 133],
           [-190, -124]
         ]) {
-          b.prop('barn', x, y, 17, 10, 6);
+          if (Math.abs(x) === 44) b.model('windmill', x, y, 14, 13, 14, x < 0 ? 0 : 2);
+          else b.prop('barn', x, y, 17, 10, 6);
           b.prop('silo', x + 13, y - 1, 6, 6, 9);
         }
         for (const sign of [-1, 1]) {
@@ -145,7 +170,12 @@ const BattleMaps = (() => {
       ground: '#c6a370',
       ink: '#c1946f',
       seed: 1199,
-      detail: 'Песчаные гребни тянутся наискось через пути между каменными воротами.',
+      detail:
+        'Из песка выступают стены караванного двора и ступенчатые пилоны. Между ними проходят старые тропы через гребни дюн.',
+      sights: [
+        [73, 70, 'Караванный двор'],
+        [-133, 198, 'Красная гряда']
+      ],
       hills: [
         [-134, -140, 317, 227, 37, 35],
         [141, 149, 314, 229, 37, 36],
@@ -174,9 +204,13 @@ const BattleMaps = (() => {
             [-133, 198, 35, 34],
             [-350, 245, 61, 22]
           ])
-            b.prop('mesa', s * x, s * y, w, h, 7 + w * 0.12);
+            if ([73, -161, 134].includes(x))
+              b.model('ruin', s * x, s * y, w, h, 8 + w * 0.08, s === 1 ? 0 : 2);
+            else b.prop('mesa', s * x, s * y, w, h, 7 + w * 0.12);
           for (let i = 0; i < 9; i++)
             b.zone('sand', s * (-210 + 51 * i), s * (147 + 8 * Math.sin(i)), 35, 14);
+          b.model('market', s * 92, s * 66, 14, 9, 4.7, s === 1 ? 0 : 2, true);
+          b.model('market', s * 147, s * 266, 12, 9, 4, 1, true);
           b.zone('trail', s * 135, s * 80, 170, 9);
           b.zone('trail', 0, s * 172, 800, 12);
           b.zone('sand', s * 342, -s * 82, 82, 84);
@@ -204,7 +238,12 @@ const BattleMaps = (() => {
       ground: '#848d89',
       ink: '#bd8d70',
       seed: 4211,
-      detail: 'С причалов у воды дороги поднимаются на складские террасы и западную насыпь.',
+      detail:
+        'От лебёдок и эллингов на причале дороги ведут между контейнерами к складским террасам и западной насыпи.',
+      sights: [
+        [223, 65, 'Причальные лебёдки'],
+        [-113, 115, 'Складская терраса']
+      ],
       hills: [
         [-173, 8, 314, 177, 83, 21],
         [-104, -219, 223, 189, 20, 18],
@@ -235,10 +274,11 @@ const BattleMaps = (() => {
             [-193, 194, 44, 9],
             [85, 215, 35, 11]
           ])
-            b.prop('container', s * x, s * y, w, h, Math.abs(x) % 3 === 0 ? 5.6 : 3.1);
+            if (x === 223 || x === 108) b.model('winch', s * x, s * y, w, h, 5, w < h ? 1 : 0);
+            else b.prop('container', s * x, s * y, w, h, Math.abs(x) % 3 === 0 ? 5.6 : 3.1);
           b.prop('building', s * 113, -s * 115, 30, 17, 8);
           b.prop('building', s * 226, -s * 207, 40, 22, 10);
-          b.prop('building', s * 49, -s * 198, 29, 18, 7);
+          b.model('boathouse', s * 49, -s * 198, 29, 18, 8, 0, true);
         }
       }
     },
@@ -260,7 +300,12 @@ const BattleMaps = (() => {
       ground: '#a38d74',
       ink: '#c3987b',
       seed: 7137,
-      detail: 'Гравийные съезды ведут со скальных плеч в центральную чашу карьера.',
+      detail:
+        'Гравийные съезды спускаются к камнедробилкам. Сортировочные бункеры у уступов отмечают входы в чашу карьера.',
+      sights: [
+        [193, -130, 'Дробильный узел'],
+        [62, 27, 'Каменный уступ']
+      ],
       hills: [
         [-109, -172, 293, 223, 23, 37],
         [113, 179, 289, 223, 23, 37],
@@ -294,7 +339,9 @@ const BattleMaps = (() => {
           b.prop('crate', s * 95, s * 15, 7, 9, 4);
           b.prop('rock', s * 31, -s * 16, 11, 8, 5);
           b.zone('mud', s * 9, s * 103, 43, 10);
-          b.prop('silo', s * 193, -s * 130, 10, 10, 13);
+          b.model('crusher', s * 193, -s * 130, 19, 12, 13, s === 1 ? 0 : 2);
+          b.model('conveyor', s * 173, -s * 130, 24, 8, 8, s === 1 ? 0 : 2);
+          b.model('conveyor', s * 99, s * 37, 22, 8, 6, 1);
         }
         b.zone('gravel', 0, 0, 840, 10);
       }
@@ -317,7 +364,12 @@ const BattleMaps = (() => {
       ground: '#c3d1cb',
       ink: '#829b9c',
       seed: 9371,
-      detail: 'Лесистые сопки по обоим берегам спускаются к пяти низким ледовым переправам.',
+      detail:
+        'Снег лежит на двускатных крышах лесных изб. За штабелями зимней делянки сопки спускаются к пяти ледовым переходам.',
+      sights: [
+        [162, -74, 'Лесной кордон'],
+        [0, 69, 'Ледовый переход']
+      ],
       hills: [
         [-183, 78, 301, 189, 76, 29],
         [184, -81, 301, 192, 75, 29],
@@ -369,14 +421,16 @@ const BattleMaps = (() => {
             [-183, 148]
           ])
             b.prop('rock', s * x, s * y, 15, 10, 5);
-          b.prop('barn', s * 162, -s * 74, 17, 9, 6);
+          b.model('snowhut', s * 162, -s * 74, 17, 9, 7, s === 1 ? 0 : 2, true);
           b.zone('trail', s * 123, s * 67, 188, 9);
           b.zone('trail', s * 191, s * 183, 334, 12);
-          b.prop('barn', s * 289, -s * 216, 20, 12, 7);
+          b.model('snowhut', s * 289, -s * 216, 20, 12, 8, 1, true);
+          b.model('logs', s * 270, -s * 207, 13, 6, 3);
           b.prop('rock', s * 225, s * 129, 17, 11, 6);
         }
       }
-    }
+    },
+    ...EXPANSION_SECTORS
   };
   function create(id) {
     if (!Object.hasOwn(specs, id)) throw new Error('Неизвестная карта.');
@@ -395,11 +449,13 @@ const BattleMaps = (() => {
       bounds: { x: (width * m) / 2, y: (height * m) / 2 },
       walls: [],
       zones: [],
+      paths: [], // wide painted polylines; the same strips are used for traction and the chart
+      sights: spec.sights.map(([x, y, name]) => ({ ...point([x, y]), name })),
       water: [],
       revision: 0,
       bases: [point(spec.base), point(spec.base.map((v) => -v))],
       hubs: spec.hubs.map(point),
-      spread: spec.spread * m * (id === 'port' ? sx : sy)
+      spread: spec.spread * m * (Math.abs(spec.base[1]) > Math.abs(spec.base[0]) ? sx : sy)
     };
     const rect = (x, y, w, h, prop = false) => {
       const X = x * sx,
@@ -419,6 +475,27 @@ const BattleMaps = (() => {
       prop(type, x, y, w, h, tall, solid = true) {
         arena.walls.push({ ...rect(x, y, w, h, true), type, height: tall * m, solid, hp: 300, maxHp: 300 });
       },
+      model(model, x, y, w, h, tall, turn = 0, breakable = false, variant = 0) {
+        // One authoritative footprint per structure. Destructible models take their
+        // shadows and all subparts with them when the existing wall record is removed.
+        this.prop(breakable ? 'building' : 'landmark', x, y, w, h, tall);
+        Object.assign(arena.walls.at(-1), { model, turn, variant });
+      },
+      path(type, width, route) {
+        const points = route.map(point),
+          radius = (width * m) / 2;
+        const xs = points.map((p) => p.x),
+          ys = points.map((p) => p.y);
+        arena.paths.push({
+          type,
+          points,
+          radius,
+          minX: Math.min(...xs) - radius,
+          maxX: Math.max(...xs) + radius,
+          minY: Math.min(...ys) - radius,
+          maxY: Math.max(...ys) + radius
+        });
+      },
       zone(type, x, y, w, h) {
         arena.zones.push({ ...rect(x, y, w, h), type });
       },
@@ -432,24 +509,55 @@ const BattleMaps = (() => {
     arena.treeRevision = 0;
     for (const [i, w] of arena.walls.entries())
       if (w.type === 'grove') {
-        const x = w.x + w.w / 2 + (i % 2 ? 1 : -1) * (w.w / 2 + 7 * m),
-          y = w.y + w.h * 0.4;
-        if (
-          Math.abs(x) > arena.bounds.x - 9 * m ||
-          Math.abs(y) > arena.bounds.y - 9 * m ||
-          (Math.abs(x) < 35 * m && Math.abs(y) < 15 * m)
-        )
-          continue;
-        if (
-          [...arena.water, ...arena.walls].some(
-            (r) => x > r.x - 4 * m && x < r.x + r.w + 4 * m && y > r.y - 4 * m && y < r.y + r.h + 4 * m
+        const side = i % 2 ? 1 : -1,
+          cx = w.x + w.w / 2,
+          cy = w.y + w.h / 2;
+        const offsets = [[side * (w.w / 2 + 7 * m), -w.h * 0.1]];
+        if (id === 'sawmill') {
+          // Irregular birch/maple stands instead of identical four-tree islands.
+          // These extra trunks use the ordinary knock-down trees, not solid walls.
+          for (let j = 0; j < 12; j++) {
+            const angle = i * 1.31 + j * 2.39996,
+              r = (12 + 1.6 * j) * m;
+            offsets.push([r * Math.cos(angle), r * Math.sin(angle)]);
+          }
+        }
+        for (const [dx, dy] of offsets) {
+          const x = cx + dx,
+            y = cy + dy;
+          if (
+            Math.abs(x) > arena.bounds.x - 9 * m ||
+            Math.abs(y) > arena.bounds.y - 9 * m ||
+            (Math.abs(x) < 35 * m && Math.abs(y) < 15 * m)
           )
-        )
-          continue;
-        arena.trees.push({ x, y, r: 0.32 * m, height: (6 + (i % 4)) * m, fallen: false });
+            continue;
+          if (
+            [...arena.water, ...arena.walls].some(
+              (r) => x > r.x - 4 * m && x < r.x + r.w + 4 * m && y > r.y - 4 * m && y < r.y + r.h + 4 * m
+            )
+          )
+            continue;
+          if (arena.paths.some((p) => onPath(p, x, y, 3 * m))) continue;
+          const height = id === 'sawmill' ? 8 + ((arena.trees.length * 7) % 6) : 6 + (i % 4);
+          arena.trees.push({ x, y, r: 0.32 * m, height: height * m, fallen: false });
+        }
       }
     arena.ground = new BattleGround(arena);
     return arena;
   }
-  return { specs, create };
+  // Distance from the point to the nearest segment, with the same round joins
+  // and end caps as the painted route. Used for track grip and roadside trees.
+  function onPath(p, x, y, pad = 0) {
+    if (x < p.minX - pad || x > p.maxX + pad || y < p.minY - pad || y > p.maxY + pad) return false;
+    for (let j = 1; j < p.points.length; j++) {
+      const a = p.points[j - 1],
+        b = p.points[j],
+        dx = b.x - a.x,
+        dy = b.y - a.y;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy)));
+      if ((x - a.x - t * dx) ** 2 + (y - a.y - t * dy) ** 2 <= (p.radius + pad) ** 2) return true;
+    }
+    return false;
+  }
+  return { specs, create, onPath };
 })();

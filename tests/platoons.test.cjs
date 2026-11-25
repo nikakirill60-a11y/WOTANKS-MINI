@@ -9,6 +9,11 @@ test('registered seats only: private membership, leases, readiness barrier, send
   const leases=new Map([a,b,c,d,anon].map(id=>[id,randomUUID()])), call=(uid,op,args={})=>rpc(uid,lobby,[op,leases.get(uid),args]);
   await assert.rejects(rpc(null,lobby,['create',randomUUID(),{tank:'MS1',map:'field'}]));
   await assert.rejects(call(anon,'create',{tank:'MS1',map:'field'}));
+  assert.equal((await call(a,'create',{tank:'MS1',map:'not-a-sector'})).error,'invalid');
+  for (const map of ['burgstadt','cape','sawmill','airfield']) {
+    assert.equal((await call(a,'create',{tank:'MS1',map})).map,map);
+    assert.deepEqual(await call(a,'leave'),{left:true});
+  }
   const r=await call(a,'create',{tank:'MS1',map:'field',nick:'not trusted'}); assert.equal(r.me,0);assert.match(r.code,/^[0-9A-F]{8}$/);assert.equal(r.members[0].nick,'lead');
   const join={code:r.code,tank:'MS1'}, topic=i=>`ct-platoon-v1:${r.id}:${i}`;
   await assert.rejects(call(anon,'join',join));await assert.rejects(rpc(null,lobby,['join',randomUUID(),join]));
@@ -58,7 +63,8 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
     for (const name of ['Дерево развития','ФРАНЦИЯ','Исследовать: Renault FT','Исследовать: Renault FT AC','Мой танк'])
       await a.getByRole('button',{name,exact:true}).click();
   }
-  await a.locator('#map-select').selectOption('field');
+  const sector=fallback?'field':'burgstadt';
+  await a.locator('#map-select').selectOption(sector);
   // Preexisting garage with a fitted rental; check that only a real launch uses it.
   await b.evaluate(()=>{GameState.owned.push('T67');GameState.selected='T67';GameState.rentalBattles.T67=2; GameState.modules.T67=['spall'];saveProgress();renderCarousel();});
   await a.locator('#platoon-open').click();await a.locator('#platoon-create').click(); await a.locator('#platoon-code').waitFor();
@@ -76,7 +82,7 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   assert.equal(await b.evaluate(()=>!!GameState.platoon.http),fallback);
   const manifest=p=>p.evaluate(()=>({ids:GameState.units.map(u=>u.id),drivers:GameState.units.filter(u=>u.callsign).map(u=>[u.driverSeat,u.callsign,!!u.bot]),
     weather:WeatherEngine.currentWeather,sector:GameState.arena.id,bots:GameState.units.filter(u=>u.bot).length}));
-  const m=await manifest(a);assert.deepEqual(await manifest(b),m);assert.equal(m.ids.length,14);assert.equal(m.sector,'field');assert.equal(m.bots,12);assert.deepEqual(m.drivers,[[0,'commander',false],[1,'friend_2',false]]);
+  const m=await manifest(a);assert.deepEqual(await manifest(b),m);assert.equal(m.ids.length,14);assert.equal(m.sector,sector);assert.equal(m.bots,12);assert.deepEqual(m.drivers,[[0,'commander',false],[1,'friend_2',false]]);
   assert.deepEqual(await a.evaluate(()=>[GameState.player.id,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),[fallback?'MS1':'FT-AC',['friend_2'],'commander']);
   assert.deepEqual(await b.evaluate(()=>[GameState.player.id,GameState.player.maxHp,GameState.rentalBattles.T67,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),['T67',475,1,['commander'],'friend_2']);
   // Hide the host's local input menu over the running world; the ally still drives.

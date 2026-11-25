@@ -2,6 +2,20 @@
 // illustration. Cache the static HUD layer until a building falls or the canvas resizes.
 const MapChart = (() => {
   let cached = null;
+  const surfaceInk = {
+    asphalt: '#788076',
+    trail: '#8e8a6c',
+    ice: '#adcbcd',
+    sand: '#ac946b',
+    mud: '#695e48',
+    gravel: '#978677',
+    stubble: '#9b945c',
+    cobble: '#b0a995',
+    rail: '#514e46',
+    runway: '#758485',
+    timber: '#b39367',
+    paving: '#827e72'
+  };
   function layout(arena, w, h, pad) {
     const { x, y } = arena.bounds,
       scale = Math.min((w - pad * 2) / (2 * x), (h - pad * 2) / (2 * y));
@@ -58,19 +72,17 @@ const MapChart = (() => {
       c.fillStyle = color;
       c.fillRect(w / 2 + r.x * l.scale, h / 2 + r.y * l.scale, r.w * l.scale, r.h * l.scale);
     }
-    for (const r of arena.zones)
-      rect(
-        r,
-        {
-          asphalt: '#788076',
-          trail: '#8e8a6c',
-          ice: '#adcbcd',
-          sand: '#ac946b',
-          mud: '#695e48',
-          gravel: '#978677',
-          stubble: '#9b945c'
-        }[r.type]
-      );
+    for (const r of arena.zones) rect(r, surfaceInk[r.type]);
+    c.save();
+    c.lineCap = c.lineJoin = 'round';
+    for (const p of arena.paths) {
+      c.strokeStyle = surfaceInk[p.type];
+      c.lineWidth = Math.max(1, p.radius * 2 * l.scale);
+      c.beginPath();
+      p.points.forEach(({ x, y }, i) => c[i ? 'lineTo' : 'moveTo'](w / 2 + x * l.scale, h / 2 + y * l.scale));
+      c.stroke();
+    }
+    c.restore();
     for (const r of arena.water) rect(r, '#477d88');
     for (const r of arena.walls) if (r.solid) rect(r, r.type === 'grove' ? '#577259' : arena.spec.ink);
     c.strokeStyle = '#c2cfb52b';
@@ -102,6 +114,26 @@ const MapChart = (() => {
       c.strokeRect(-s, -s, 2 * s, 2 * s);
       c.restore();
     }
+    if (large) {
+      c.save();
+      c.font = 'bold 11px sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      arena.sights.forEach(({ x, y }, i) => {
+        const px = w / 2 + x * l.scale,
+          py = h / 2 + y * l.scale;
+        c.beginPath();
+        c.arc(px, py, 7, 0, 2 * Math.PI);
+        c.fillStyle = '#28332e';
+        c.fill();
+        c.strokeStyle = '#ebcd88';
+        c.lineWidth = 1.5;
+        c.stroke();
+        c.fillStyle = '#fff0c7';
+        c.fillText(String(i + 1), px, py + 0.5);
+      });
+      c.restore();
+    }
     return l;
   }
   function initPicker() {
@@ -113,6 +145,13 @@ const MapChart = (() => {
         s = arena.spec;
       document.getElementById('map-size').textContent = s.size.join(' × ') + ' м';
       document.getElementById('map-detail').textContent = s.detail;
+      document.getElementById('map-sights').replaceChildren(
+        ...arena.sights.map(({ name }) => {
+          const li = document.createElement('li');
+          li.textContent = name;
+          return li;
+        })
+      );
       canvas.setAttribute('aria-label', 'План: ' + s.name + ', ' + s.size.join(' × ') + ' м. ' + s.detail);
       paint(canvas, arena, true);
     }
@@ -191,20 +230,24 @@ const MapChart = (() => {
     c.restore();
     const cursor = p.isSPG && BattleView.artillery;
     if (cursor) {
-      const x = w / 2 + cursor.x * s, y = h / 2 + cursor.y * s;
-      c.strokeStyle = '#ffe5ab'; c.lineWidth = 1.4;
+      const x = w / 2 + cursor.x * s,
+        y = h / 2 + cursor.y * s;
+      c.strokeStyle = '#ffe5ab';
+      c.lineWidth = 1.4;
       c.strokeRect(x - 3.5, y - 3.5, 7, 7);
     }
   }
   // Inverse of the painted board, including its padding and the mobile CSS scale.
   function boardPoint(canvas, clientX, clientY) {
-    const box = canvas.getBoundingClientRect(), l = layout(GameState.arena, canvas.width, canvas.height, 4);
-    const x = (clientX - box.left - canvas.clientLeft) * canvas.width / canvas.clientWidth;
-    const y = (clientY - box.top - canvas.clientTop) * canvas.height / canvas.clientHeight;
-    return {x:(x - canvas.width / 2) / l.scale, y:(y - canvas.height / 2) / l.scale};
+    const box = canvas.getBoundingClientRect(),
+      l = layout(GameState.arena, canvas.width, canvas.height, 4);
+    const x = ((clientX - box.left - canvas.clientLeft) * canvas.width) / canvas.clientWidth;
+    const y = ((clientY - box.top - canvas.clientTop) * canvas.height) / canvas.clientHeight;
+    return { x: (x - canvas.width / 2) / l.scale, y: (y - canvas.height / 2) / l.scale };
   }
   return {
-    initPicker, boardPoint,
+    initPicker,
+    boardPoint,
     drawHUD,
     reset() {
       cached = null;

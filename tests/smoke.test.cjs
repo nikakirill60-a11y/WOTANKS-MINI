@@ -582,16 +582,16 @@ test('the new VII and VIII use their own meshes as player and opponent in a 3D b
   assert.equal((await saved(page)).totalBattles,0,'leaving a training session does not claim an end-of-battle reward');
 });
 
-test('all six selected plans become playable WebGL arenas with exploration, contact and damage in 7×7, 10×10 and 15×15',async t=>{
+test('all ten selected plans become playable WebGL arenas with exploration, contact and damage in 7×7, 10×10 and 15×15',async t=>{
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LTR','IS3','RHMPZW','T1C','M3LEE','M48PATTON','OBJ140','WTE100','E100','MAUS','T100LT','MT25','E75','TIGERII'],selected:'MS1'})}});
   const ids=await page.locator('#map-select option').evaluateAll(options=>options.map(o=>o.value));
-  assert.deepEqual(ids,['city','field','desert','port','quarry','frost']);
+  assert.deepEqual(ids,['city','field','desert','port','quarry','frost','burgstadt','cape','sawmill','airfield']);
   const plans=new Set();
   for(const size of [7,10,15]) {
     for(const [i,id] of ids.entries()) {
       const playerName=size===7?['T1 Cunningham','Leichttraktor','МС-1'][i%3]:
-        size===10?['ИС-3','Объект 140','Rhm. Panzerwagen','M3 Lee','Waffenträger auf E 100','M48 Patton'][i]:
-        ['E 100','Т-100 ЛТ','Maus','E 75','МТ-25','Tiger II'][i];
+        size===10?['ИС-3','Объект 140','Rhm. Panzerwagen','M3 Lee','Waffenträger auf E 100','M48 Patton'][i%6]:
+        ['E 100','Т-100 ЛТ','Maus','E 75','МТ-25','Tiger II'][i%6];
       await click('Выбрать для боя: '+playerName);
       await page.locator('#map-select').selectOption(id);
       await click(size===15?'В БОЙ 15×15':size+'×'+size);
@@ -602,7 +602,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
           if(!await selectControl('mobile'))throw new Error(document.querySelector('#battle-notice-text').textContent);
         } finally {Math.random=random;}
         // Run the ordinary fixed ticks, but don't wait wall-clock minutes or need a fast GPU
-        // to exercise eighteen different sorties. Nothing sets aim, vision, damage or team orders.
+        // to exercise thirty different sorties. Nothing sets aim, vision, damage or team orders.
         stopBattleLoop();const g=GameState,a=g.arena,nav=g.navigation,r=nav.recon;
         const initialCounts=r.teams.map(t=>t.count), initialScore=['allies-list','enemies-list'].map(id=>Number(document.getElementById(id).textContent));
         const orders=new Set(g.units.filter(u=>u.bot).map(u=>u.bot.order)).size;
@@ -648,7 +648,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
       assert.ok(!info.invalid && info.spotted && info.both && info.damage>0 && info.reset,label+' fight');
     }
   }
-  assert.equal(plans.size,6,'each plan depicts different ground');
+  assert.equal(plans.size,ids.length,'each plan depicts different ground');
 });
 
 test('Germany is a separate connected mobile tree: stats before unlocking, free starter, no cross-nation shortcuts',async t=>{

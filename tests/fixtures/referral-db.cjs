@@ -15,6 +15,7 @@ async function database(t,{platoons=false}={}) {
       create function realtime.topic() returns text language sql stable as $$select current_setting('realtime.topic',true)$$;
       grant usage on schema realtime to authenticated; grant select,insert on realtime.messages to authenticated;`);
     await db.exec(source('db/player_platoons.sql'));
+    await db.exec(source('db/platoon_sectors_07_10.sql'));
   }
   const rows=async(sql,args=[]) => (await db.query(sql,args)).rows;
   // GoTrue admin creation: INSERT, then update trusted metadata in the same transaction.

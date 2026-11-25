@@ -26,6 +26,7 @@ function game() {
     'js/config',
     'js/battle-space',
     'js/battle-ground',
+    'js/sector-expansion',
     'js/battle-maps',
     'js/battle-navigation',
     'js/battle-recon',
@@ -45,7 +46,7 @@ function game() {
     vm.runInContext(readFileSync(path.join(root, file + '.js'), 'utf8'), ctx, { filename: file });
   }
   return vm.runInContext(
-    '({DB,PLAYABLE_NATIONS,makeRosters,BOT_CLEARANCE,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,nearestBattleWall})',
+    '({DB,PLAYABLE_NATIONS,makeRosters,BOT_CLEARANCE,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,getTerrainAt,nearestBattleWall})',
     ctx
   );
 }
@@ -62,7 +63,7 @@ function assertRoute(nav, from, to) {
   return path;
 }
 
-test('six larger maps: separated spawns, a clear practice lane and reachable ground for all three team sizes', () => {
+test('ten maps: separated spawns, a clear practice lane and reachable ground for all three team sizes', () => {
   const { BattleMaps, BattleNavigation, BattleRecon, battleFormation, BOT_CLEARANCE, BATTLE_UNITS_PER_METRE: m } = game();
   const previousMetres = {
     city: [420, 300],
@@ -72,11 +73,11 @@ test('six larger maps: separated spawns, a clear practice lane and reachable gro
     quarry: [480, 340],
     frost: [520, 380]
   };
-  assert.deepEqual(Object.keys(BattleMaps.specs), ['city', 'field', 'desert', 'port', 'quarry', 'frost']);
+  assert.deepEqual(Object.keys(BattleMaps.specs), ['city','field','desert','port','quarry','frost','burgstadt','cape','sawmill','airfield']);
   for (const id of Object.keys(BattleMaps.specs)) {
     const a = BattleMaps.create(id),
       nav = new BattleNavigation(a);
-    const expectedSide = { city: 700, port: 800 }[id] || 1000;
+    const expectedSide = { city: 700, port: 800, burgstadt:800, cape:900, sawmill:900 }[id] || 1000;
     assert.deepEqual(Array.from(a.spec.size), [expectedSide, expectedSide]);
     assert.equal(a.ground.W, a.bounds.x);
     assert.equal(a.ground.H, a.bounds.y);
@@ -84,12 +85,12 @@ test('six larger maps: separated spawns, a clear practice lane and reachable gro
     assert.equal(a.ground.ray(-148, 0, 5, 1, 0, 0, 283), Infinity);
     for (const r of a.walls)for(const fx of [0,.5,1])for(const fy of [0,.5,1])
       assert.ok(Math.abs(a.ground.at(r.x+r.w*fx,r.y+r.h*fy)-r.baseHeight)<.002,id+' level foundation at its rendered elevation');
-    const [oldX, oldY] = previousMetres[id].map((v) => (v * m) / 2);
+    const [oldX, oldY] = previousMetres[id]?.map(v=>v*m/2) ?? [a.bounds.x*.53,a.bounds.y*.53];
     assert.deepEqual(
       [a.bounds.x, a.bounds.y],
       Array.from(a.spec.size, (v) => (v * m) / 2)
     );
-    assert.ok(
+    if (previousMetres[id]) assert.ok(
       a.bounds.x > oldX && a.bounds.y > oldY && a.bounds.x * a.bounds.y >= 2.9 * oldX * oldY,
       id + ' playable expansion'
     );
@@ -102,6 +103,11 @@ test('six larger maps: separated spawns, a clear practice lane and reachable gro
         a.walls.some((w) => w.solid && sign * (w.y + w.h / 2) > oldY),
         id + ' new outer cover along y'
       );
+    }
+    assert.ok(a.walls.some(w=>w.model && w.solid),id+' has custom 3D scenery in the playable area');
+    for (const p of a.paths) for (let j=1;j<p.points.length;j++) {
+      const u=p.points[j-1],v=p.points[j];
+      assert.ok(nav.clear(u.x,u.y,v.x,v.y),id+' painted road obstructed by scenery');
     }
     const recon = new BattleRecon(nav);
     assert.equal(recon.total, 35, id + ' accessible survey anchors');
@@ -583,5 +589,42 @@ test('every playable map has substantial reachable high ground, a real drivable 
     const w=a.walls.find(w=>w.baseHeight>4*m),roof=w.baseHeight+w.height;
     const hit=api.nearestBattleWall(w.x+w.w/2,w.y+w.h/2,roof+18,0,0,-1,80);
     assert.equal(hit.hit,w);assert.ok(Math.abs(hit.distance-18)<.001,id+' shell hits the raised roof');
+  }
+});
+
+// Not just a decorative hill: drive a heavy up each switchback without assigning
+// its position/heading between waypoints. Then let an ordinary lane-4 supporter
+// plan and drive from the corresponding team base into the courtyard on its own.
+test('Burgstadt: north and south castle approaches carry a player and a bot into the elevated courtyard', () => {
+  const api = game(), m = api.BATTLE_UNITS_PER_METRE;
+  for (const side of [0,1]) {
+    const {a,nav,g,vehicle} = fixture(api,'burgstadt'), road = a.paths[side].points,
+      start = road[0], target = road.at(-1), elevation = a.ground.at(target.x,target.y);
+    assert.ok(elevation-a.ground.at(start.x,start.y)>12*m);
+    const u = vehicle(start.x,start.y,'player','KV1'); g.player=u;
+    for (const p of road.slice(1)) {
+      assert.ok(nav.clear(u.x,u.y,p.x,p.y));
+      assert.equal(api.getTerrainAt(p.x,p.y),'cobble');
+      let n=0;
+      while (Math.hypot(p.x-u.x,p.y-u.y)>1.7*m && n++<4000) {
+        const bearing=Math.atan2(p.y-u.y,p.x-u.x)-u.angle;
+        const diff=Math.atan2(Math.sin(bearing),Math.cos(bearing));
+        api.TrackDrive.step(u, Math.abs(diff)<.45?1:0, Math.max(-1, Math.min(1,diff*4)), Math.abs(diff)>=.45);
+      }
+      assert.ok(n<4000,'player reached switchback point '+JSON.stringify(p));
+    }
+    assert.ok(u.rideHeight>elevation-m && !u.driveBlocked);
+    g.units.length=0; g.player=null;
+    const from=nav.point(nav.nearest(a.bases[side].x,a.bases[side].y));
+    const bot=vehicle(from.x,from.y,side?'enemy':'ally','T26');
+    api.BotAI.attach(bot,{side,lane:4,index:4},nav);
+    const goal=bot.bot.opening;
+    assert.ok(Math.hypot(goal.x-target.x,goal.y-target.y)<18*m,'natural opening is inside the gates');
+    let tick=0;
+    while (Math.hypot(bot.x-goal.x,bot.y-goal.y)>3*m && ++tick<18000) {
+      api.BotAI.beginTick(nav,tick); api.BotAI.step(bot,tick);
+      if (tick%60===0) assert.ok(nav.clear(bot.x,bot.y,bot.x,bot.y));
+    }
+    assert.ok(tick<18000 && bot.rideHeight>elevation-3*m,'bot reached court from side '+side);
   }
 });

@@ -76,6 +76,11 @@ const CONFIG = {
   // Rolling/steering resistance and the fraction of lateral slip removed per 60 Hz step.
   TERRAIN: {
     normal:  { name: 'Грунт',        speedMul: 1,    resistance: 1,    grip: .29 },
+    timber:  { name: 'Настил',       speedMul: .93, resistance: 1.12, grip: .31 },
+    paving:  { name: 'Мощение',      speedMul: .98, resistance: .91, grip: .43 },
+    cobble:  { name: 'Брусчатка',    speedMul: .98, resistance: .90, grip: .42 },
+    rail:    { name: 'Шпалы',        speedMul: .91, resistance: 1.25, grip: .24 },
+    runway:  { name: 'Взлётная полоса', speedMul: 1, resistance: .78, grip: .52 },
     trail:   { name: 'Просёлок',     speedMul: 1,    resistance: .92,  grip: .30 },
     sand:    { name: 'Рыхлый песок', speedMul: .85,  resistance: 1.5,  grip: .22 },
     gravel:  { name: 'Щебень',       speedMul: .96,  resistance: 1.1,  grip: .24 },

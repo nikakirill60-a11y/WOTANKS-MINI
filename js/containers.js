@@ -1,9 +1,9 @@
 // Ordinary supply boxes keep their original resource tables. The collection has its own vehicle pool.
 const CONTAINERS = {
-  collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 150}, color: '#91c7d4',
+  collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 500}, color: '#91c7d4',
     // This box has its own published manifest; a promo collectible is not automatically a crate prize.
-    vehicleChance: 0.05, vehicles: ['M4A3E2','T71DA','JPANTHERII','T62A','TL7'],
-    drops: [['silver', 10000, 30000], ['gold', 25, 100]] },
+    vehicleChance: 0.02, slotChance: 0.05, vehicles: ['M4A3E2','T71DA','JPANTHERII','T62A','TL7'],
+    drops: [['silver', 100, 50000], ['gold', 1, 650]] },
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
     drops: [['silver', 5000, 15000], ['xp', 2000, 8000], ['gold', 50, 200]] },
   premium: { name: 'Офицерский резерв', icon: '🎁', cost: {gold: 500}, color: '#d0a76b',
@@ -12,7 +12,7 @@ const CONTAINERS = {
     drops: [['silver', 30000, 80000], ['xp', 15000, 40000], ['gold', 200, 1000]] }
 };
 // A separate permanent berth roll; the primary reward table is unchanged.
-const SLOT_CHANCE = .10;
+const slotChance = box => box.slotChance ?? 0.10;
 const SUPPLIES = {
   silver: ['SILVER', 'Серебро', '₽', '💰', '#bdc3c7'],
   xp: ['XP', 'Опыт', 'XP', '⭐', '#82b4d6'],
@@ -30,7 +30,7 @@ function migrateSupplyBoxes(inventory) {
   return result;
 }
 
-// Each box rolls independently at opening (also in bulk). One pool roll, not 5% per vehicle.
+// Each box rolls independently at opening (also in bulk). The vehicle chance applies to the pool, not to each vehicle.
 function rollPrimary(box, random) {
   let roll = random();
   if (box.vehicles) {
@@ -53,8 +53,9 @@ function rollPrimary(box, random) {
 
 function openContainerDirect(id, random = Math.random) {
   if (!Object.hasOwn(CONTAINERS,id)) return null;
-  const reward = rollPrimary(CONTAINERS[id],random);
-  reward.slot = random() < SLOT_CHANCE && GameState.garageSlots < Number.MAX_SAFE_INTEGER;
+  const box = CONTAINERS[id];
+  const reward = rollPrimary(box, random);
+  reward.slot = random() < slotChance(box) && GameState.garageSlots < Number.MAX_SAFE_INTEGER;
   if (reward.slot) {
     GameState.garageSlots++;
     reward.delivered = HangarSlots.deliver();
@@ -212,10 +213,15 @@ function collectionOdds(box) {
     ` Серебро — ${each}%, золото — ${each}%.`;
 }
 
+function boxOdds(box) {
+  const primary = box.vehicles ? collectionOdds(box) : 'Одна из трёх ресурсных наград с равным шансом.';
+  return `${primary} Дополнительный слот ангара — ${slotChance(box) * 100}%.`;
+}
+
 function renderSupplyStatus(){
   document.getElementById('supply-balance').textContent=`Баланс: ${GameState.GOLD.toLocaleString('ru-RU')} G · ${GameState.SILVER.toLocaleString('ru-RU')} ₽ · ${GameState.charges} ⚡`;
   document.getElementById('supply-capacity').textContent=`Слоты ангара: ${GameState.owned.length} / ${GameState.garageSlots}`;
-  document.getElementById('supply-notice').textContent=`В каждом контейнере есть независимый шанс ${SLOT_CHANCE*100}% получить дополнительный слот ангара вместе с основной наградой.`;
+  document.getElementById('supply-notice').textContent='Дополнительный слот ангара разыгрывается отдельно от основной награды в каждом ящике, даже при открытии всей пачки.';
 }
 function crateArt(id){
   return `<button type="button" class="crate-art" aria-label="Осмотреть модель: ${CONTAINERS[id].name}" onclick="CrateView.show('${id}')">
@@ -227,11 +233,10 @@ function renderContainerGrid() {
   for(const [id,box] of Object.entries(CONTAINERS)){
     const [currency,cost]=Object.entries(box.cost)[0],unit={silver:'₽',gold:'G',charges:'⚡'}[currency];
     const card=document.createElement('article');card.className='c-card';card.style.setProperty('--stripe',box.color);
-    const description=box.vehicles?collectionOdds(box):'Одна из трёх ресурсных наград с равным шансом.';
     const list=(box.vehicles||[]).map(id=>`<li>${HangarSlots.received(id)?'✓ ':''}${DB[id].n}</li>`);
     list.push(...box.drops.map(([t,a,b])=>`<li>${SUPPLIES[t][1]}: ${a.toLocaleString('ru-RU')}–${b.toLocaleString('ru-RU')}</li>`));
     card.innerHTML=`${crateArt(id)}<div class="crate-copy"><small class="season-kicker">${box.vehicles?'ЗИМНЯЯ СЕРИЯ':'СНАБЖЕНИЕ'}</small>
-      <h4 class="c-name">${box.name}</h4><p class="c-desc">${description}</p><details class="crate-manifest"><summary>Состав контейнера</summary><ul>${list.join('')}</ul></details></div>
+      <h4 class="c-name">${box.name}</h4><p class="c-desc">${boxOdds(box)}</p><details class="crate-manifest"><summary>Состав контейнера</summary><ul>${list.join('')}</ul></details></div>
       <button class="winter-action c-buy" onclick="buyContainer('${id}')">КУПИТЬ · ${cost} ${unit}</button>`;
     host.append(card);
   }
@@ -249,7 +254,7 @@ function renderInventoryGrid() {
     const box=CONTAINERS[id];if(!box||qty<=0)continue;
     const card=document.createElement('article');card.className='inv-card';card.style.setProperty('--stripe',box.color);
     card.innerHTML=`${crateArt(id)}<div class="crate-copy"><small class="season-kicker">НА СКЛАДЕ · ${qty} ШТ.</small><h4 class="inv-name">${box.name} × ${qty}</h4>
-      ${box.vehicles?`<p class="c-desc">${collectionOdds(box)}</p>`:''}</div>
+      <p class="c-desc">${boxOdds(box)}</p></div>
       <button class="winter-action inv-open" onclick="openFromInventory('${id}')">ОТКРЫТЬ 1</button>
       ${qty>1?`<button class="winter-back inv-open-all" onclick="openAllFromInventory('${id}')">ОТКРЫТЬ ВСЕ</button>`:''}`;
     grid.append(card);

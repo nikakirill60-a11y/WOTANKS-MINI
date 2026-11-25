@@ -212,16 +212,19 @@ function fixture(api, id) {
 const wall = () => ({ type: 'building', solid: true, x: -30, y: -110, w: 60, h: 220, height: 45, hp: 40 });
 
 // Use a deterministic stream for coverage; production calls the same deal with Math.random.
-test('separate rosters: every player model and size, all research nations, no exact copy even at tier I', () => {
+test('separate rosters: every player model and size, all research nations, premium and collectible bots on both sides, no exact copy even at tier I', () => {
   const { DB, PLAYABLE_NATIONS, GameState:g, makeRosters } = game();
   let seed = 113;
   const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const specialBots = [new Set(), new Set()];
   const owned = JSON.stringify([g.owned, g.rentalBattles, g.usedPromos]);
   for (const player of Object.values(DB)) for (const size of [7,10,15]) {
     for (const roll of [random, () => 0]) {
       const [allies, enemies] = makeRosters(player.id, size, roll);
       assert.equal(allies[0], player.id);
-      for (const team of [allies, enemies]) {
+      for (const [side, team] of [allies, enemies].entries()) {
+        // A special in the player's own seat does not count as a bot appearance.
+        for (const id of (side === 0 ? team.slice(1) : team)) if (DB[id].source) specialBots[side].add(id);
         assert.equal(team.length, size); assert.equal(new Set(team).size, size);
         assert.ok(team.every(id => Math.abs(DB[id].tier - player.tier) <= 1));
         assert.ok(PLAYABLE_NATIONS.every(nat => team.some(id => DB[id].nat === nat)));
@@ -229,6 +232,8 @@ test('separate rosters: every player model and size, all research nations, no ex
       assert.ok(enemies.some(id => !allies.includes(id)), player.id+' '+size+' distinct sets, not a permutation');
     }
   }
+  const eligibleSpecials = new Set(Object.values(DB).filter(t => t.source === 'premium' || t.source === 'collection').map(t => t.id));
+  for (const seen of specialBots) assert.deepEqual(seen, eligibleSpecials);
   const enemies = new Set(), allies = new Set(), spgCount = [0,0]; let sameFirst = 0;
   for(let k=0;k<150;k++) {
     const [a,b] = makeRosters('MS1', 7, random);

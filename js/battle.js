@@ -54,9 +54,14 @@ function startTraining() {
 // rentals) is not the bot pool; fielding a bot never grants or spends a vehicle.
 function makeRosters(playerId, size, random = Math.random) {
   const tier = DB[playerId].tier;
-  const pools = PLAYABLE_NATIONS.map(nat => BRANCHES[nat].tanks
-    .concat(SPECIAL_TANKS.filter(t => t.cls === 'spg' && t.nat === nat))
-    .filter(t => Math.abs(t.tier - tier) <= 1).map(t => t.id));
+  const byNation = new Map();
+  for (const tank of Object.values(DB)) {
+    if (Math.abs(tank.tier - tier) > 1) continue;
+    if (tank.source && tank.source !== 'premium' && tank.source !== 'collection') continue;
+    if (!byNation.has(tank.nat)) byNation.set(tank.nat, []);
+    byNation.get(tank.nat).push(tank.id);
+  }
+  const pools = [...byNation.values()];
   function deal(first) {
     const deck = first ? [first] : [];
     const groups = pools.map(ids => ids.filter(id => id !== first));

@@ -36,19 +36,20 @@ test('legacy large fleet and earned capacity persist; restore sanitizes the deli
   });assert.deepEqual(restored,[['MS1','BT42','TL7'],[],14,10,10]);
 });
 
-test('independent bonus slot from all four boxes: boundary at 10%, keeps the primary prize and can park a same-box vehicle',async t=>{
+test('independent bonus slot from all four boxes: 5% for the holiday box, 10% for the others; keeps the primary prize and can park a same-box vehicle',async t=>{
   const {page}=await openGame(t,{seed:{owned:full}});
   const out=await page.evaluate(()=>{
     const opened=[];for(const id of ['basic','premium','supply','collection']){
-      for(const bonus of [.1,.099999]){
+      const threshold=id==='collection' ? .05 : .10;
+      for(const bonus of [threshold,threshold-.000001]){
         const seq=[.06,0,bonus],g=GameState.garageSlots,r=openContainerDirect(id,()=>seq.shift());
         opened.push([id,r.type,r.amount,r.slot,GameState.garageSlots-g]);
       }
     }
-    GameState.garageSlots=GameState.owned.length;const seq=[.049999,.999999,0],r=openContainerDirect('collection',()=>seq.shift());
+    GameState.garageSlots=GameState.owned.length;const seq=[.019999,.999999,.049999],r=openContainerDirect('collection',()=>seq.shift());
     return {opened,r,count:GameState.owned.length,cap:GameState.garageSlots,waiting:GameState.pendingVehicles};
   });
-  assert.deepEqual(out.opened,[['basic',5000],['premium',15000],['supply',30000],['collection',10000]].flatMap(([id,n])=>[[id,'silver',n,false,0],[id,'silver',n,true,1]]));
+  assert.deepEqual(out.opened,[['basic',5000],['premium',15000],['supply',30000],['collection',100]].flatMap(([id,n])=>[[id,'silver',n,false,0],[id,'silver',n,true,1]]));
   assert.equal(out.r.id,'TL7');assert.equal(out.r.slot,true);assert.equal(out.count,11);assert.equal(out.cap,11);assert.deepEqual(out.waiting,[]);
 });
 
@@ -59,9 +60,9 @@ test('full garage: Advent and two distinct box wins queue FIFO. Bulk slot, sale 
   await click('Адвент');assert.match(await page.locator('#milestone-15').innerText(),/ожидает слота/);await click('В ангар');await click('Ожидают слота: 1');
   const inventory=id=>page.locator('.inv-card').filter({hasText:id});
   assert.match(await page.locator('#vehicle-deliveries').innerText(),/БТ-42/);
-  await pressWithRolls(inventory('Новогодний ящик').getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[0,.9999,.1, 0,.9999,.1, .525,0,.09999]);
+  await pressWithRolls(inventory('Новогодний ящик').getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[0,.9999,.05, 0,.9999,.05, .51,0,.04999]);
   const state=await saved();assert.deepEqual(state.inventory,{basic:1});assert.deepEqual(state.pendingVehicles,['TL7','T62A']);
-  assert.deepEqual(state.owned,full.concat('BT42'));assert.equal(state.garageSlots,11);assert.equal(state.GOLD,75); // daily 50 + primary 25
+  assert.deepEqual(state.owned,full.concat('BT42'));assert.equal(state.garageSlots,11);assert.equal(state.GOLD,51); // daily 50 + primary 1
   const text=await page.locator('#reward-lines').innerText();for(const term of [/Слоты ангара: \+1/,/TL-7/,/Т-62А/,/Ожидает слота/,/Доставлено из очереди/])assert.match(text,term);
   assert.match(await page.locator('.crate-poster').getAttribute('src'),/collection-open.webp$/);assert.match(await page.locator('#unpack-hint').innerText(),/WebGL 2/);
   // No collect button is necessary for durability, even on devices with no WebGL.

@@ -9,11 +9,11 @@ async function openGame(t,{seed,date='2026-11-22T09:00:00Z',route,clock=false,mo
   t.after(async()=>{await browser.close();assert.deepEqual(errors,[]);}); page.on('pageerror',e=>errors.push(e.message));
   await page.route(/^https?:/,req=>{ if(route)return route(req);errors.push('Unexpected network request: '+req.request().url());return req.abort(); });
   if(clock)await page.clock.install({time:new Date(date)});else await page.clock.setFixedTime(new Date(date));
-  if(seed)await page.addInitScript(({seed,guestKey})=>{
-    if(!sessionStorage.fixture){localStorage.setItem(guestKey,JSON.stringify(seed));sessionStorage.fixture='ok';}
-  },{seed,guestKey});
   page.on('console',m=>{if(/Shader Error|GL_INVALID_OPERATION/.test(m.text()))errors.push(m.text());});
   page.setDefaultTimeout(webgl?25000:8000);await page.goto(index);
+  // The checkpoint reads the guest slot on entry. Seed it once, never from a
+  // navigation script that could overwrite the progress a reload is testing.
+  if(seed)await page.evaluate(({seed,guestKey})=>localStorage.setItem(guestKey,JSON.stringify(seed)),{seed,guestKey});
   if(enterGuest){await page.getByRole('button',{name:'ГОСТЬ',exact:true}).click();await page.locator('.tank-slot.selected').waitFor();}
   return {page,click:name=>page.getByRole('button',{name,exact:true}).click(),saved:()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)),guestKey)};
 }

@@ -53,6 +53,7 @@ def extract(src):
     model_id = string('id').upper()
     return dict(id={'T28':'T28_USSR'}.get(model_id,model_id),color=string('color'),source=string('sourceUrl'),
                 tracks=(string('trackColor') if 'trackColor:' in meta else
+                        '#2e3227' if 'nation:"japan"' in meta and '#2e3227' in text[:start] else
                         '#2c3126' if 'nation:"hungary"' in meta else
                         '#303030' if '#303030' in text[:start] and 'nation:"germany"' in meta else
                         '#352e27' if '#352e27' in text[:start] and 'nation:"usa"' in meta else

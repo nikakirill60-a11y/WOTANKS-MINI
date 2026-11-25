@@ -33,7 +33,7 @@ test('all twenty supplied flag plates decode from disk, including reserves, with
       return [...PLAYABLE_NATIONS].sort();
     } finally { frame.remove(); }
   }, keys);
-  assert.deepEqual(branches, ['germany','hungary','sweden','usa','ussr']);
+  assert.deepEqual(branches, ['germany','hungary','japan','sweden','usa','ussr']);
 });
 
 test('mobile: every research and special vehicle keeps its own cut-out over its national flag, independent of the browsed tree', async t => {
@@ -46,16 +46,16 @@ test('mobile: every research and special vehicle keeps its own cut-out over its 
   await page.locator('#bay-poster:not([hidden])').waitFor();
   await checkCards(page.locator('#bay-poster img'), ['T54A']);
   await click('Дерево развития');
-  for (const name of ['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ']) {
+  for (const name of ['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ','ЯПОНИЯ']) {
     await click(name);
     const ids = await checkCards(page.locator('#nodes .node img'));
     assert.ok(ids.length >= 10); ids.forEach(id => seen.add(id));
   }
-  assert.equal(seen.size,167);
+  assert.equal(seen.size,186);
   assert.equal(await page.locator('.tank-slot[data-tank-id="T54"] .slot-bg').getAttribute('data-card-nation'), 'ussr');
   assert.equal(await page.locator('.tank-slot[data-tank-id="T54A"] .slot-bg').getAttribute('data-card-nation'), 'hungary');
-  await click('Характеристики: T-55AM');
-  await checkCards(page.locator('#tree-photo'), ['T55AM1']);
+  await click('Характеристики: Type 5 Heavy');
+  await checkCards(page.locator('#tree-photo'), ['TYPE-5-H']);
   assert.equal((await saved()).selected,'T54A');
   await click('Выбрать для боя: БТ-42'); await click('Продать: БТ-42');
   await checkCards(page.locator('#sale-photo'), ['BT42']);

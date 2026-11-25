@@ -26,9 +26,9 @@ function crossesMapRect(ax, ay, bx, by, r, pad = 0) {
   return lo <= hi;
 }
 
-// The E 100 needs 5.14 m around its pivot to turn at any heading. Plan for
+// The Type 5 Heavy mesh needs 5.83 m around its pivot at any heading. Plan for
 // the entire hull, including its offset, not just the half-width of the tracks.
-const BOT_CLEARANCE = 5.2 * BATTLE_UNITS_PER_METRE;
+const BOT_CLEARANCE = 5.9 * BATTLE_UNITS_PER_METRE;
 class BattleNavigation {
   constructor(arena) {
     this.arena = arena;
@@ -260,7 +260,7 @@ function battleFormation(arena, nav, teams) {
       const offset = guard ? (side ? -85 : 85) : orientation * (lane - middle) * arena.spread + (row % 2 ? 38 : 0);
       const x = arena.bases[side].x + back * ahead.x + offset * across.x,
         y = arena.bases[side].y + back * ahead.y + offset * across.y;
-      const n = nav.nearest(x, y, (p) => units.every((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 >= 73 ** 2));
+      const n = nav.nearest(x, y, (p) => units.every((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 >= (2 * BOT_CLEARANCE) ** 2));
       if (n < 0) throw new Error('Не удалось разместить команду на карте.');
       units.push({ ...nav.point(n), id, team, angle: angle + side * Math.PI, lane, index: i, scout: scouts.get(lane) === i, side });
     }

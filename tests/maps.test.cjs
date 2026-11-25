@@ -45,7 +45,7 @@ function game() {
     vm.runInContext(readFileSync(path.join(root, file + '.js'), 'utf8'), ctx, { filename: file });
   }
   return vm.runInContext(
-    '({DB,makeRosters,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,nearestBattleWall})',
+    '({DB,PLAYABLE_NATIONS,makeRosters,BOT_CLEARANCE,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,nearestBattleWall})',
     ctx
   );
 }
@@ -63,7 +63,7 @@ function assertRoute(nav, from, to) {
 }
 
 test('six larger maps: separated spawns, a clear practice lane and reachable ground for all three team sizes', () => {
-  const { BattleMaps, BattleNavigation, BattleRecon, battleFormation, BATTLE_UNITS_PER_METRE: m } = game();
+  const { BattleMaps, BattleNavigation, BattleRecon, battleFormation, BOT_CLEARANCE, BATTLE_UNITS_PER_METRE: m } = game();
   const previousMetres = {
     city: [420, 300],
     field: [500, 360],
@@ -120,7 +120,7 @@ test('six larger maps: separated spawns, a clear practice lane and reachable gro
     const [p, t] = battleFormation(a, nav, [['MS1'], ['IS7']]);
     assert.ok(nav.clear(p.x, p.y, t.x, t.y) && t.practice, id + ' practice');
     for (const size of [7, 10, 15]) {
-      const slots = battleFormation(a, nav, [Array(size).fill('IS7'), Array(size).fill('E100')]);
+      const slots = battleFormation(a, nav, [Array(size).fill('TYPE-5-H'), Array(size).fill('E100')]);
       assert.equal(slots.length, 2 * size);
       for (const side of [0, 1]) {
         const team = slots.filter((s) => s.side === side),
@@ -131,7 +131,7 @@ test('six larger maps: separated spawns, a clear practice lane and reachable gro
         assert.ok(scouts.every((s) => s.index !== 0 && s.team !== 'player'));
       }
       for (const [i, s] of slots.entries()) {
-        assert.ok(slots.slice(0, i).every((o) => Math.hypot(o.x - s.x, o.y - s.y) >= 73));
+        assert.ok(slots.slice(0, i).every((o) => Math.hypot(o.x - s.x, o.y - s.y) >= 2 * BOT_CLEARANCE));
         const hub = a.hubs[s.lane],
           destination = nav.point(nav.nearest(hub.x, hub.y));
         assertRoute(nav, s, destination);
@@ -212,8 +212,8 @@ function fixture(api, id) {
 const wall = () => ({ type: 'building', solid: true, x: -30, y: -110, w: 60, h: 220, height: 45, hp: 40 });
 
 // Use a deterministic stream for coverage; production calls the same deal with Math.random.
-test('separate rosters: every player model and size, five nation draws, no exact copy even at tier I', () => {
-  const { DB, GameState:g, makeRosters } = game();
+test('separate rosters: every player model and size, all research nations, no exact copy even at tier I', () => {
+  const { DB, PLAYABLE_NATIONS, GameState:g, makeRosters } = game();
   let seed = 113;
   const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
   const owned = JSON.stringify([g.owned, g.rentalBattles, g.usedPromos]);
@@ -224,7 +224,7 @@ test('separate rosters: every player model and size, five nation draws, no exact
       for (const team of [allies, enemies]) {
         assert.equal(team.length, size); assert.equal(new Set(team).size, size);
         assert.ok(team.every(id => Math.abs(DB[id].tier - player.tier) <= 1));
-        assert.ok(new Set(team.map(id => DB[id].nat)).size >= 5);
+        assert.ok(PLAYABLE_NATIONS.every(nat => team.some(id => DB[id].nat === nat)));
       }
       assert.ok(enemies.some(id => !allies.includes(id)), player.id+' '+size+' distinct sets, not a permutation');
     }
@@ -240,7 +240,7 @@ test('separate rosters: every player model and size, five nation draws, no exact
 });
 
 test('formation uses both actual rosters: bot SPGs spawn at their own base, scout roles follow each side’s mobile models', () => {
-  const { BattleMaps, BattleNavigation, battleFormation } = game();
+  const { BattleMaps, BattleNavigation, battleFormation, BOT_CLEARANCE } = game();
   for(const map of Object.keys(BattleMaps.specs)) {
     const a=BattleMaps.create(map), nav=new BattleNavigation(a);
     for(const size of [7,10,15]) {
@@ -254,7 +254,7 @@ test('formation uses both actual rosters: bot SPGs spawn at their own base, scou
         assert.equal(Array.from(team,s=>s.id).join(),teams[side].join());
         assert.ok(!post.scout && Math.hypot(post.x-a.bases[side].x,post.y-a.bases[side].y)<240,map+' base berth');
         assert.ok(nav.clear(post.x,post.y,post.x,post.y));
-        assert.ok(slots.every(s=>s===post || Math.hypot(s.x-post.x,s.y-post.y)>=73));
+        assert.ok(slots.every(s=>s===post || Math.hypot(s.x-post.x,s.y-post.y)>=2*BOT_CLEARANCE));
         assert.equal(team.filter(s=>s.scout).length,width);
         assert.equal(team.find(s=>s.scout && s.lane===post.lane).id,'BT7');
       }

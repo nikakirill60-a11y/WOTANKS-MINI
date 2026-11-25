@@ -39,7 +39,7 @@
 #entry-status:not(:empty) { background:#10212de8; border-left:2px solid var(--sand); padding:8px 12px; margin-top:12px; color:#f4d8ac; font-size:13px; }
 .entry-foot { min-height:68px; border-top:1px solid var(--hair); font-size:10px; color:var(--mist); }
 .entry-update { display:flex; align-items:center; gap:9px; }
-.entry-update i { display:block; width:20px; height:12px; border-radius:1px; background:linear-gradient(#b35e60 0 33.3%,#dfdfd5 33.3% 66.6%,#5c8879 66.6%); }
+.entry-update img { display:block; flex:none; object-fit:cover; border-radius:1px; }
 .entry-foot b,.entry-model strong { color:#edf2f4; font:650 16px/1.2 'Segoe UI',Arial,sans-serif; letter-spacing:.01em; }
 .entry-model { margin-left:auto; display:flex; align-items:center; gap:10px; }
 .entry-model i { color:var(--sand); font-style:normal; }
@@ -58,6 +58,12 @@
   .entry-actions { width:100%; margin-top:18px; } #entry-guest { margin-top:10px; }
   .entry-foot { min-height:50px; gap:9px; letter-spacing:.04em; }
   .entry-foot b,.entry-model strong { font-size:13px; }.entry-model { gap:5px; }
+}
+@media (max-width:450px) and (orientation:portrait) {
+  .entry-foot { display:grid; grid-template-columns:auto 1fr; align-content:center; gap:2px 10px; }
+  .entry-foot > b { grid-row:2; padding-left:27px; }
+  .entry-model { grid-column:2; grid-row:1 / span 2; display:block; text-align:right; }
+  .entry-model i { display:none; }.entry-model strong { display:block; }
 }
 @media (max-height:550px) and (orientation:landscape) {
   .entry-mast { min-height:48px; }.entry-content { padding:15px 0; } #entry-title { font-size:44px; margin:9px 0; } #entry-title br { display:none; }

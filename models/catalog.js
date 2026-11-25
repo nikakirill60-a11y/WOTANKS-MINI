@@ -227,6 +227,31 @@ const HUNGARIAN_BRANCH = defineLine('hungary', [
   ['T55A','T-55A','mt','t-55a',                   1680,320,6800,225,100,205,50,1.07,385,.22,{minPitch:-6,maxPitch:17}],
   ['T55AM1','T-55AM','mt','t-55am-1',            2000,330,5900,262,160,250,50,1.10,395,.21,{minPitch:-6,maxPitch:17}]
 ]);
+// Japan's two routes share one Renault Otsu. Both sheets specify damage per
+// single shot; STA-1 is a research vehicle, unrelated to the premium STA-2.
+const JAPANESE_MEDIUM_BRANCH = defineLine('japan', [
+  ['R-OTSU','Renault Otsu','lt','r-otsu',    115, 36,2200, 38, 22, 22,22, .65,270,.33,{minPitch:-22,maxPitch:20}],
+  ['HA-GO','Type 95 Ha-Go','lt','ha-go',     170, 45,2300, 48, 12, 12,45, .72,285,.32,{minPitch:-15,maxPitch:20}],
+  ['CHI-HA','Type 97 Chi-Ha','lt','chi-ha',  260, 60,2700, 68, 25, 25,40, .78,300,.30,{minPitch:-15,maxPitch:20}],
+  ['CHI-HE','Type 1 Chi-He','mt','chi-he',   390, 75,2600, 88, 50, 50,44, .85,320,.27,{minPitch:-15,maxPitch:20}],
+  ['CHI-NU','Type 3 Chi-Nu','mt','chi-nu',   570,120,3700,124, 50, 50,39, .90,335,.25,{minPitch:-10,maxPitch:15}],
+  ['CHI-TO','Type 4 Chi-To','mt','chi-to',   810,155,4200,155, 75, 75,45, .96,345,.23,{minPitch:-10,maxPitch:20}],
+  ['CHI-RI','Type 5 Chi-Ri','mt','chi-ri',  1200,160,3600,165, 75, 75,42,1.00,355,.22,{minPitch:-10,maxPitch:20}],
+  ['STA-1','STA-1','mt','sta-1',            1350,240,5800,212, 45, 70,45,1.02,370,.22,{minPitch:-10,maxPitch:13}],
+  ['TYPE-61','Type 61','mt','type-61',      1650,360,7400,245, 55,114,48,1.05,385,.21,{minPitch:-10,maxPitch:13}],
+  ['STB-1','STB-1','mt','stb-1',            1950,360,6200,258,110,220,53,1.08,395,.21,{minPitch:-8,maxPitch:15}]
+]);
+const JAPANESE_HEAVY_BRANCH = defineLine('japan', [
+  ['I-GOCHI-RO','Type 89 I-Go','mt','i-gochi-ro', 190, 65, 3500, 45, 17, 17,25, .78,280,.27,{minPitch:-15,maxPitch:20}],
+  ['TYPE-91','Type 91 Heavy','ht','type-91',       320, 75, 3800, 58, 20, 20,25, .90,285,.17,{minPitch:-12,maxPitch:20}],
+  ['TYPE-95','Type 95 Heavy','ht','type-95',       520,115, 4400, 88, 35, 35,22, .96,300,.16,{minPitch:-12,maxPitch:20}],
+  ['MITSU-108','Mitsu 108','ht','mitsu-108',       800,240, 8200,125, 75, 75,35,1.04,310,.14,{minPitch:-10,maxPitch:20}],
+  ['O-I','O-I','ht','o-i',                       1150,320, 9500,150,150,150,25,1.14,320,.09,{minPitch:-10,maxPitch:20}],
+  ['O-NI','O-Ni','ht','o-ni',                    1550,350, 9800,185,175,200,25,1.16,340,.08,{minPitch:-10,maxPitch:20}],
+  ['O-HO','O-Ho','ht','o-ho',                    1900,380,10200,210,200,200,25,1.17,350,.07,{minPitch:-10,maxPitch:20}],
+  ['TYPE-4-H','Type 4 Heavy','ht','type-4-h',    2350,550,14500,245,250,250,20,1.20,370,.06,{minPitch:-10,maxPitch:20}],
+  ['TYPE-5-H','Type 5 Heavy','ht','type-5-h',    2900,600,15000,255,260,260,25,1.22,385,.05,{minPitch:-10,maxPitch:20}]
+], JAPANESE_MEDIUM_BRANCH.slice(0,1));
 function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});
 }
@@ -239,7 +264,8 @@ const BRANCHES = Object.freeze({
   usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
     US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
-  hungary: nationTree('05','Путь к танку: T-55AM',HUNGARIAN_BRANCH)
+  hungary: nationTree('05','Путь к танку: T-55AM',HUNGARIAN_BRANCH),
+  japan: nationTree('06','STB-1 и Type 5 Heavy',JAPANESE_MEDIUM_BRANCH,JAPANESE_HEAVY_BRANCH)
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
 // Special vehicles have a real tier, but no XP price or research parent.

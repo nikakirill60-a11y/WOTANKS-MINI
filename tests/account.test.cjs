@@ -23,6 +23,7 @@ function service() {
     const access=q.headers().authorization?.replace('Bearer ',''),uid=sessions.get(access);
     if(!uid){forbidden.push(u.pathname);return json(401,{});}
     if(u.pathname==='/auth/v1/logout'){sessions.delete(access);return json(200,{});}
+    if(u.pathname==='/rest/v1/rpc/city_tanks_referral_collect_v1')return json(200,{invited:0,gold:0,xp:0,revision:rows.get(uid)?.revision||0});
     if(u.pathname==='/rest/v1/rpc/city_tanks_clock_v1')return json(200,api.time);
     if(u.pathname!=='/rest/v1/city_tanks_saves_v1'){forbidden.push(u.pathname);return json(404,{});}
     const owner=m==='POST'?body.player_id:u.searchParams.get('player_id')?.slice(3);

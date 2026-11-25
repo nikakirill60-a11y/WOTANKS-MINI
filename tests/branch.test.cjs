@@ -30,7 +30,7 @@ test('branch 01 uses the ten supplied stat lines and ten distinct playable model
   assert.ok(line.every(id => DB[id].nat==='ussr'));
   assert.equal(new Set(line).size,10);
   assert.deepEqual(line.map(researchParent),[undefined,...line.slice(0,-1)]);
-  assert.equal(new Set(Object.values(DB).map(t=>t.file)).size,215);
+  assert.equal(new Set(Object.values(DB).map(t=>t.file)).size,217);
   assert.equal(DB.IS.file,'is.mesh.js');assert.equal(DB.IS3.file,'is-3.mesh.js');
   for (const spec of Object.values(DB)) for (const key of ['file','thumbnail'])
     assert.ok(fs.statSync(path.join(root,'models',spec[key])).size > 0);
@@ -45,7 +45,7 @@ test('Germany: ten supplied stat lines, chosen primary loadouts, prices and inde
     ['SPIC',880,220,1,6800,175,15,15,58], ['HWK12',1100,240,1,6800,190,15,15,65],
     ['RU251',1350,250,1,5800,210,25,20,72], ['RHMPZW',1650,320,1,7200,235,30,20,75]
   ]);
-  assert.equal(Object.keys(DB).length,216);
+  assert.equal(Object.keys(DB).length,218);
   for(const [i,t] of rows.entries()){
     assert.ok(t.tier===i+1 && t.nat==='germany' && t.cls==='lt');assert.equal(t.xp,soviet[i].xp);
     assert.equal(researchParent(t.id),rows[i-1]?.id);const u=new Tank(t.id,0,0,'enemy');
@@ -55,7 +55,7 @@ test('Germany: ten supplied stat lines, chosen primary loadouts, prices and inde
 
 test('Autoloaders: real independent projectiles, total base damage and full-clip cooldown for both sides',()=>{
   const {Tank,GameState:g,at,resolveHit}=game();
-  for(const [id,n,alpha,reload] of [['TOLDI1',4,20,4000],['PZII',5,15,4500],['PZIC',8,12,5000],['LUCHS',6,30,7500],['LEOPARD',8,30,9000],['WTE100',4,520,40000],['EMIL1',3,320,22000],['EMIL2',3,400,25000],['KRANVAGN',3,400,22000],['T69',4,240,22000],['T54E1',4,390,30000],['T57HEAVY',4,400,23000]]){
+  for(const [id,n,alpha,reload] of [['PZ-II-J',5,15,4200],['TOLDI1',4,20,4000],['PZII',5,15,4500],['PZIC',8,12,5000],['LUCHS',6,30,7500],['LEOPARD',8,30,9000],['WTE100',4,520,40000],['EMIL1',3,320,22000],['EMIL2',3,400,25000],['KRANVAGN',3,400,22000],['T69',4,240,22000],['T54E1',4,390,30000],['T57HEAVY',4,400,23000]]){
     for(const team of ['player','enemy']){
       g.bullets=[];const u=new Tank(id,0,0,team),t=new Tank('LTR',200,0,'enemy');
       u.modelAsset={groundY:0,pivot:[0,1,0],gunPivot:[0,.25,.7],muzzle:[0,0,2]};
@@ -205,7 +205,7 @@ test('each vehicle uses its transparent offline WebP and data-only mesh; only th
     const model=fs.readFileSync(path.join(root,'models',t.file),'utf8');assert.match(model,/^BattleModels\.receive\(\{/);
     const data=JSON.parse(model.slice('BattleModels.receive('.length,-3));assert.equal(data.id,t.id==='OBJ-263-X'?'OBJ-263':t.id);assert.equal(data.meshes.length,
       ({TAS:2,T55A:3,TL7OLEN:10,GPZ:4,'SU-100M1':4,'SU-101':4,'SU-122-54':4,'OBJ-2684':4})[t.id] ?? 5);
-  }assert.equal(icons.size,215);assert.equal(DB['OBJ-263-X'].thumbnail,DB['OBJ-263'].thumbnail);
+  }assert.equal(icons.size,217);assert.equal(DB['OBJ-263-X'].thumbnail,DB['OBJ-263'].thumbnail);
   assert.ok(!fs.readdirSync(path.join(root,'models')).some(f=>f.endsWith('.html')));
 });
 
@@ -288,10 +288,10 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
   }
 });
 
-test('13 special vehicles use the supplied combat stats, nonresearch acquisition and decorated submeshes',()=>{
+test('15 special vehicles use the supplied combat stats, nonresearch acquisition and decorated submeshes',()=>{
   const {DB,BRANCHES,Tank,BATTLE_UNITS_PER_METRE:m}=game();
   assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,203);
-  const rows=[['GPZ',2,125,220,1,14500,35,22,null,50],['M4A3E2',6,880,140,1,4000,138,102,152,35],['T71DA',7,860,150,6,20000,175,25,25,64],
+  const rows=[['PZ-II-J',3,290,15,5,4200,46,80,80,31],['T67',5,440,115,1,2800,128,13,25,67],['GPZ',2,125,220,1,14500,35,22,null,50],['M4A3E2',6,880,140,1,4000,138,102,152,35],['T71DA',7,860,150,6,20000,175,25,25,64],
     ['JPANTHERII',8,1200,490,1,10800,246,100,null,55],['T62A',10,1950,320,1,5600,255,102,240,50],
     ['TL7',9,1500,360,4,32000,252,100,200,50],['IS6',8,1550,390,1,10800,196,100,150,35],
     ['LOWE',8,1650,320,1,9200,234,150,120,35],['T34HEAVY',8,1550,400,1,12200,248,102,279,35],
@@ -300,7 +300,7 @@ test('13 special vehicles use the supplied combat stats, nonresearch acquisition
   for (const [i,row] of rows.entries()) {
     const u=new Tank(row[0],0,0,'player'),t=DB[u.id];
     assert.deepEqual([u.id,t.tier,u.maxHp,u.dmg,u.magSize,u.reloadTime,u.pen,u.armor,u.turretArmor,Math.round(u.baseSpeed*60*3.6/m)],row);
-    assert.equal(t.source,i<6?'collection':i<11?'premium':'advent');assert.equal(t.xp,undefined);assert.equal(t.parent,undefined);
+    assert.equal(t.source,i<8?'collection':i<13?'premium':'advent');assert.equal(t.xp,undefined);assert.equal(t.parent,undefined);
   }
   const data=id=>JSON.parse(fs.readFileSync(path.join(root,'models',DB[id].file),'utf8').slice('BattleModels.receive('.length,-3));
   const regular=data('TL7'),deer=data('TL7OLEN');assert.deepEqual(deer.meshes.slice(0,5),regular.meshes);

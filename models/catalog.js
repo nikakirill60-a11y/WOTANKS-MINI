@@ -327,6 +327,8 @@ const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
 // The category determines the garage label and resale currency, not the contents of a seasonal box.
 const SPECIAL_TANKS = Object.freeze([
   // source, ID, name, nation, tier, class, slug, HP, full load, reload ms, pen, hull, turret, km/h, model limits
+  ['collection','PZ-II-J','Pz.Kpfw. II Ausf. J','germany',3,'lt','pz-ii-j',290,75,4200,46,80,80,31,{mag:5,minPitch:-20,maxPitch:10}],
+  ['collection','T67','T67','usa',5,'td','t67',440,115,2800,128,13,25,67,{minPitch:-20,maxPitch:10}],
   ['collection','GPZ','G.Pz. Mk. VI (e)','germany',2,'spg','gpz-mk-vi-e',125,220,14500,35,22,null,50,{s:.70,vr:270,camo:.29,yawLimits:[-5,5],minPitch:-3,maxPitch:42}],
   ['collection','M4A3E2','M4A3E2 Sherman Jumbo','usa',6,'mt','m4a3e2-sherman-jumbo',880,140,4000,138,102,152,35,{minPitch:-25,maxPitch:10}],
   ['collection','T71DA','T71 DA','usa',7,'lt','t71-da',860,900,20000,175,25,25,64,{mag:6,weapon:'drum',oscillating:true,minPitch:-20,maxPitch:7}],

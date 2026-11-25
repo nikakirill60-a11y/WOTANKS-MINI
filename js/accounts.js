@@ -32,9 +32,9 @@ const Accounts = (() => {
     return data.session.access_token;
   }
   async function rest(p, route, method='GET', body) {
-    const bearer = await token(p);
+    const authorization = p ? {Authorization:'Bearer '+await token(p)} : {};
     const r = await fetch(`${url}/rest/v1/${route}`, {method, cache:'no-store', signal:AbortSignal.timeout(9000),
-      headers:{apikey:key,Authorization:'Bearer '+bearer,'Content-Type':'application/json',Prefer:'return=representation'},
+      headers:{apikey:key,...authorization,'Content-Type':'application/json',Prefer:'return=representation'},
       ...(body && {body:JSON.stringify(body)})});
     if (!r.ok) throw Object.assign(Error('rest'),{status:r.status});
     return r.json();
@@ -143,11 +143,51 @@ const Accounts = (() => {
     el('season-note').hidden = true;
     applySettings(); updateResources(); renderTree(); renderCarousel(); updateInvCount(); updateBoosterUI();
   }
-  async function activate(session) {
+  const collect = (p, rev) => rest(p,'rpc/city_tanks_referral_collect_v1','POST',{expected_revision:rev});
+  function createInvite(payout,gift) {
+    if (!player || GameState.gameActive) return;
+    run(async () => {
+      message('');
+      try { Referrals.publish(await rest(player,'rpc/city_tanks_invite_v1','POST',{payout,gift})); }
+      catch { el('invite-status').textContent = 'Ссылка не создана. Проверьте соединение и попробуйте ещё раз.'; }
+    });
+  }
+  function checkInvites() {
+    if (!player || GameState.gameActive) return;
+    // While the modal is busy, profile switching, player input and seasonal rewards are suspended.
+    run(async () => {
+      message(''); const p=player; capture(); await flush(p);
+      if (p.conflict || !p.rev || p.ack !== p.snapshot) {
+        el('invite-status').textContent = 'Сначала синхронизируйте ангар с облаком. Награды останутся на аккаунте.'; return;
+      }
+      try {
+        let r = await collect(p,p.rev);
+        if (r.stale) {
+          // Another device (or an earlier call whose reply was lost) advanced this clean save.
+          const row = await readRemote(p); Object.assign(GameState,row.data);
+          p.rev=row.rev; p.ack=p.snapshot=progressSnapshot(); changedProfile();
+          r = await collect(p,p.rev); if (r.stale) throw Error('changed again');
+        }
+        if (!Number.isSafeInteger(r.invited) || !Number.isSafeInteger(r.gold) || !Number.isSafeInteger(r.xp) ||
+            r.revision !== p.rev + Number(!!(r.gold || r.xp))) throw Error('receipt');
+        GameState.GOLD += r.gold; GameState.XP += r.xp;
+        p.rev=r.revision; p.ack=p.snapshot=progressSnapshot(); p.error=false; status(p); updateResources();
+        Referrals.count(r.invited); const paid=Referrals.earnings(r);
+        el('invite-status').textContent = paid ? 'Начислено: ' + paid + '.' : 'Все награды уже зачислены.';
+      } catch { el('invite-status').textContent = 'Не удалось проверить награды. Повторите проверку при подключении.'; }
+    });
+  }
+  async function activate(session, welcome) {
     if (!session?.user || !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(session.user.id)) throw Error('session');
     const p = {id:session.user.id,email:session.user.email?.replace(/@players\.citytanks\.invalid$/,'') || 'Профиль',cached:false};
-    const [row, ms] = await Promise.all([readRemote(p),readClock(p)]);
-    const draft = findDraft(p), remote = JSON.stringify(row.data);
+    const draft = findDraft(p); let rewards;
+    const load = async () => {
+      // Don't advance a server revision underneath an unsent draft. On a clean login read the
+      // save AFTER settlement, even if its response was lost. Ordinary login works without the RPC.
+      if (!draft) try { rewards = await collect(p,null); } catch { /* retry in the referral desk */ }
+      return readRemote(p);
+    };
+    const [row, ms] = await Promise.all([load(),readClock(p)]), remote = JSON.stringify(row.data);
     // On first entry the guest never started playing: don't migrate/write that slot behind the menu.
     const fromEntry = atEntry();
     if (!fromEntry) saveProgress();
@@ -166,15 +206,20 @@ const Accounts = (() => {
       enterHangar();
       if (p.conflict && !dialog.open) dialog.showModal();
     } else changedProfile();
+    const arrived = Referrals.incoming; Referrals.resetProfile(); Referrals.count(rewards?.invited);
+    if (arrived || welcome) Referrals.clear();
+    const paid = Referrals.earnings(rewards);
+    Referrals.announce(welcome ? `Подарок за приглашение: ${Referrals.gifts[welcome]}. Уже в вашем ангаре.` :
+      arrived ? 'Подарок по ссылке предназначен только для нового аккаунта.' : paid ? 'За приглашения начислено: ' + paid + '.' : '');
     message(p.conflict ? 'Черновик сохранён отдельно. Выберите, какую версию оставить.' : 'Вы вошли. Гостевой ангар сохранён отдельно.');
   }
   function formMode(register) {
     const form = el('account-form'), password = form.elements.password;
-    form.dataset.mode = register ? 'register' : 'login';
+    form.dataset.mode = register ? 'register' : 'login'; Referrals.mode(register);
     password.value = ''; password.autocomplete = register ? 'new-password' : 'current-password';
     if (register) password.minLength = 8; else password.removeAttribute('minlength');
     el('profile-title').textContent = register ? 'Регистрация' : 'Вход в аккаунт';
-    el('account-intro').textContent = register ? 'Создайте личный ангар с облачным сохранением. Почта не нужна.' : 'Войдите, чтобы продолжить игру в своём облачном ангаре.';
+    el('account-intro').textContent = register ? 'Создайте личный ангар с облачным сохранением. Почта не нужна.' : 'Войдите в свой облачный ангар. В профиле можно создать ссылку для друзей.';
     el('account-hint').textContent = register ? 'Позывной: 3–24 латинские буквы, цифры или _. Пароль — от 8 символов. Сохраните его: восстановление по почте недоступно.' : 'Для прежнего аккаунта Wot-mini вместо позывного можно указать почту.';
     el('account-submit').textContent = register ? 'Создать аккаунт' : 'Войти';
     el('account-switch').textContent = register ? 'Уже есть аккаунт' : 'Регистрация';
@@ -194,6 +239,7 @@ const Accounts = (() => {
       return 'Не удалось войти. Проверьте позывной и пароль.';
     if (err.code === 'weak_password') return 'Выберите более надёжный пароль (не менее 8 символов).';
     if (err.status === 429) return 'Слишком много запросов. Попробуйте чуть позже.';
+    if (err.code === 'invalid_invite') return 'Приглашение недействительно. Попросите другую ссылку или выберите регистрацию без приглашения.';
     if (err.code === 'taken') return 'Этот позывной уже занят. Войдите или выберите другой.';
     return 'Не удалось подключить профиль. Проверьте интернет и доступ к хранилищу браузера. Гостевой прогресс не изменён.';
   }
@@ -214,16 +260,18 @@ const Accounts = (() => {
     const email = nickname ? handle+'@players.citytanks.invalid' : handle;
     run(async () => {
       // Probe tab storage before creating any account. Guest storage is never overwritten.
-      const auth = sdk();
+      const auth = sdk(); let offer;
       if (registering) {
+        offer = await Referrals.resolve();
         const response = await fetch(url+'/functions/v1/city-tanks-register',{method:'POST',signal:AbortSignal.timeout(15000),
-          headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({handle,password})});
-        if (!response.ok) throw Object.assign(Error('registration'),{status:response.status,code:response.status===409?'taken':null});
+          headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({handle,password,...(offer && {invite:offer.code})})});
+        if (!response.ok) throw Object.assign(Error('registration'),{status:response.status,code:response.status===409?'taken':response.status===422?'invalid_invite':null});
+        if (offer && (await response.json()).result !== 'referred') throw Error('invite receipt');
       }
       const {data,error} = await auth.signInWithPassword({email,password});
       if (error) throw error;
       form.elements.password.value = '';
-      await activate(data.session);
+      await activate(data.session,offer?.gift);
     });
   }
   function logout() {
@@ -234,7 +282,7 @@ const Accounts = (() => {
       // Local scope only: logging out here must not revoke the player's other devices.
       try { await sdk().signOut({scope:'local'}); } catch { /* still close the local session offline */ }
       sessionStorage.removeItem(authKey()); client?.stopAutoRefresh(); client = null;
-      player = null; rememberGuest(true); loadProgress(); changedProfile(); saveProgress();
+      player = null; Referrals.resetProfile(); rememberGuest(true); loadProgress(); changedProfile(); saveProgress();
       formMode(false);
       message(p.snapshot === p.ack ? 'Вы вернулись в локальный гостевой ангар.' : 'Черновик аккаунта остался на устройстве до следующего входа. Вы играете как гость.');
     });
@@ -259,6 +307,7 @@ const Accounts = (() => {
   }
   function init(onEnter) {
     enterHangar = onEnter;
+    Referrals.init({preview:code => rest(null,'rpc/city_tanks_invite_preview_v1','POST',{code}), create:createInvite, check:checkInvites});
     el('entry-login').addEventListener('click',() => open('login'));
     el('entry-register').addEventListener('click',() => open('register'));
     el('entry-guest').addEventListener('click',enterGuest);
@@ -281,6 +330,7 @@ const Accounts = (() => {
       const {data,error} = await sdk().getSession(); if (error || !data.session) throw error || Error('session');
       await activate(data.session);
     });
+    else if (Referrals.incoming) open('register');
     else if (resumeGuest) enterGuest();
   }
   return {init,open,logout,recover,downloadDraft,capture,now,get active(){return !!player;},get switching(){return busy;}};

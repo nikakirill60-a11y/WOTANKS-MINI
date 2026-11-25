@@ -26,7 +26,7 @@
   <section class="entry-content">
     <p class="entry-eyebrow"><i aria-hidden="true"></i> НОВОГОДНЯЯ СМЕНА <span>/ 01</span></p>
     <h1 id="entry-title">Северное<br> депо</h1>
-    <p class="entry-intro">Выберите способ входа в ангар.</p>
+    <p class="entry-intro" id="entry-intro">Выберите способ входа в ангар.</p>
     <div class="entry-actions" role="group" aria-label="Вход в игру">
       <div class="entry-online"><button type="button" id="entry-login">ВХОД <span aria-hidden="true">→</span></button><button type="button" id="entry-register">РЕГИСТРАЦИЯ</button></div>
       <button type="button" id="entry-guest"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3"/><path d="M3 17c0-6 14-6 14 0"/></svg>ГОСТЬ</button>
@@ -111,12 +111,38 @@
     <button type="button" class="winter-back" id="account-back" onclick="this.closest('dialog').close()">Назад</button></header>
   <form id="account-form" data-mode="login">
     <p class="winter-intro" id="account-intro"></p>
+    <section id="invite-registration" hidden>
+      <details id="invite-manual"><summary>Есть приглашение от игрока?</summary>
+        <label for="invite-input">Реферальная ссылка</label><input id="invite-input" type="text" maxlength="2048" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Вставьте ссылку от друга">
+        <button type="button" id="invite-preview" class="winter-back">Проверить ссылку</button>
+      </details>
+      <p id="invite-offer" role="status" hidden></p><button type="button" id="invite-clear" class="invite-text-btn" hidden>Продолжить без приглашения</button>
+    </section>
     <label for="profile-handle">Позывной игрока</label><input id="profile-handle" name="handle" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Например, polaris_27" required>
     <label for="profile-pass">Пароль</label><input id="profile-pass" name="password" type="password" autocomplete="current-password" required>
     <p class="profile-foot" id="account-hint"></p>
     <div class="profile-actions"><button class="winter-action" id="account-submit" type="submit">Войти</button><button class="winter-back" id="account-switch" type="button">Создать аккаунт</button></div>
   </form>
   <section id="cloud-profile" hidden><p class="winter-intro">Аккаунт Wot-mini</p><strong id="profile-email"></strong><p id="profile-sync"></p>
+    <details id="referral-desk"><summary>Пригласить друзей</summary>
+      <p class="season-kicker">БЮРО НАБОРА / ПРИГЛАШЕНИЕ</p>
+      <p>Вы выбираете обе награды. Отправьте ссылку друзьям: за каждый новый аккаунт по ней вам придёт награда, а новичку — ваш подарок.</p>
+      <fieldset><legend>01 · Моя награда за игрока</legend><div class="invite-payouts">
+        <label><input type="radio" name="invite-payout" value="gold" checked>25 золота</label>
+        <label><input type="radio" name="invite-payout" value="xp">250 опыта</label>
+      </div></fieldset>
+      <fieldset><legend>02 · Мой подарок новичку</legend>
+        <label><input type="radio" name="invite-gift" value="resources" checked><span>250 золота <b>+</b> 1000 опыта</span></label>
+        <label><input type="radio" name="invite-gift" value="tanks"><span>Pz.Kpfw. II Ausf. J <small>навсегда</small><br><b>+</b> T67 <small>на 5 боёв</small></span></label>
+      </fieldset>
+      <button type="button" class="winter-action" id="invite-create">Создать ссылку</button>
+      <div id="invite-share" hidden><label for="invite-url">Ссылка с выбранными наградами</label>
+        <div><input id="invite-url" type="url" readonly><button type="button" class="winter-back" id="invite-copy">Скопировать</button></div>
+        <p class="profile-foot">У друга игра из ZIP? Он может вставить ссылку в «Регистрация → Есть приглашение от игрока?».</p>
+      </div>
+      <div class="invite-account"><span id="invite-count">Приглашено игроков: —</span><button type="button" class="invite-text-btn" id="invite-check">Проверить награды</button></div>
+      <p class="winter-message" id="invite-status" role="status"></p>
+    </details>
     <div class="profile-actions"><button type="button" class="winter-action" onclick="Accounts.logout()">Выйти в гостевой ангар</button>
     <button type="button" class="winter-back" onclick="Accounts.downloadDraft()">Скачать копию</button>
     <button id="cloud-recover" type="button" class="winter-back" onclick="Accounts.recover()" hidden>Загрузить облачную версию</button></div>
@@ -286,6 +312,7 @@
         </aside>
       </div>
       <p id="sale-status" role="status" hidden></p>
+      <p id="referral-notice" hidden role="status"></p>
       <p id="season-note" role="status" hidden></p>
       <details class="bay-supply">
         <summary>Бустеры снабжения</summary>
@@ -456,6 +483,7 @@
     <script src="js/destructible.js"></script>         <!-- NEW: разрушаемые здания -->
     <script src="js/effects.js"></script>               <!-- NEW: искры/гильзы/тени -->
     <script src="vendor/auth-2.79.min.js"></script>
+    <script src="js/referrals.js"></script>
     <script src="js/accounts.js"></script>
     <script src="js/local-profile.js"></script>
     <script src="js/shell-ui.js"></script>

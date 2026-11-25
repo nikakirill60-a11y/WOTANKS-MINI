@@ -418,13 +418,14 @@ test('offline team modes use the shared 3D asset; touch driving/firing, replay a
     await page.locator('#map-select').selectOption(map);await click(name);await chooseControls(page,type);await ready(page);
     const units=await page.evaluate(()=>{
       const pool=Object.values(DB).filter(t=>Math.abs(t.tier-GameState.player.tier)<=1).map(t=>t.id);
+      const mover=GameState.units.findIndex(u=>u.bot && !u.isSPG);
       return {n:BattleView.stats().units,poolSize:pool.length,
         shared:GameState.units.every(u=>pool.includes(u.id)&&u.modelAsset===GameState.units.find(t=>t.id===u.id).modelAsset),
         types:new Set(GameState.units.map(u=>u.id)).size,
-        allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[GameState.units[1].x,GameState.units[1].y]};
+        allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[mover,GameState.units[mover].x,GameState.units[mover].y]};
     });
-    assert.equal(units.n,count);assert.equal(units.types,Math.min(units.poolSize,count/2));assert.ok(units.shared&&units.allFinite);
-    await page.waitForFunction(([x,y])=>Math.hypot(GameState.units[1].x-x,GameState.units[1].y-y)>4,units.start);
+    assert.equal(units.n,count);assert.ok(units.types>count/2 && units.types<=Math.min(units.poolSize,count));assert.ok(units.shared&&units.allFinite);
+    await page.waitForFunction(([i,x,y])=>Math.hypot(GameState.units[i].x-x,GameState.units[i].y-y)>4,units.start);
     if(type==='pc'){
       // Real RAF motion was checked above. On the full-size map walk the remaining
       // fixed steps to first contact without tying the result to software GPU speed.
@@ -597,6 +598,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
         stopBattleLoop();const g=GameState,a=g.arena,nav=g.navigation,r=nav.recon;
         const initialCounts=r.teams.map(t=>t.count), initialScore=['allies-list','enemies-list'].map(id=>Number(document.getElementById(id).textContent));
         const orders=new Set(g.units.filter(u=>u.bot).map(u=>u.bot.order)).size;
+        const mobileBots=g.units.filter(u=>u.bot && !u.isSPG).length;
         const starts=g.units.map(u=>[u.x,u.y]);let moved=0,invalid=false,spotted=false,damage=0,both=false;
         const clock=Date.now,start=performance.now(),date=clock();let time=0;
         const rng=Math.random;let state=650+size;
@@ -606,19 +608,21 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
           for(let i=0;i<7200 && g.gameActive;i++){
             time+=TICK; update();
             if(ticks%12===0){
-              moved=Math.max(moved,g.units.filter((u,k)=>u.bot && Math.hypot(u.x-starts[k][0],u.y-starts[k][1])>110).length);
+              moved=Math.max(moved,g.units.filter((u,k)=>u.bot && !u.isSPG && Math.hypot(u.x-starts[k][0],u.y-starts[k][1])>110).length);
               invalid ||= g.units.some(u=> !Number.isFinite(u.x+u.y+u.angle+u.tAngle+u.rideHeight+u.groundPitch+u.groundRoll) || u.drownTimer!=null || !nav.clear(u.x,u.y,u.x,u.y));
               spotted ||= g.units.some(u=>u.team==='enemy' && u.visible);
               damage=g.units.reduce((s,u)=>s+u.maxHp-u.hp,0);
               both=g.units.some(u=>u.team==='ally' && u.lastShot>0) && g.units.some(u=>u.team==='enemy' && u.lastShot>0);
-              if(both && damage>0 && moved===size*2-1 && r.teams.every((t,i)=>t.count>=initialCounts[i]+2))break;
+              if(both && damage>0 && moved===mobileBots && r.teams.every((t,i)=>t.count>=initialCounts[i]+2))break;
             }
           }
           BattleView.syncCamera();BattleView.aim();BattleView.draw();updateHUD();
         } finally {delete performance.now;Date.now=clock;Math.random=rng;}
         const allies=g.units.filter(u=>u.team!=='enemy'),enemies=g.units.filter(u=>u.team==='enemy');
-        const mirrored=allies.every((u,k)=>enemies[k].id===u.id && Math.abs(u.tier-g.player.tier)<=1);
-        const info={player:g.player.name,nations:[...new Set(allies.map(u=>DB[u.id].nat))],mirrored,id:a.id,sizeOK:document.querySelector('#map-size').textContent===spec.size.join(' × ')+' м',
+        const different=enemies.some(e=>!allies.some(u=>u.id===e.id));
+        const inBand=g.units.every(u=>Math.abs(u.tier-g.player.tier)<=1);
+        const onBase=g.units.filter(u=>u.bot && u.isSPG).every(u=>!u.bot.scout && u.bot.sector<0 && Math.hypot(u.x-u.bot.post.x,u.y-u.bot.post.y)<65);
+        const info={player:g.player.name,nations:[...new Set(allies.map(u=>DB[u.id].nat))],different,inBand,onBase,mobileBots,id:a.id,sizeOK:document.querySelector('#map-size').textContent===spec.size.join(' × ')+' м',
           hudOK:document.querySelector('#combat-map').textContent===spec.name && document.querySelector('#combat-sector').textContent.endsWith(size+' × '+size),
           surveyLabel:document.querySelector('#recon-status').textContent, expectedLabel:`Разведано: ${r.teams[0].count}/${r.total}`,
           growth:r.teams.map((t,i)=>t.count-initialCounts[i]), initialScore, orders,plan,mesh:BattleView.stats(),moved,spotted,damage,both,invalid};
@@ -626,13 +630,13 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
         return info;
       },{id,size});
       const label=id+' '+size+'×'+size;
-      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','hungary','sweden','usa','ussr']);assert.ok(info.mirrored);
+      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','hungary','sweden','usa','ussr']);assert.ok(info.different && info.inBand && info.onBase,label+' different rosters, matched range and SPG base duty');
       assert.equal(info.id,id);assert.ok(info.sizeOK && info.hudOK,label);plans.add(info.plan);
       assert.ok(info.mesh.triangles>1000 && info.mesh.units===size*2,label+' scene');
       assert.deepEqual(info.initialScore,[size,size],label+' initial HUD counts the actual line-ups');
       assert.equal(info.orders,size*2-1);assert.ok(info.growth.every(g=>g>=2),label+' both teams enter new sectors');
       assert.equal(info.surveyLabel,info.expectedLabel);
-      assert.equal(info.moved,size*2-1,label+' all non-player tanks advance');
+      assert.equal(info.moved,info.mobileBots,label+' non-artillery bots leave their starts');
       assert.ok(!info.invalid && info.spotted && info.both && info.damage>0 && info.reset,label+' fight');
     }
   }

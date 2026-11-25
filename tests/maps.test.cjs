@@ -29,6 +29,7 @@ function game() {
     'js/battle-maps',
     'js/battle-navigation',
     'js/battle-recon',
+    'js/artillery',
     'js/bot-ai',
     'js/terrain',
     'js/track-contact',
@@ -36,6 +37,7 @@ function game() {
     'js/armor-system',
     'js/destructible',
     'js/tank',
+    'js/battle',
     'js/main',
     'js/features/combat-mechanics',
     'js/features/weather-environments'
@@ -43,7 +45,7 @@ function game() {
     vm.runInContext(readFileSync(path.join(root, file + '.js'), 'utf8'), ctx, { filename: file });
   }
   return vm.runInContext(
-    '({BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,nearestBattleWall})',
+    '({DB,makeRosters,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,nearestBattleWall})',
     ctx
   );
 }
@@ -115,10 +117,10 @@ test('six larger maps: separated spawns, a clear practice lane and reachable gro
         id + ' bounds'
       );
     }
-    const [p, t] = battleFormation(a, nav, ['MS1'], 'IS7');
+    const [p, t] = battleFormation(a, nav, [['MS1'], ['IS7']]);
     assert.ok(nav.clear(p.x, p.y, t.x, t.y) && t.practice, id + ' practice');
     for (const size of [7, 10, 15]) {
-      const slots = battleFormation(a, nav, Array(size).fill('IS7'));
+      const slots = battleFormation(a, nav, [Array(size).fill('IS7'), Array(size).fill('E100')]);
       assert.equal(slots.length, 2 * size);
       for (const side of [0, 1]) {
         const team = slots.filter((s) => s.side === side),
@@ -209,6 +211,109 @@ function fixture(api, id) {
 
 const wall = () => ({ type: 'building', solid: true, x: -30, y: -110, w: 60, h: 220, height: 45, hp: 40 });
 
+// Use a deterministic stream for coverage; production calls the same deal with Math.random.
+test('separate rosters: every player model and size, five nation draws, no exact copy even at tier I', () => {
+  const { DB, GameState:g, makeRosters } = game();
+  let seed = 113;
+  const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const owned = JSON.stringify([g.owned, g.rentalBattles, g.usedPromos]);
+  for (const player of Object.values(DB)) for (const size of [7,10,15]) {
+    for (const roll of [random, () => 0]) {
+      const [allies, enemies] = makeRosters(player.id, size, roll);
+      assert.equal(allies[0], player.id);
+      for (const team of [allies, enemies]) {
+        assert.equal(team.length, size); assert.equal(new Set(team).size, size);
+        assert.ok(team.every(id => Math.abs(DB[id].tier - player.tier) <= 1));
+        assert.ok(new Set(team.map(id => DB[id].nat)).size >= 5);
+      }
+      assert.ok(enemies.some(id => !allies.includes(id)), player.id+' '+size+' distinct sets, not a permutation');
+    }
+  }
+  const enemies = new Set(), allies = new Set(), spgCount = [0,0]; let sameFirst = 0;
+  for(let k=0;k<150;k++) {
+    const [a,b] = makeRosters('MS1', 7, random);
+    allies.add(a.slice().sort().join()); enemies.add(b.slice().sort().join());
+    if(b[0]==='MS1')sameFirst++; if(a.includes('GPZ'))spgCount[0]++;if(b.includes('GPZ'))spgCount[1]++;
+  }
+  assert.ok(enemies.size>30 && allies.size>30 && sameFirst>0 && sameFirst<100, 'variety, not a compulsory counterpart or a model ban');
+  assert.ok(spgCount.every(n=>n>0 && n<150));assert.equal(JSON.stringify([g.owned,g.rentalBattles,g.usedPromos]),owned);
+});
+
+test('formation uses both actual rosters: bot SPGs spawn at their own base, scout roles follow each side’s mobile models', () => {
+  const { BattleMaps, BattleNavigation, battleFormation } = game();
+  for(const map of Object.keys(BattleMaps.specs)) {
+    const a=BattleMaps.create(map), nav=new BattleNavigation(a);
+    for(const size of [7,10,15]) {
+      const teams=[Array(size).fill('T26'),Array(size).fill('KV1')], width=size===15?5:3;
+      teams[0][1]='GPZ'; teams[0][1+width]='BT7';
+      teams[1][1]='BT7'; teams[1][1+width]='GPZ';
+      const slots=battleFormation(a,nav,teams);
+      assert.equal(slots[0].team,'player');assert.ok(!slots[0].scout);
+      for(const side of [0,1]) {
+        const team=slots.filter(s=>s.side===side), post=team.find(s=>s.id==='GPZ');
+        assert.equal(Array.from(team,s=>s.id).join(),teams[side].join());
+        assert.ok(!post.scout && Math.hypot(post.x-a.bases[side].x,post.y-a.bases[side].y)<240,map+' base berth');
+        assert.ok(nav.clear(post.x,post.y,post.x,post.y));
+        assert.ok(slots.every(s=>s===post || Math.hypot(s.x-post.x,s.y-post.y)>=73));
+        assert.equal(team.filter(s=>s.scout).length,width);
+        assert.equal(team.find(s=>s.scout && s.lane===post.lane).id,'BT7');
+      }
+    }
+  }
+});
+
+test('mobile bots hold a usable position, regroup when outnumbered or low on HP and resume after danger clears', () => {
+  for(const side of [0,1]) for(const lowHP of [false,true]) {
+    const { BotAI, ...api }=game(), { nav, vehicle }=fixture(api);
+    const us=side?'enemy':'ally', them=side?'player':'enemy', dir=side?-1:1;
+    const bot=vehicle(0,0,us), target=vehicle(dir*360,0,them), extra=vehicle(dir*390,55,them);
+    bot.angle=bot.tAngle=bot.lookYaw=side?Math.PI:0;
+    BotAI.attach(bot,{side,index:0,lane:1},nav);target.spotted=true;
+    bot.nextShot=1e6;bot.isReloading=true;
+    const step=i=>{BotAI.beginTick(nav,i);BotAI.step(bot,i);};
+    for(let i=1;i<=40;i++)step(i);
+    assert.equal(bot.bot.mode,'engage','hidden enemy does not count');assert.ok(Math.abs(bot.x)<1,'no needless closing');
+    if(lowHP)bot.hp=bot.maxHp*.30;else extra.spotted=true;
+    // A dead teammate is neither support nor a reason to drive on.
+    vehicle(-dir*15,60,us).dead=true;
+    for(let i=41;i<=370;i++)step(i);
+    assert.equal(bot.bot.mode,'regroup');assert.ok(bot.x*dir < -35,'actually backed off along walkable ground');
+    assert.ok(nav.clear(bot.x,bot.y,bot.x,bot.y));
+    target.spotted=extra.spotted=false;step(371);
+    assert.equal(bot.bot.target,null);assert.equal(bot.bot.mode,'regroup','no immediate rush to last-known point');
+    const until=bot.bot.regroupUntil;
+    for(let i=372;i<=until+20;i++)step(i);
+    assert.notEqual(bot.bot.mode,'regroup','not parked for the rest of the match');
+  }
+});
+
+test('bot artillery on either side stays at its post, uses only team sightings and goes back if displaced', () => {
+  for(const side of [0,1]) {
+    const api=game(), { a, nav, g, vehicle }=fixture(api), home=a.bases[side];
+    const us=side?'enemy':'ally', them=side?'player':'enemy', dir=side?-1:1;
+    const gun=vehicle(home.x,home.y,us,'GPZ'), t=vehicle(-home.x,42,them), ally=vehicle(t.x,t.y+12,us);
+    gun.angle=gun.lookYaw=gun.tAngle=side?Math.PI:0;
+    api.BotAI.attach(gun,{side,index:2,lane:1,scout:true},nav);g.holdTurret=true; // player's controls do not operate this NPC
+    const tick=i=>{api.BotAI.beginTick(nav,i);api.BotAI.step(gun,i);};
+    for(let i=1;i<=120;i++)tick(i);
+    assert.equal(gun.bot.mode,'base');assert.equal(gun.bot.scout,false);assert.equal(gun.bot.sector,-1);assert.equal(gun.bot.goal,null);
+    assert.equal(g.bullets.length,0,'cannot see through fog');
+    t.spotted=true;
+    for(let i=121;i<=400;i++)tick(i);
+    assert.equal(gun.bot.target,t);assert.equal(g.bullets.length,0,'friendly too near the board cursor');
+    ally.dead=true;
+    for(let i=401;i<=520;i++)tick(i);
+    assert.equal(g.bullets.length,1);const shot=g.bullets[0];assert.ok(shot.arc && shot.shooter===gun && gun.isReloading);
+    assert.equal(gun.nextShot,16500);assert.equal(gun.x,home.x);assert.equal(gun.y,home.y);
+    t.spotted=false;const old=gun.bot.board.x;t.x+=dir*110;
+    for(let i=521;i<=600;i++)tick(i);
+    assert.equal(gun.bot.target,null);assert.equal(gun.bot.board.x,old);assert.equal(gun.bot.sector,-1);
+    gun.x+=dir*185;tick(601);assert.equal(gun.bot.mode,'return');
+    for(let i=602;i<=1700;i++)tick(i);
+    assert.equal(gun.bot.mode,'base');assert.ok(Math.hypot(gun.x-home.x,gun.y-home.y)<35);assert.equal(g.bullets.length,1);
+  }
+});
+
 test('solid cover changes the route; bots really steer around it, and destruction opens a new route', () => {
   const api = game(),
     { a, nav, g, vehicle } = fixture(api),
@@ -249,6 +354,7 @@ test('bots prefer an open contact; teammates, intervening cover and smoke withho
   g.walls.push({ ...wall(), x: -140, y: 40, w: 60, h: 24 });
   g.arena.revision++;
   // The second contact is reported by a teammate, but the shooter's view of it is blocked.
+  vehicle(-310, 0, 'ally'); // support behind the observer: this fixture is about sight, not regrouping
   hidden.spotted = t.spotted = true;
   u.nextShot = 10000;
   api.BotAI.attach(u, { side: 0, lane: 1, index: 0 }, nav);
@@ -329,7 +435,7 @@ test('without contact the scouts split up, drive into the outer map and keep sur
     .battleFormation(
       a,
       nav,
-      Array.from({ length: 15 }, (_, i) => (i % 2 ? 'BT7' : 'T26'))
+      [Array.from({ length: 15 }, (_, i) => (i % 2 ? 'BT7' : 'T26')), Array(15).fill('MS1')]
     )
     .slice(0, 15);
   for (const s of slots) {

@@ -225,53 +225,45 @@ class BattleNavigation {
   }
 }
 
-function battleFormation(arena, nav, roster, practiceEnemy) {
-  if (practiceEnemy)
+function battleFormation(arena, nav, teams) {
+  if (teams[0].length === 1)
     return [
-      { id: roster[0], x: -148, y: 0, team: 'player', angle: 0 },
-      { id: practiceEnemy, x: 135, y: 0, team: 'enemy', angle: Math.PI, practice: true }
+      { id: teams[0][0], x: -148, y: 0, team: 'player', angle: 0 },
+      { id: teams[1][0], x: 135, y: 0, team: 'enemy', angle: Math.PI, practice: true }
     ];
   const units = [],
     [home, away] = arena.bases,
     angle = Math.atan2(away.y - home.y, away.x - home.x);
   const ahead = { x: Math.cos(angle), y: Math.sin(angle) },
     across = { x: -ahead.y, y: ahead.x };
-  // Five files of three in 15×15. Smaller teams keep their three centre lanes.
   const middle = Math.floor(arena.hubs.length / 2),
     lanes = [middle, middle - 1, middle + 1];
-  if (roster.length >= 15) lanes.push(0, arena.hubs.length - 1);
-  const first = arena.hubs[0],
-    last = arena.hubs.at(-1);
+  if (teams[0].length >= 15) lanes.push(0, arena.hubs.length - 1);
+  const first = arena.hubs[0], last = arena.hubs.at(-1);
   const orientation = Math.sign((last.x - first.x) * across.x + (last.y - first.y) * across.y) || 1;
-  // Give a mobile bot in each file the survey job. Same roles on mirrored sides;
-  // slot zero is the player's counterpart, never a mandatory scout.
-  const scouts = new Map();
   const mobility = (id) => DB[id].speed + (DB[id].cls === 'lt' ? 14 : DB[id].cls === 'mt' ? 5 : 0);
-  for (let i = 1; i < roster.length; i++) {
-    const lane = lanes[i % lanes.length],
-      prior = scouts.get(lane);
-    if (prior === undefined || mobility(roster[i]) > mobility(roster[prior])) scouts.set(lane, i);
-  }
-  for (let side = 0; side < 2; side++)
-    for (let i = 0; i < roster.length; i++) {
-      const lane = lanes[i % lanes.length],
-        row = Math.floor(i / lanes.length);
-      const back = (side ? 1 : -1) * row * 96;
-      const offset = orientation * (lane - middle) * arena.spread + (row % 2 ? 38 : 0);
+  for (const [side, roster] of teams.entries()) {
+    // Choose scouts from THIS team's actual vehicles. Leave its first slot and
+    // base artillery out of survey duty, even if the SPG has a high top speed.
+    const scouts = new Map();
+    for (let i = 1; i < roster.length; i++) {
+      if (DB[roster[i]].cls === 'spg') continue;
+      const lane = lanes[i % lanes.length], prior = scouts.get(lane);
+      if (prior === undefined || mobility(roster[i]) > mobility(roster[prior])) scouts.set(lane, i);
+    }
+    for (const [i, id] of roster.entries()) {
+      const lane = lanes[i % lanes.length], row = Math.floor(i / lanes.length);
+      const team = side ? 'enemy' : i ? 'ally' : 'player';
+      const guard = team !== 'player' && DB[id].cls === 'spg';
+      // Bot artillery gets a legal berth by its base marker, not a distant scout lane.
+      const back = (side ? 1 : -1) * (guard ? 110 : row * 96);
+      const offset = guard ? (side ? -85 : 85) : orientation * (lane - middle) * arena.spread + (row % 2 ? 38 : 0);
       const x = arena.bases[side].x + back * ahead.x + offset * across.x,
         y = arena.bases[side].y + back * ahead.y + offset * across.y;
       const n = nav.nearest(x, y, (p) => units.every((u) => (u.x - p.x) ** 2 + (u.y - p.y) ** 2 >= 73 ** 2));
       if (n < 0) throw new Error('Не удалось разместить команду на карте.');
-      units.push({
-        ...nav.point(n),
-        id: roster[i],
-        team: side ? 'enemy' : i ? 'ally' : 'player',
-        angle: angle + side * Math.PI,
-        lane,
-        index: i,
-        scout: scouts.get(lane) === i,
-        side
-      });
+      units.push({ ...nav.point(n), id, team, angle: angle + side * Math.PI, lane, index: i, scout: scouts.get(lane) === i, side });
     }
+  }
   return units;
 }

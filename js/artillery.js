@@ -6,6 +6,7 @@ class ArtillerySight {
     this.moveTo(point.x, point.y);
   }
   static fov = 50;
+  static burstRadius = 33;
   static raisedPitch = .5; // a game animation pose inside the supplied mount limits
   get zoom() { return 2 ** this.level; }
   get altitude() { return 850 / this.zoom; }
@@ -64,7 +65,7 @@ function artilleryStep(b) {
 
 // Small near-miss bonus at a ground impact. No second direct hit, friendly fire, or splash through cover.
 function artilleryBurst(b) {
-  const radius = 33;
+  const radius = ArtillerySight.burstRadius;
   spawnParticles(b.x, b.y, '#ffb65b', 16, 3.4, 20, b.h + 1);
   for (const u of GameState.units) {
     if (u.dead || (u.team === 'enemy') === (b.team === 'enemy')) continue;

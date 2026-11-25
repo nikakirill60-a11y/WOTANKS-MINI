@@ -87,7 +87,7 @@ class Tank {
     this.updateReload(now);
     if (this.dead || this.isReloading || now < this.nextShot || !this.modelAsset) return false;
     if (this.usesMagazine) shellType = 0; // One clip type, including for AI and touch input.
-    if (sight && (!this.isSPG || GameState.holdTurret || !sight.aligned(this))) return false;
+    if (sight && (!this.isSPG || (this === GameState.player && GameState.holdTurret) || !sight.aligned(this))) return false;
     const sh = this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[shellType],
       ray = this.barrelRay();
     const speed = 14 * sh.sMul * this.shellSpeedMul;

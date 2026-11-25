@@ -9,7 +9,7 @@ const TankSales = (() => {
     const amount = gold ? tank.tier * 100 : tank.xp === 0 ? 0 : tank.tier * 5000;
     return {field: gold ? 'GOLD' : 'SILVER', amount, label: amount.toLocaleString('ru-RU') + (gold ? ' G' : ' ₽')};
   }
-  const canSell = id => Object.hasOwn(DB,id) && GameState.owned.includes(id) && !GameState.gameActive && !battleLaunch && !Accounts.switching;
+  const canSell = id => Object.hasOwn(DB,id) && GameState.owned.includes(id) && !GameState.rentalBattles[id] && !GameState.gameActive && !battleLaunch && !Accounts.switching;
   function open(id) {
     if (dialog.open || !canSell(id)) return;
     offered = id;
@@ -36,10 +36,8 @@ const TankSales = (() => {
     close();
     if (!canSell(id)) return;
     const g = GameState, price = quote(DB[id]);
-    g.owned.splice(g.owned.indexOf(id),1);
     g[price.field] += price.amount;
-    for (const key of ['modules','upgrades','upgradesBought']) delete g[key][id];
-    const arrivals = HangarSlots.deliver(); // selects a remaining/delivered tank, or null in an empty garage
+    const arrivals = HangarSlots.release(id);
     saveProgress(); updateResources(); renderCarousel(); renderTree();
     const status = el('sale-status'); status.hidden = false;
     status.textContent = `${DB[id].n}: продажа за ${price.label}.` + (arrivals.length ? ` Доставлено: ${arrivals.map(i=>DB[i].n).join(', ')}.` : '');

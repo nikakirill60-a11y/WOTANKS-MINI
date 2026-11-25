@@ -148,12 +148,17 @@ function activateBooster(type) {
 }
 
 // ========== Модули ==========
+function rentalEquipmentNote(id) {
+  const term = HangarSlots.rentalTerm(id);
+  return term ? `<p class="rental-note">Аренда: ${term}. По окончании аренды модули и улучшения снимаются без компенсации.</p>` : '';
+}
+
 function showModules() {
   var tid = GameState.selected;
   var t = DB[tid];
   if (!t) return;
   var mods = GameState.modules[tid] || [null, null, null];
-  var html = '<div class="module-panel"><h3>⚙️ Модули: ' + t.n + '</h3><div class="module-slots">';
+  var html = '<div class="module-panel"><h3>⚙️ Модули: ' + t.n + '</h3>' + rentalEquipmentNote(tid) + '<div class="module-slots">';
   for (var i = 0; i < 3; i++) {
     var m = mods[i];
     var mod = m ? CONFIG.MODULES[m] : null;
@@ -229,7 +234,7 @@ function showUpgrades() {
     { key: 'engine', icon: '⚙️', title: 'Двигатель', items: CONFIG.UPGRADES.engine },
     { key: 'turret', icon: '🛡️', title: t.turretArmor == null ? 'Рубка' : 'Башня', items: CONFIG.UPGRADES.turret }
   ];
-  var html = '<div class="upgrade-panel"><h3>📈 Прокачка: ' + t.n + ' [' + (CONFIG.TIER_ROMAN[tier] || 'XI') + ']</h3><div class="upgrade-columns">';
+  var html = '<div class="upgrade-panel"><h3>📈 Прокачка: ' + t.n + ' [' + (CONFIG.TIER_ROMAN[tier] || 'XI') + ']</h3>' + rentalEquipmentNote(tid) + '<div class="upgrade-columns">';
   for (var ci = 0; ci < cats.length; ci++) {
     var cat = cats[ci];
     html += '<div class="upgrade-col"><div class="upgrade-col-title">' + cat.icon + ' ' + cat.title + '</div>';
@@ -292,7 +297,7 @@ function showPromo() {
 function hidePromo() { var modal = document.getElementById('promo-modal'); if (modal) modal.classList.remove('show'); }
 
 function activatePromo() {
-  if (GameState.gameActive || Accounts.switching) return;
+  if (GameState.gameActive || battleLaunch || Accounts.switching) return;
   const code = document.getElementById('promo-input').value.trim().toUpperCase();
   const result = document.getElementById('promo-result');
   const say = (text, color) => { result.textContent = text; result.style.color = color; };
@@ -308,10 +313,12 @@ function activatePromo() {
       const where = GameState.owned.includes(id) ? 'уже в ангаре' : 'уже ожидает слота';
       return say(`${name} ${where}. Код не потрачен.`, '#eabb70');
     }
-    HangarSlots.award(id);
+    HangarSlots.award(id, reward.rentalBattles);
     items.push(GameState.pendingVehicles.includes(id)
       ? `${name} ожидает слота в инвентаре. Освободите место в ангаре.`
       : `${name} добавлена в ангар.`);
+    const term = HangarSlots.rentalTerm(id);
+    if (term) items.push(`Аренда на ${term}. Каждый выезд на этой машине, включая тренировку, расходует один бой.`);
   }
   if (reward.gold) { GameState.GOLD += reward.gold; items.push(reward.gold + 'G'); }
   if (reward.silver) { GameState.SILVER += reward.silver; items.push(reward.silver + '💰'); }
@@ -320,7 +327,7 @@ function activatePromo() {
   if (reward.boosterXP) GameState.boosterStock.xp += reward.boosterXP;
   if (reward.boosterSilver) GameState.boosterStock.silver += reward.boosterSilver;
   GameState.usedPromos.push(code);
-  saveProgress(); // receipt and vehicle (parked or reserved) in the same profile snapshot
+  saveProgress(); // receipt, vehicle (parked or reserved) and rental term in the same snapshot
   say('✅ Успешно! ' + items.join(' '), '#2ecc71');
   updateResources(); renderCarousel(); updateBoosterUI();
 }
@@ -369,8 +376,10 @@ function renderCarousel(fromCarousel = false) {
     select.type = 'button';
     select.className = 'slot-select';
     select.setAttribute('aria-label', 'Выбрать для боя: ' + t.n);
-    select.setAttribute('aria-description', CONFIG.NATIONS[t.nat]);
-    select.title = t.n + ' · ' + CONFIG.NATIONS[t.nat];
+    const term = HangarSlots.rentalTerm(id);
+    const description = CONFIG.NATIONS[t.nat] + (term ? ' · Аренда: ' + term : '');
+    select.setAttribute('aria-description', description);
+    select.title = t.n + ' · ' + description;
     select.setAttribute('aria-pressed', String(GameState.selected === id));
     (function(tankId) {
       select.onclick = function() {
@@ -383,16 +392,21 @@ function renderCarousel(fromCarousel = false) {
         if (active) active.focus({ preventScroll: true });
       };
     })(id);
-    var sb = document.createElement('button');
-    sb.className = 'sell-btn';
-    sb.setAttribute('aria-label', 'Продать: ' + t.n);
-    sb.type = 'button';
-    sb.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h7l7 7-7 7-7-7Z"/><circle cx="7" cy="7" r="1"/></svg><span>Продать</span>';
-    sb.title = t.n + ' · продать за ' + TankSales.quote(t).label;
-    (function(tankId) {
-      sb.onclick = function(e) { e.stopPropagation(); sellTank(tankId); };
-    })(id);
-    slot.appendChild(sb);
+    if (term) {
+      const tag = document.createElement('span');
+      tag.className = 'rental-tag';
+      tag.textContent = 'Аренда: ' + term;
+      slot.appendChild(tag);
+    } else {
+      const sb = document.createElement('button'), tankId = id;
+      sb.className = 'sell-btn';
+      sb.setAttribute('aria-label', 'Продать: ' + t.n);
+      sb.type = 'button';
+      sb.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h7l7 7-7 7-7-7Z"/><circle cx="7" cy="7" r="1"/></svg><span>Продать</span>';
+      sb.title = t.n + ' · продать за ' + TankSales.quote(t).label;
+      sb.onclick = e => { e.stopPropagation(); sellTank(tankId); };
+      slot.appendChild(sb);
+    }
     var upg = GameState.upgrades[id];
     if (upg) {
       var total = (upg.gun || 0) + (upg.engine || 0) + (upg.turret || 0);

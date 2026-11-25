@@ -21,7 +21,7 @@ const CONFIG = {
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ', spg: 'САУ' },
   SPG_ROUND: { name: 'ОФ', sMul: 1, dMul: 1, penMul: 1, color: '#ffd48b' },
   PROMOCODES: {
-    "ARTA": { vehicle: "GPZ" },
+    "ARTA": { vehicle: "GPZ", rentalBattles: 4 },
     "BETA_TEST": { gold: 500 },
     "START2025": { gold: 100, silver: 5000 },
     "TANKS": { xp: 1000 },
@@ -106,7 +106,7 @@ function initialProgress() {
   return {
     XP: 500, GOLD: 0, SILVER: 5000, charges: 0,
     owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
-    garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [],
+    garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [], rentalBattles: {},
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,

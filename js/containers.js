@@ -241,7 +241,10 @@ function renderInventoryGrid() {
   const grid=document.getElementById('inventory-grid');grid.replaceChildren();
   document.getElementById('inventory-empty').hidden=!!getInvTotal();
   const waiting=document.getElementById('vehicle-deliveries');waiting.hidden=!GameState.pendingVehicles.length;
-  waiting.textContent=waiting.hidden?'':`Ожидают слота: ${GameState.pendingVehicles.map(id=>DB[id].n).join(', ')}. Машины сохранены и поступят в ангар по очереди, как только освободится или выпадет место.`;
+  const deliveries=GameState.pendingVehicles.map(id=>{
+    const term=HangarSlots.rentalTerm(id);return DB[id].n+(term?` (аренда на ${term})`:'');
+  });
+  waiting.textContent=waiting.hidden?'':`Ожидают слота: ${deliveries.join(', ')}. Машины сохранены и поступят в ангар по очереди, как только освободится или выпадет место.`;
   for(const [id,qty] of Object.entries(GameState.inventory)){
     const box=CONTAINERS[id];if(!box||qty<=0)continue;
     const card=document.createElement('article');card.className='inv-card';card.style.setProperty('--stripe',box.color);

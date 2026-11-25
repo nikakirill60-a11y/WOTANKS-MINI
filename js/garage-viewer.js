@@ -8,7 +8,8 @@ const GarageViewer = (() => {
   let inspecting = true;
 
   function description(tank) {
-    return [CONFIG.NATIONS[tank.nat], CONFIG.TIER_ROMAN[tank.tier] + ' ур.', classNames[tank.cls]]
+    const term = HangarSlots.rentalTerm(tank.id);
+    return [CONFIG.NATIONS[tank.nat], CONFIG.TIER_ROMAN[tank.tier] + ' ур.', classNames[tank.cls], term && 'Аренда: ' + term]
       .filter(Boolean)
       .join(' · ');
   }
@@ -91,10 +92,11 @@ const GarageViewer = (() => {
       for (const btn of document.querySelectorAll('[data-needs-tank],#battle-controls button')) btn.disabled = empty;
       if (empty) {
         el('dispatch-name').textContent = el('bay-name').textContent = 'Ангар пуст';
-        el('dispatch-meta').textContent = ''; el('dispatch-drum').hidden = true;
+        el('dispatch-drum').hidden = true;
         el('bay-kind').textContent = 'МОЯ ТЕХНИКА'; el('bay-meta').textContent = 'Ни одной машины для выезда';
       } else describeSelection(DB[id]);
     }
+    el('dispatch-meta').textContent = id ? description(DB[id]) : ''; // balance can change without changing selection
     el('fleet-count').textContent = `${GameState.owned.length} / ${GameState.garageSlots}`;
     const waiting = el('fleet-pending');
     waiting.hidden = !GameState.pendingVehicles.length;
@@ -105,7 +107,6 @@ const GarageViewer = (() => {
 
   function describeSelection(tank) {
     el('dispatch-name').textContent = tank.n;
-    el('dispatch-meta').textContent = description(tank);
     el('dispatch-hp').textContent = tank.hp;
     el('dispatch-dmg-label').textContent = damageLabel(tank);
     el('dispatch-dmg').textContent = damageSummary(tank);

@@ -165,6 +165,12 @@ async function launchBattle(teamSize) {
     startPerfMonitor();
     BattleInput.begin();
     startBattleLoop();
+    // Count a successfully launched match, not a click, failed load, result or exit.
+    // Persist now so closing the tab cannot refund it. The fourth match plays normally.
+    if (HangarSlots.useRentalBattle(playerId)) {
+      g.player.rented = true;
+      saveProgress();
+    }
     return true;
   } catch (error) {
     if (!ticket.signal.aborted) battleFailed(error.message || 'Не удалось открыть поле боя.');
@@ -223,6 +229,11 @@ function endBattle(won) {
   if (xpMul > 1) boostInfo += '<br><span style="color:#3498db">⭐ Бустер XP x' + xpMul + '</span>';
   if (silverMul > 1) boostInfo += '<br><span style="color:#bdc3c7">💰 Бустер ₽ x' + silverMul + '</span>';
   if (goldMul > 1) boostInfo += '<br><span style="color:#f1c40f">🪙 Бустер G x' + goldMul + '</span>';
+
+  if (GameState.player?.rented) {
+    const term = HangarSlots.rentalTerm(GameState.player.id);
+    boostInfo += '<br>' + (term ? `Остаток аренды: ${term}.` : `Аренда ${DB[GameState.player.id].n} завершена.`);
+  }
 
   document.getElementById('result-stats').innerHTML =
     'Урон: ' +

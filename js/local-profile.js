@@ -65,7 +65,7 @@ function decodeProgress(data) {
   const savedEmpty = Array.isArray(data.owned) && !data.owned.length && data.selected === null;
   if (!restored.owned.length && !savedEmpty) restored.owned = defaults.owned;
   restored.selected = savedTankId(data.selected);
-  HangarSlots.restore(restored);
+  HangarSlots.restore(restored, !Object.hasOwn(data, 'rentalBattles'));
   if (!PLAYABLE_NATIONS.includes(data.curNat)) {
     const nat = DB[restored.selected]?.nat;
     restored.curNat = PLAYABLE_NATIONS.includes(nat) ? nat : defaults.curNat;

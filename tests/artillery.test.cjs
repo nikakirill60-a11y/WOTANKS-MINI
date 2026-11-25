@@ -10,43 +10,121 @@ async function redeem(page, code='ARTA', enter=false) {
   return page.locator('#promo-result').innerText();
 }
 
-test('ARTA grants the German collectible once, without research, a purchase or a new slot; selling cannot reset the code', async t => {
+test('ARTA grants four battles once, without research, payment or a new slot; the rental cannot be sold', async t => {
   const {page,click,saved} = await openGame(t,{mobile:true});
   await click('Дерево развития'); await click('ГЕРМАНИЯ');
   assert.equal(await page.locator('#tree-route option[value="GPZ"],#nodes [data-tank-id="GPZ"]').count(),0);
   const before = await saved(); await page.evaluate(()=>researchTank('GPZ')); assert.deepEqual(await saved(),before);
   await click('Код'); assert.match(await redeem(page,'AR TA'),/Неверный код/); assert.deepEqual(await saved(),before);
-  assert.ok((await redeem(page,'  aRtA  ',true)).includes(name+' добавлена в ангар'));
-  const claimed = {...before,owned:[...before.owned,'GPZ'],usedPromos:[...before.usedPromos,'ARTA']};
+  const message = await redeem(page,'  aRtA  ',true);
+  assert.ok(message.includes(name+' добавлена в ангар')); assert.match(message,/Аренда на 4 боя/);
+  const claimed = {...before,owned:[...before.owned,'GPZ'],usedPromos:[...before.usedPromos,'ARTA'],rentalBattles:{GPZ:4}};
   assert.deepEqual(await saved(),claimed); assert.match(await redeem(page),/Уже использован/); assert.deepEqual(await saved(),claimed);
   await click('ЗАКРЫТЬ'); await click('Выбрать для боя: '+name); await page.reload();
   assert.equal((await saved()).selected,'GPZ'); assert.equal(await page.locator('#bay-kind').innerText(),'КОЛЛЕКЦИОННАЯ МАШИНА');
-  assert.match(await page.locator('#dispatch-meta').innerText(),/Германия.*II.*САУ/);
+  assert.match(await page.locator('#dispatch-meta').innerText(),/Германия.*II.*САУ.*Аренда: 4 боя/);
   assert.equal(await page.locator('.tank-slot.selected [data-card-nation]').getAttribute('data-card-nation'),'germany');
-  await click('Продать: '+name); assert.equal(await page.locator('#sale-price').innerText(),'200 G');
-  assert.match(await page.locator('#sale-terms').innerText(),/Промокод.*уже использован/);
-  await click('Подтвердить продажу'); const sold=await saved(); assert.equal(sold.GOLD,before.GOLD+200);
-  await click('Код'); assert.match(await redeem(page),/Уже использован/); assert.deepEqual(await saved(),sold);
+  assert.equal(await page.locator('.tank-slot.selected .rental-tag').innerText(),'Аренда: 4 боя');
+  const parked = await saved();
+  assert.equal(await page.getByRole('button',{name:'Продать: '+name}).count(),0);
+  assert.equal(await page.evaluate(()=>{sellTank('GPZ');document.getElementById('sale-confirm').click();return document.getElementById('sale-modal').open;}),false);
+  await click('В БОЙ 15×15'); await click('Назад в ангар');
+  assert.equal(await page.evaluate(()=>startTraining()),false,'no WebGL: a failed launch must be free');
+  assert.deepEqual(await saved(),parked);
 });
 
 test('full garage: the promo saves one reservation, survives reload and delivers once when a berth opens',async t=>{
   const fleet=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','IS7'];
   const {page,click,saved}=await openGame(t,{seed:{owned:fleet,selected:'IS7'}}); const before=await saved();
-  await click('Код'); assert.ok((await redeem(page)).includes(name+' ожидает слота'));
-  const waiting={...before,pendingVehicles:['GPZ'],usedPromos:['ARTA']}; assert.deepEqual(await saved(),waiting);
-  await page.reload(); await click('Ожидают слота: 1');assert.ok((await page.locator('#vehicle-deliveries').innerText()).includes(name));
+  await click('Код'); const message=await redeem(page);assert.ok(message.includes(name+' ожидает слота'));assert.match(message,/Аренда на 4 боя/);
+  const waiting={...before,pendingVehicles:['GPZ'],usedPromos:['ARTA'],rentalBattles:{GPZ:4}}; assert.deepEqual(await saved(),waiting);
+  await page.reload(); await click('Ожидают слота: 1');assert.ok((await page.locator('#vehicle-deliveries').innerText()).includes(name+' (аренда на 4 боя)'));
   await click('В ангар'); await click('Код');assert.match(await redeem(page,'arta',true),/Уже использован/);assert.deepEqual(await saved(),waiting);
   await click('ЗАКРЫТЬ'); await page.getByRole('button',{name:'Выбрать для боя: Т-26',exact:true}).focus();
   await click('Продать: Т-26');await click('Подтвердить продажу');await page.reload();
   const delivered=await saved();assert.deepEqual(delivered.owned,fleet.filter(id=>id!=='T26').concat('GPZ'));
   assert.equal(delivered.selected,'IS7');assert.deepEqual(delivered.pendingVehicles,[]);assert.deepEqual(delivered.usedPromos,['ARTA']);
+  assert.deepEqual(delivered.rentalBattles,{GPZ:4}); assert.equal(await page.locator('[data-tank-id="GPZ"] .rental-tag').innerText(),'Аренда: 4 боя');
 });
 
 test('already researched GPZ retains selection and equipment; entering ARTA neither clones nor compensates it',async t=>{
   const {page,click,saved}=await openGame(t,{seed:{...seed,XP:350,modules:{GPZ:['optics']},upgrades:{GPZ:{gun:1}}}});
   const old=await saved();assert.deepEqual([old.owned,old.selected,old.XP,old.modules.GPZ,old.upgrades.GPZ],[seed.owned,'GPZ',350,['optics'],{gun:1}]);
   await click('Код'); assert.ok((await redeem(page)).includes(name+' уже в ангаре. Код не потрачен.'));
-  await page.reload();assert.deepEqual(await saved(),old);
+  await page.reload();assert.deepEqual(await saved(),old);assert.deepEqual(old.rentalBattles,{});
+  assert.equal(await page.locator('.rental-tag').count(),0);
+  await click('Продать: '+name);assert.equal(await page.locator('#sale-price').innerText(),'200 G');await click('Отмена');
+});
+
+test('rental migration uses the ARTA receipt plus actual possession; sold, corrupt and expired grants never respawn',async t=>{
+  const {page}=await openGame(t);
+  const cases=await page.evaluate(()=>{
+    const full=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','IS7'];
+    return [
+      {owned:full,pendingVehicles:['BT42','GPZ']}, // queued by the previous promo build
+      {owned:['MS1']},                           // sold before the update
+      {owned:['MS1'],rentalBattles:{GPZ:4}},     // orphan counter is not a grant
+      {owned:['GPZ'],rentalBattles:{GPZ:0}},     // last vehicle expired
+      {owned:['GPZ'],rentalBattles:{GPZ:'2'}},   // non-integer must not make it permanent
+      {owned:['GPZ'],rentalBattles:{GPZ:40,MS1:4}},
+      {owned:['GPZ'],usedPromos:[],rentalBattles:{GPZ:3}} // researched copy, no receipt
+    ].map(fields=>{
+      const g=decodeProgress({selected:'GPZ',usedPromos:['ARTA'],...fields});
+      return [g.rentalBattles,g.owned.includes('GPZ'),g.pendingVehicles,g.selected,g.usedPromos];
+    });
+  });
+  assert.deepEqual(cases,[
+    [{GPZ:4},false,['BT42','GPZ'],'MS1',['ARTA']], [{},false,[],'MS1',['ARTA']], [{},false,[],'MS1',['ARTA']],
+    [{},false,[],null,['ARTA']], [{},false,[],null,['ARTA']], [{GPZ:4},true,[],'GPZ',['ARTA']], [{},true,[],'GPZ',[]]
+  ]);
+});
+
+test('four playable sorties only: no charge for a target or cancelled load, no refund on reload/exit, final berth delivers FIFO',async t=>{
+  const fleet=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','GPZ'];
+  // Parked ARTA grant from the previous release, with no counter yet.
+  const {page,click,saved}=await openGame(t,{webgl:true,seed:{owned:fleet,selected:'GPZ',usedPromos:['ARTA'],pendingVehicles:['BT42','T62A'],
+    modules:{GPZ:['spall'],MS1:['optics']},upgrades:{GPZ:{gun:1}},upgradesBought:{GPZ:{gun:[true,true,false]}}}});
+  const start=await saved();assert.deepEqual(start.rentalBattles,{GPZ:4});
+  assert.equal(await page.evaluate(async()=>{const pending=startTraining();backToGarage();return await pending;}),false);
+  assert.deepEqual(await saved(),start);
+
+  const enter=size=>page.evaluate(async size=>{
+    GameState.controlMode='mobile';const launch=launchBattle(size),duplicate=await launchBattle(size);
+    if (!await launch) throw Error(document.getElementById('battle-notice-text').textContent);
+    stopBattleLoop();return {player:GameState.player.id,hp:GameState.player.maxHp,enemy:GameState.units.find(u=>u.team==='enemy').id,duplicate};
+  },size);
+  await click('Выбрать для боя: МС-1');await click('ТРЕНИРОВКА');
+  await page.locator('#train-nat-select').selectOption('germany');await page.locator('#enemy-select').selectOption('GPZ');
+  const target=await enter(1);assert.deepEqual([target.player,target.enemy,target.duplicate],['MS1','GPZ',false]);
+  await page.evaluate(()=>{endBattle(false);backToGarage();});assert.deepEqual((await saved()).rentalBattles,{GPZ:4});
+  await click('Выбрать для боя: '+name);
+
+  for (let remaining=3;remaining>=0;remaining--) {
+    const match=await enter(remaining===3?7:1);assert.deepEqual([match.player,match.hp,match.duplicate],['GPZ',135,false]);
+    assert.deepEqual((await saved()).rentalBattles,remaining?{GPZ:remaining}:{});
+    if (remaining===2) { // close the live match, then restore the same rental, not a fresh one
+      await page.reload();await page.locator('.tank-slot.selected').waitFor();
+    } else if (remaining===1) {
+      page.once('dialog',d=>d.accept());await page.evaluate(()=>leaveBattle());
+    } else {
+      await page.evaluate(win=>{endBattle(win);endBattle(win);},!!remaining);
+      assert.match(await page.locator('#result-stats').innerText(),remaining?/Остаток аренды: 3 боя/:/Аренда G\.Pz\. Mk\. VI \(e\) завершена/);
+      await click('В АНГАР');
+    }
+    if (remaining) {
+      const tag='Аренда: '+remaining+(remaining===1?' бой':' боя');
+      assert.equal(await page.locator('.tank-slot.selected .rental-tag').innerText(),tag);
+      assert.ok((await page.locator('#dispatch-meta').innerText()).includes(tag));
+    }
+  }
+  await page.reload();await page.locator('.tank-slot.selected').waitFor();
+  const final=await saved();assert.deepEqual(final.owned,fleet.filter(id=>id!=='GPZ').concat('BT42'));
+  assert.deepEqual([final.selected,final.pendingVehicles,final.garageSlots,final.usedPromos,final.rentalBattles],['MS1',['T62A'],10,['ARTA'],{}]);
+  for(const k of ['modules','upgrades','upgradesBought'])assert.equal(final[k].GPZ,undefined);
+  assert.deepEqual(final.modules.MS1,['optics']);assert.equal(final.totalBattles,3);assert.equal(final.GOLD,start.GOLD+70,'battle rewards only');
+  assert.equal(await page.locator('.tank-slot[data-tank-id="GPZ"]').count(),0);assert.equal(await page.locator('#dispatch-name').innerText(),'МС-1');
+  assert.equal(await page.evaluate(async()=>{const id=GameState.selected;try{GameState.selected='GPZ';return await startTraining();}finally{GameState.selected=id;}}),false);
+  await click('Код');assert.match(await redeem(page),/Уже использован/);assert.deepEqual(await saved(),final);
 });
 
 async function practice(page,click,type) {

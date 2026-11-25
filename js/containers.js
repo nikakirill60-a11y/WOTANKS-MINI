@@ -1,5 +1,8 @@
-// Контейнеры снабжения содержат ресурсы, а не отдельный каталог машин.
+// Ordinary supply boxes keep their original resource tables. The collection has its own vehicle pool.
 const CONTAINERS = {
+  collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 150}, color: '#91c7d4',
+    vehicleChance: 0.05, vehicles: SPECIAL_TANKS.filter(t => t.source === 'collection').map(t => t.id),
+    drops: [['silver', 10000, 30000], ['gold', 25, 100]] },
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
     drops: [['silver', 5000, 15000], ['xp', 2000, 8000], ['gold', 50, 200]] },
   premium: { name: 'Офицерский резерв', icon: '🎁', cost: {gold: 500}, color: '#d0a76b',
@@ -7,6 +10,8 @@ const CONTAINERS = {
   supply: { name: 'Склад снабжения', icon: '⚡', cost: {charges: 1}, color: '#76b8ba',
     drops: [['silver', 30000, 80000], ['xp', 15000, 40000], ['gold', 200, 1000]] }
 };
+// A separate permanent berth roll; the primary reward table is unchanged.
+const SLOT_CHANCE = .10;
 const SUPPLIES = {
   silver: ['SILVER', 'Серебро', '₽', '💰', '#bdc3c7'],
   xp: ['XP', 'Опыт', 'XP', '⭐', '#82b4d6'],
@@ -24,43 +29,66 @@ function migrateSupplyBoxes(inventory) {
   return result;
 }
 
-function openContainerDirect(id) {
-  const box = CONTAINERS[id];
-  if (!box) return null;
-  const [type, min, max] = box.drops[Math.floor(Math.random() * box.drops.length)];
-  const [field, label, unit, icon, color] = SUPPLIES[type];
-  const amount = min + Math.floor(Math.random() * (max - min + 1));
+// Each box rolls independently at opening (also in bulk). One pool roll, not 5% per vehicle.
+function rollPrimary(box, random) {
+  let roll = random();
+  if (box.vehicles) {
+    const missing = box.vehicles.filter(id => !HangarSlots.received(id));
+    const chance = missing.length ? box.vehicleChance : 0;
+    if (roll < chance) {
+      const tankId = missing[Math.floor(random() * missing.length)];
+      HangarSlots.award(tankId);
+      return {type:'vehicle', id:tankId, amount:1};
+    }
+    roll = (roll - chance) / (1 - chance);
+  }
+  // The resource entries are equiprobable. A complete collection goes directly here.
+  const [type, min, max] = box.drops[Math.floor(roll * box.drops.length)];
+  const [field] = SUPPLIES[type];
+  const amount = min + Math.floor(random() * (max - min + 1));
   GameState[field] += amount;
-  updateResources();
-  return { type, amount, label, display: amount + ' ' + unit, icon, color };
+  return { type, amount };
 }
 
-let containerAnimating = false;
-
-function showContainerShop() {
-  document.getElementById('container-modal').classList.add('show');
-  switchTab('shop', document.querySelector('#container-modal .modal-tab'));
-  updateInvCount();
+function openContainerDirect(id, random = Math.random) {
+  if (!Object.hasOwn(CONTAINERS,id)) return null;
+  const reward = rollPrimary(CONTAINERS[id],random);
+  reward.slot = random() < SLOT_CHANCE && GameState.garageSlots < Number.MAX_SAFE_INTEGER;
+  if (reward.slot) {
+    GameState.garageSlots++;
+    reward.delivered = HangarSlots.deliver();
+  }
+  return reward;
 }
 
+function showContainerShop(tab = 'shop') {
+  if (CrateView.active || GameState.gameActive) return;
+  const dialog = document.getElementById('container-modal');
+  if (!dialog.open) { dialog.showModal(); GarageViewer.suspend(); }
+  document.getElementById('supply-feedback').textContent = '';
+  switchTab(tab,dialog.querySelectorAll('.modal-tab')[tab==='inventory'?1:0]); updateInvCount();
+}
 function hideContainerShop() {
-  document.getElementById('container-modal').classList.remove('show');
+  const dialog=document.getElementById('container-modal');
+  if(CrateView.active) CrateView.close();
+  if(dialog.open) dialog.close();
 }
-
+document.getElementById('container-modal').addEventListener('close',()=>GarageViewer.syncSelection());
 function switchTab(tab, btn) {
-  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
-  document.getElementById('tab-' + tab).classList.add('active-tab');
-
-  if (tab === 'shop') renderContainerGrid();
-  if (tab === 'inventory') renderInventoryGrid();
+  const dialog=document.getElementById('container-modal');
+  document.getElementById('supply-feedback').textContent='';
+  for(const t of dialog.querySelectorAll('.modal-tab')){
+    t.classList.toggle('active',t===btn);t.setAttribute('aria-pressed',String(t===btn));
+  }
+  for(const panel of dialog.querySelectorAll('.tab-content'))panel.classList.toggle('active-tab',panel.id==='tab-'+tab);
+  if(tab==='shop')renderContainerGrid();else renderInventoryGrid();
 }
-
-function openInventoryTab() {
-  showContainerShop();
-  switchTab('inventory', document.querySelectorAll('#container-modal .modal-tab')[1]);
+function refreshSupplyTab() {
+  if (!document.getElementById('container-modal').open) return;
+  if (document.getElementById('tab-inventory').classList.contains('active-tab')) renderInventoryGrid();
+  else renderContainerGrid();
 }
+function openInventoryTab() { showContainerShop('inventory'); }
 
 function getInvTotal() {
   let total = 0;
@@ -89,7 +117,6 @@ function buyCharges(count) {
   GameState.GOLD -= cost;
   GameState.charges = (GameState.charges || 0) + count;
   updateResources();
-  renderContainerGrid();
   if (typeof saveProgress === 'function') saveProgress();
   showInvNotification(count + " ⚡ Зарядов", "⚡");
   return true;
@@ -97,9 +124,9 @@ function buyCharges(count) {
 window.buyCharges = buyCharges;
 
 function buyContainer(cid) {
-  if (containerAnimating) return;
+  if (CrateView.active) return;
+  if (!Object.hasOwn(CONTAINERS,cid)) return;
   const c = CONTAINERS[cid];
-  if (!c) return;
 
   if (c.cost.charges) {
     const curCharges = GameState.charges || 0;
@@ -129,46 +156,46 @@ function buyContainer(cid) {
 
   updateResources();
   updateInvCount();
-  renderContainerGrid();
   saveProgress();
   showInvNotification(c.name, c.icon);
 }
 
-function openFromInventory(cid) {
-  if (containerAnimating) return;
-  if (!GameState.inventory[cid] || GameState.inventory[cid] <= 0) return;
-
-  GameState.inventory[cid]--;
-  if (GameState.inventory[cid] <= 0) delete GameState.inventory[cid];
-
-  const rwd = openContainerDirect(cid);
-  if (!rwd) return;
-
-  showOpenAnim(cid, rwd);
-  updateInvCount();
+// Exactly one transaction for single or bulk. The animation, skip, close and reload
+// can never consume another box or award anything (even if WebGL fails midway).
+function unpack(cid, all) {
+  if (CrateView.active || !Object.hasOwn(CONTAINERS,cid)) return;
+  const stock = GameState.inventory[cid] || 0;
+  if (!stock) return;
+  const n = all ? stock : 1;
+  if (all && n>10 && !confirm(`Открыть ${n} контейнеров?`)) return;
+  const results = [];
+  for(let i=0;i<n;i++) results.push(openContainerDirect(cid));
+  if(n===stock)delete GameState.inventory[cid];else GameState.inventory[cid]=stock-n;
   saveProgress();
+  updateResources();renderCarousel();updateInvCount();
+  CrateView.show(cid,n,receipt(results));
 }
+function openFromInventory(cid) { unpack(cid,false); }
+function openAllFromInventory(cid) { unpack(cid,true); }
 
-function openAllFromInventory(cid) {
-  if (containerAnimating) return;
-  const count = GameState.inventory[cid] || 0;
-  if (count <= 0) return;
-  if (count > 10 && !confirm("Открыть " + count + " контейнеров?")) return;
-
-  let results = [];
-  for (let i = 0; i < count; i++) {
-    const rwd = openContainerDirect(cid);
-    if (rwd) results.push(rwd);
+function receipt(results){
+  const totals={},vehicles=new Set(),delivered=new Set();let slots=0;
+  for(const r of results){
+    if(r.id)vehicles.add(r.id);else totals[r.type]=(totals[r.type]||0)+r.amount;
+    if(r.slot)slots++;for(const id of r.delivered||[])delivered.add(id);
   }
-
-  delete GameState.inventory[cid];
-  showBulkOpenResults(results, CONTAINERS[cid]);
-  updateInvCount();
-  renderInventoryGrid();
-  saveProgress();
+  const rows=[];
+  for(const id of new Set([...vehicles,...delivered])) rows.push({title:DB[id].n,vehicle:id,
+    detail:GameState.pendingVehicles.includes(id)?'Ожидает слота · сохранено в инвентаре':vehicles.has(id)?'Получено · в ангаре':'Доставлено из очереди в ангар'});
+  for(const [type,amount] of Object.entries(totals)){
+    const [,label,unit]=SUPPLIES[type];rows.push({title:`${amount} ${unit}`,detail:label,tag:unit});
+  }
+  if(slots) rows.push({title:`Слоты ангара: +${slots}`,detail:`Постоянный бонус · всего мест: ${GameState.garageSlots}`,tag:'+1'});
+  return rows;
 }
 
 function showInvNotification(name, icon) {
+  if(document.getElementById('container-modal').open){document.getElementById('supply-feedback').textContent=`Добавлено: ${name}`;return;}
   const notif = document.createElement('div');
   notif.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.9);border:2px solid #2ecc71;border-radius:10px;padding:20px 30px;z-index:9999;text-align:center;animation:invNotif 1.5s forwards;pointer-events:none;';
   notif.innerHTML = '<div style="font-size:40px">' + icon + '</div><div style="color:#2ecc71;font-weight:bold;margin-top:5px">В инвентарь!</div><div style="color:#aaa;font-size:12px">' + name + '</div>';
@@ -176,57 +203,51 @@ function showInvNotification(name, icon) {
   setTimeout(() => notif.remove(), 1500);
 }
 
-function showBulkOpenResults(results, container) {
-  const totals = {};
-  for (const r of results) totals[r.type] = (totals[r.type] || 0) + r.amount;
-  showOpenAnim(null, { icon: container.icon, color: container.color,
-    display: Object.entries(totals).map(([type, n]) => `${n} ${SUPPLIES[type][2]}`).join(' · ') });
+function collectionOdds(box) {
+  const available = box.vehicles.some(id => !HangarSlots.received(id));
+  const chance = available ? box.vehicleChance * 100 : 0;
+  const each = ((100 - chance) / box.drops.length).toLocaleString('ru-RU');
+  return (available ? `${chance}% на танк — общий шанс для всех недостающих машин.` : 'Все пять машин уже получены.') +
+    ` Серебро — ${each}%, золото — ${each}%.`;
 }
 
-function showOpenAnim(cid, reward) {
-  containerAnimating = true;
-  document.getElementById('container-opening').classList.add('show');
-  document.getElementById('anim-container').style.display = 'none';
-  const display = document.getElementById('reward-display');
-  display.style.display = 'flex';
-  display.innerHTML = `<div class="rwd-glow" style="color:${reward.color}"><div class="rwd-icon">${reward.icon}</div>
-    <div class="rwd-text">${reward.display}</div></div><button class="btn rwd-collect" onclick="collectReward()">ЗАБРАТЬ</button>`;
+function renderSupplyStatus(){
+  document.getElementById('supply-balance').textContent=`Баланс: ${GameState.GOLD.toLocaleString('ru-RU')} G · ${GameState.SILVER.toLocaleString('ru-RU')} ₽ · ${GameState.charges} ⚡`;
+  document.getElementById('supply-capacity').textContent=`Слоты ангара: ${GameState.owned.length} / ${GameState.garageSlots}`;
+  document.getElementById('supply-notice').textContent=`В каждом контейнере есть независимый шанс ${SLOT_CHANCE*100}% получить дополнительный слот ангара вместе с основной наградой.`;
 }
-
-function collectReward() {
-  containerAnimating = false;
-  document.getElementById('container-opening').classList.remove('show');
-  renderContainerGrid(); renderInventoryGrid(); updateInvCount();
+function crateArt(id){
+  return `<button type="button" class="crate-art" aria-label="Осмотреть модель: ${CONTAINERS[id].name}" onclick="CrateView.show('${id}')">
+    <img alt="" src="${CrateView.poster(id,false)}"><span>3D · Осмотреть</span></button>`;
 }
-
 function renderContainerGrid() {
-  const host = document.getElementById('container-grid');
-  host.innerHTML = `<div class="supply-charges">⚡ Заряды снабжения: ${GameState.charges}
-    <button class="btn btn-sm" onclick="buyCharges(1)">+1 заряд · 100 G</button></div>`;
-  for (const [id, box] of Object.entries(CONTAINERS)) {
-    const [currency, cost] = Object.entries(box.cost)[0];
-    const unit = {silver: '₽', gold: 'G', charges: '⚡'}[currency];
-    const card = document.createElement('div');
-    card.className = 'c-card'; card.style.borderColor = box.color;
-    card.innerHTML = `<div class="c-icon">${box.icon}</div><div class="c-name">${box.name}</div>
-      <div class="c-desc">Одна из трёх наград с равным шансом</div>
-      <div class="c-drops">${box.drops.map(([t,a,b]) => `<div>${SUPPLIES[t][1]}: ${a}–${b}</div>`).join('')}</div>
-      <button class="btn c-buy" onclick="buyContainer('${id}')">КУПИТЬ · ${cost} ${unit}</button>`;
+  renderSupplyStatus();
+  const host=document.getElementById('container-grid');host.replaceChildren();
+  for(const [id,box] of Object.entries(CONTAINERS)){
+    const [currency,cost]=Object.entries(box.cost)[0],unit={silver:'₽',gold:'G',charges:'⚡'}[currency];
+    const card=document.createElement('article');card.className='c-card';card.style.setProperty('--stripe',box.color);
+    const description=box.vehicles?collectionOdds(box):'Одна из трёх ресурсных наград с равным шансом.';
+    const list=(box.vehicles||[]).map(id=>`<li>${HangarSlots.received(id)?'✓ ':''}${DB[id].n}</li>`);
+    list.push(...box.drops.map(([t,a,b])=>`<li>${SUPPLIES[t][1]}: ${a.toLocaleString('ru-RU')}–${b.toLocaleString('ru-RU')}</li>`));
+    card.innerHTML=`${crateArt(id)}<div class="crate-copy"><small class="season-kicker">${box.vehicles?'ЗИМНЯЯ СЕРИЯ':'СНАБЖЕНИЕ'}</small>
+      <h4 class="c-name">${box.name}</h4><p class="c-desc">${description}</p><details class="crate-manifest"><summary>Состав контейнера</summary><ul>${list.join('')}</ul></details></div>
+      <button class="winter-action c-buy" onclick="buyContainer('${id}')">КУПИТЬ · ${cost} ${unit}</button>`;
     host.append(card);
   }
 }
-
 function renderInventoryGrid() {
-  const grid = document.getElementById('inventory-grid');
-  grid.replaceChildren();
-  document.getElementById('inventory-empty').style.display = getInvTotal() ? 'none' : 'block';
-  for (const [id, qty] of Object.entries(GameState.inventory)) {
-    const box = CONTAINERS[id];
-    if (!box || qty <= 0) continue;
-    const card = document.createElement('div'); card.className = 'inv-card';
-    card.innerHTML = `<div class="inv-icon">${box.icon}</div><div class="inv-name">${box.name} × ${qty}</div>
-      <button class="btn inv-open" onclick="openFromInventory('${id}')">ОТКРЫТЬ 1</button>
-      ${qty > 1 ? `<button class="btn inv-open-all" onclick="openAllFromInventory('${id}')">ОТКРЫТЬ ВСЕ</button>` : ''}`;
+  renderSupplyStatus();
+  const grid=document.getElementById('inventory-grid');grid.replaceChildren();
+  document.getElementById('inventory-empty').hidden=!!getInvTotal();
+  const waiting=document.getElementById('vehicle-deliveries');waiting.hidden=!GameState.pendingVehicles.length;
+  waiting.textContent=waiting.hidden?'':`Ожидают слота: ${GameState.pendingVehicles.map(id=>DB[id].n).join(', ')}. Машины сохранены и поступят в ангар по очереди, как только освободится или выпадет место.`;
+  for(const [id,qty] of Object.entries(GameState.inventory)){
+    const box=CONTAINERS[id];if(!box||qty<=0)continue;
+    const card=document.createElement('article');card.className='inv-card';card.style.setProperty('--stripe',box.color);
+    card.innerHTML=`${crateArt(id)}<div class="crate-copy"><small class="season-kicker">НА СКЛАДЕ · ${qty} ШТ.</small><h4 class="inv-name">${box.name} × ${qty}</h4>
+      ${box.vehicles?`<p class="c-desc">${collectionOdds(box)}</p>`:''}</div>
+      <button class="winter-action inv-open" onclick="openFromInventory('${id}')">ОТКРЫТЬ 1</button>
+      ${qty>1?`<button class="winter-back inv-open-all" onclick="openAllFromInventory('${id}')">ОТКРЫТЬ ВСЕ</button>`:''}`;
     grid.append(card);
   }
 }

@@ -69,8 +69,8 @@ const BattleModels = (() => {
     return g;
   }
   function build(data) {
-    const parts = {};
-    for (const [kind, positions, indices] of data.meshes) {
+    const groups = {body:[], tracks:[], wheels:[], turret:[], gun:[]};
+    for (const [kind, positions, indices, override] of data.meshes) {
       const pos = Float32Array.from(unpack(positions, Int16Array), (v) => v / 1000),
         ix = unpack(indices, Uint16Array),
         wheels = kind === 'wheels' || kind === 'tracks',
@@ -81,28 +81,30 @@ const BattleModels = (() => {
       const flat = geo.toNonIndexed(),
         position = flat.attributes.position.array,
         normal = wheels ? flat.attributes.normal.array : crease(position);
-      const paint = new THREE.Color(kind === 'tracks' ? data.tracks : data.color);
+      const paint = new THREE.Color(override || (kind === 'tracks' ? data.tracks : data.color));
       if (kind === 'wheels') paint.multiplyScalar(0.65);
       const color = new Float32Array(position.length);
       for (let i = 0; i < color.length; i += 3) paint.toArray(color, i);
-      parts[kind] = { position, normal, color };
+      groups[kind].push({ position, normal, color, decorative: !!override });
       geo.dispose();
       flat.dispose();
     }
     const a = {
-      hull: join([parts.body, parts.tracks, parts.wheels]),
-      turret: join([parts.turret]),
-      gun: join([parts.gun]),
+      hull: join([...groups.body, ...groups.tracks, ...groups.wheels]),
+      turret: join(groups.turret),
+      gun: join(groups.gun),
       pivot: data.pivot,
       gunPivot: data.gunPivot
     };
     if (data.suspension) {
       a.suspension = data.suspension;
-      a.body = join([parts.body]);
-      a.treads = join([parts.tracks, parts.wheels]);
+      a.body = join(groups.body);
+      a.treads = join([...groups.tracks, ...groups.wheels]);
     }
-    const p = parts.gun.position,
-      z = a.gun.boundingBox.max.z;
+    // A decorative nose is not the muzzle. Use the authored base barrel for the ray.
+    const p = groups.gun.find(part => !part.decorative).position;
+    let z = -Infinity;
+    for (let i = 2; i < p.length; i += 3) z = Math.max(z, p[i]);
     let x0 = Infinity,
       x1 = -Infinity,
       y0 = Infinity,
@@ -115,7 +117,15 @@ const BattleModels = (() => {
         y1 = Math.max(y1, p[i + 1]);
       }
     a.muzzle = [(x0 + x1) / 2, (y0 + y1) / 2, z];
-    const hull = a.hull.boundingBox;
+    // Coloured add-ons (antlers, spots) are visual only. Their boxes are not armour,
+    // and must not change track contacts, aim height, or the depth at which a tank floods.
+    if (data.meshes.some(m => m[3])) {
+      const solidBox = parts => parts.filter(p => !p.decorative).reduce((box, p) =>
+        box.union(new THREE.Box3().setFromArray(p.position)), new THREE.Box3());
+      a.hitHull = solidBox([...groups.body,...groups.tracks,...groups.wheels]);
+      a.hitTurret = solidBox(groups.turret);
+    }
+    const hull = a.hitHull || a.hull.boundingBox;
     a.groundY = -hull.min.y;
     if (DB[data.id].oscillating) {
       // The upper turret is in the gun group. Don't inflate its hit box with the long, narrow barrel.
@@ -129,7 +139,7 @@ const BattleModels = (() => {
       a.groundY +
       Math.max(
         hull.max.y,
-        a.pivot[1] + a.turret.boundingBox.max.y,
+        a.pivot[1] + (a.hitTurret || a.turret.boundingBox).max.y,
         a.upperBox ? a.pivot[1] + a.gunPivot[1] + a.upperBox.max.y : 0
       );
     a.aimHeight = a.groundY + (hull.min.y + hull.max.y) / 2;

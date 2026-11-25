@@ -1,0 +1,3 @@
+# Account creation happens before login. All player saves still require an authenticated JWT + RLS.
+[functions.city-tanks-register]
+verify_jwt = false

@@ -12,6 +12,7 @@ function researchState(id) {
     return { kind: 'owned', text: id === GameState.selected ? 'Выбран для боя' : 'В ангаре' };
   if (parent && !GameState.owned.includes(parent))
     return { kind: 'locked', text: 'Сначала исследуйте ' + DB[parent].n };
+  if (HangarSlots.free() <= 0) return { kind: 'locked', full: true, text: HangarSlots.fullMessage() };
   if (t.xp === 0)
     return { kind: 'available', text: 'Стартовая машина · нажмите узел, чтобы получить бесплатно' };
   if (GameState.XP < t.xp) return { kind: 'locked', text: 'Не хватает ' + xpLabel(t.xp - GameState.XP) };
@@ -21,9 +22,7 @@ function researchState(id) {
 function showTreeCard(id) {
   treeCardId = id;
   const t = DB[id];
-  const photo = treeEl('tree-photo'),
-    src = 'models/' + t.thumbnail;
-  if (photo.getAttribute('src') !== src) photo.src = src;
+  setVehicleCardArt(treeEl('tree-photo'), t);
   treeEl('tree-tier').textContent = CONFIG.TIER_ROMAN[t.tier] + ' · ' + CONFIG.TANK_CLASSES[t.cls];
   treeEl('tree-name').textContent = t.n;
   treeEl('tree-status').textContent = researchState(id).text;
@@ -60,13 +59,13 @@ function showTreeCard(id) {
 }
 
 function researchTank(id) {
-  if (!Object.hasOwn(DB, id)) return;
+  if (!Object.hasOwn(DB, id) || DB[id].source) return;
   const state = researchState(id);
   showTreeCard(id);
   if (state.kind === 'locked') return;
   if (state.kind === 'available') {
+    if (!HangarSlots.park(id)) return;
     GameState.XP -= DB[id].xp;
-    GameState.owned.push(id);
   }
   GameState.selected = id;
   saveProgress();
@@ -86,26 +85,54 @@ function updateTreeNav() {
   treeEl('tree-next').disabled = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
 }
 
+// Presentation only: zoom in on one complete I–X route without changing the
+// player's tank, progression or the shared vehicle records at a fork.
+function visibleRoute(branch) {
+  const picker = treeEl('tree-route');
+  if (picker.dataset.nation !== GameState.curNat) {
+    picker.dataset.nation = GameState.curNat;
+    picker.replaceChildren(new Option('Все ветки', ''), ...branch.routes.map(route => {
+      const end = route.at(-1);
+      return new Option(end.n, end.id);
+    }));
+    treeEl('route-filter').hidden = branch.routes.length < 2;
+    picker.onchange = () => {
+      treeCardId = picker.value || GameState.selected;
+      renderTree();
+      revealTreeNode();
+    };
+  }
+  const route = branch.routes.find(r => r.at(-1).id === picker.value);
+  const selected = DB[GameState.selected];
+  if (route && lastTreeSelection !== GameState.selected && branch.tanks.includes(selected) && !route.includes(selected)) {
+    picker.value = ''; // A newly equipped tank from another lane must not be hidden.
+    return;
+  }
+  return route;
+}
+
 function renderTree() {
   renderNatButtons();
   const container = treeEl('tree-container'),
     nodes = treeEl('nodes'),
     canvas = treeEl('tree-canvas');
   const branch = BRANCHES[GameState.curNat],
-    line = branch.tanks;
+    route = visibleRoute(branch),
+    routes = route ? [route] : branch.routes,
+    line = route || branch.tanks;
   treeEl('branch-number').textContent = branch.number;
-  treeEl('branch-title').textContent = branch.title;
+  treeEl('branch-title').textContent = route ? 'Путь к танку: ' + route.at(-1).n : branch.title;
   const height = 84,
     gap = 36,
     inset = 22,
     firstRow = 36,
     rowStep = height + 18,
-    mapHeight = firstRow + (Math.max(2, branch.routes.length) - 1) * rowStep + height + 17;
+    mapHeight = firstRow + (routes.length - 1) * rowStep + height + 17;
   container.style.setProperty('--tree-height', mapHeight + 9 + 'px');
   const ctx = canvas.getContext('2d');
   ctx.font = getComputedStyle(nodes).getPropertyValue('--node-name-font').trim();
   // Long tier VIII–X names should not push tier II off a small phone screen.
-  const columns = branch.routes[0].map((t) => ({
+  const columns = routes[0].map((t) => ({
     width: Math.max(
       137,
       ...line.filter((v) => v.tier === t.tier).map((v) => Math.ceil(ctx.measureText(v.n).width) + 20)
@@ -130,10 +157,8 @@ function renderTree() {
   // node once, centred over the lanes that descend from it, including later forks.
   const pos = new Map();
   for (const t of line) {
-    const lanes = branch.routes.flatMap((route, i) => (route[t.tier - 1] === t ? [i] : []));
-    const y = branch.routes.length === 1
-      ? ({ lt: 112, mt: 87, ht: 62 }[t.cls] ?? 87)
-      : firstRow + (lanes[0] + lanes.at(-1)) * rowStep / 2;
+    const lanes = routes.flatMap((lane, i) => (lane[t.tier - 1] === t ? [i] : []));
+    const y = firstRow + (lanes[0] + lanes.at(-1)) * rowStep / 2;
     pos.set(t.id, { ...columns[t.tier - 1], y });
   }
   ctx.font = '11px Consolas, monospace';
@@ -181,15 +206,15 @@ function renderTree() {
       ? '✓ Для боя'
       : state.kind === 'owned'
         ? 'В ангаре'
-        : t.xp
+        : state.full ? 'Нет места' : t.xp
           ? xpLabel(t.xp)
           : 'Бесплатно';
     const img = document.createElement('img');
-    img.src = 'models/' + t.thumbnail;
     img.alt = '';
     img.className = 'node-tank';
     img.draggable = false;
     button.append(tag, img, name, price);
+    setVehicleCardArt(img, t);
     button.onfocus = () => showTreeCard(id);
     button.onpointerenter = (e) => {
       if (e.pointerType === 'mouse') showTreeCard(id);
@@ -199,9 +224,9 @@ function renderTree() {
   });
   nodes.replaceChildren(...buttons);
   // Browsing a nation does not equip its tank. A branch always opens on a card belonging to it.
-  if (DB[treeCardId]?.nat !== GameState.curNat || lastTreeSelection !== GameState.selected) {
+  if (!line.includes(DB[treeCardId]) || lastTreeSelection !== GameState.selected) {
     treeCardId =
-      DB[GameState.selected].nat === GameState.curNat
+      line.includes(DB[GameState.selected])
         ? GameState.selected
         : line.filter((t) => GameState.owned.includes(t.id)).sort((a, b) => b.tier - a.tier)[0]?.id ||
           line[0].id;

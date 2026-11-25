@@ -71,7 +71,7 @@ function makeRoster(playerId, size) {
   return Array.from({ length: size }, (_, i) => deck[i % deck.length]);
 }
 async function launchBattle(teamSize) {
-  if (GameState.gameActive || battleLaunch) return false;
+  if (GameState.gameActive || battleLaunch || !GameState.owned.includes(GameState.selected)) return false;
   const ticket = (battleLaunch = new AbortController());
   GarageViewer.suspend();
   battleNotice('Выезд на позицию', 'Готовим модели и местность…');
@@ -281,6 +281,7 @@ function backToGarage() {
   if (typeof updateBoosterUI === 'function') updateBoosterUI();
   renderTree();
   renderCarousel();
+  WinterSeason.refresh(true);
 }
 
 function leaveBattle() {

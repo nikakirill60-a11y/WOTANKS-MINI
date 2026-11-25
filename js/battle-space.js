@@ -87,6 +87,9 @@ function rayBox(x, y, h, dx, dy, dh, x0, y0, h0, x1, y1, h1, limit) {
 function localBox(box, scale, x, h, z, dx, dh, dz, limit) {
   const lo = box.min,
     hi = box.max;
+  // An export with the casemate in its hull has an empty turret group (e.g. 44M Tas).
+  // Its +Infinity/-Infinity bounds are NOT a plate the ray can intersect.
+  if (lo.x > hi.x) return Infinity;
   return rayBox(
     x,
     z,
@@ -198,7 +201,7 @@ function traceBattleRay(
         d.h = ct * dy - st * dz;
         d.z = st * dy + ct * dz;
         body = Math.min(tracks, localBox(asset.body.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance));
-      } else body = localBox(asset.hull.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance);
+      } else body = localBox(asset.hitHull || asset.hull.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance);
       const [tx, th, tz] = asset.pivot,
         side = o.x - tx * s,
         f = o.z - tz * s;
@@ -210,7 +213,7 @@ function traceBattleRay(
         z = c * f - sn * side,
         dl = c * d.x + sn * d.z,
         dz = c * d.z - sn * d.x;
-      let turret = localBox(asset.turret.boundingBox, s, l, upLocal, z, dl, d.h, dz, distance);
+      let turret = localBox(asset.hitTurret || asset.turret.boundingBox, s, l, upLocal, z, dl, d.h, dz, distance);
       if (asset.upperBox) {
         const [gx, gy, gz] = asset.gunPivot,
           up = upLocal - gy * s,

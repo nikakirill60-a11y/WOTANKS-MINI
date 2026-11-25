@@ -2,7 +2,7 @@
 const GarageViewer = (() => {
   const el = (id) => document.getElementById(id);
   const classNames = { lt: 'Лёгкий танк', mt: 'Средний танк', ht: 'Тяжёлый танк', td: 'ПТ-САУ' };
-  let selectedId = null,
+  let selectedId,
     request = null,
     showingId = null;
   let inspecting = true;
@@ -26,14 +26,14 @@ const GarageViewer = (() => {
     el('bay-angles').hidden = el('bay-loading').hidden = true;
     const panel = el('bay-poster'),
       img = panel.querySelector('img');
-    img.src = 'models/' + DB[selectedId].thumbnail;
+    setVehicleCardArt(img, DB[selectedId]);
     img.alt = 'Изображение танка: ' + DB[selectedId].n;
     panel.querySelector('span').textContent = 'Статичный вид · ' + reason;
     panel.hidden = false;
   }
 
   async function showStand() {
-    if (!inspecting || GameState.gameActive) {
+    if (!inspecting || GameState.gameActive || el('container-modal').open) {
       suspend();
       return;
     }
@@ -42,7 +42,7 @@ const GarageViewer = (() => {
       return;
     }
     const tank = DB[selectedId];
-    el('bay-kind').textContent = 'БОЕВАЯ МАШИНА';
+    el('bay-kind').textContent = ({collection:'КОЛЛЕКЦИОННАЯ МАШИНА',premium:'ПРЕМИУМ-МАШИНА',advent:'НАГРАДА АДВЕНТА'})[tank.source] || 'ИССЛЕДУЕМАЯ МАШИНА';
     el('bay-name').textContent = tank.n;
     el('bay-meta').textContent =
       description(tank) + (tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');
@@ -85,27 +85,42 @@ const GarageViewer = (() => {
     const id = GameState.selected;
     if (selectedId !== id) {
       selectedId = id;
-      const tank = DB[id];
-      el('dispatch-name').textContent = tank.n;
-      el('dispatch-meta').textContent = description(tank);
-      el('dispatch-hp').textContent = tank.hp;
-      el('dispatch-dmg-label').textContent = damageLabel(tank);
-      el('dispatch-dmg').textContent = damageSummary(tank);
-      el('dispatch-drum').hidden = !tank.mag;
-      if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · удерживайте огонь для очереди`;
-      el('dispatch-reload-label').textContent = tank.mag ? 'Полная перезарядка' : 'Перезарядка';
-      el('dispatch-reload').textContent = (tank.reload / 1000).toLocaleString('ru-RU') + ' с';
-      el('dispatch-pen').textContent = tank.pen + ' мм';
-      el('dispatch-armor').textContent = armorLabel(tank) + ' мм';
-      el('dispatch-speed').textContent = speedLabel(tank) + ' км/ч';
-      el('dispatch-view').textContent = Math.round(tank.vr / BATTLE_UNITS_PER_METRE) + ' м';
+      const empty = !id;
+      el('empty-depot').hidden = !empty;
+      for (const key of ['vehicle-spec-heading','vehicle-spec','battle-controls']) el(key).hidden = empty;
+      for (const btn of document.querySelectorAll('[data-needs-tank],#battle-controls button')) btn.disabled = empty;
+      if (empty) {
+        el('dispatch-name').textContent = el('bay-name').textContent = 'Ангар пуст';
+        el('dispatch-meta').textContent = ''; el('dispatch-drum').hidden = true;
+        el('bay-kind').textContent = 'МОЯ ТЕХНИКА'; el('bay-meta').textContent = 'Ни одной машины для выезда';
+      } else describeSelection(DB[id]);
     }
-    el('fleet-count').textContent = String(GameState.owned.length).padStart(2, '0');
+    el('fleet-count').textContent = `${GameState.owned.length} / ${GameState.garageSlots}`;
+    const waiting = el('fleet-pending');
+    waiting.hidden = !GameState.pendingVehicles.length;
+    waiting.textContent = `Ожидают слота: ${GameState.pendingVehicles.length}`;
     if (fromCarousel && !inspecting) setPane(true);
     else showStand();
   }
 
+  function describeSelection(tank) {
+    el('dispatch-name').textContent = tank.n;
+    el('dispatch-meta').textContent = description(tank);
+    el('dispatch-hp').textContent = tank.hp;
+    el('dispatch-dmg-label').textContent = damageLabel(tank);
+    el('dispatch-dmg').textContent = damageSummary(tank);
+    el('dispatch-drum').hidden = !tank.mag;
+    if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · удерживайте огонь для очереди`;
+    el('dispatch-reload-label').textContent = tank.mag ? 'Полная перезарядка' : 'Перезарядка';
+    el('dispatch-reload').textContent = (tank.reload / 1000).toLocaleString('ru-RU') + ' с';
+    el('dispatch-pen').textContent = tank.pen + ' мм';
+    el('dispatch-armor').textContent = armorLabel(tank) + ' мм';
+    el('dispatch-speed').textContent = speedLabel(tank) + ' км/ч';
+    el('dispatch-view').textContent = Math.round(tank.vr / BATTLE_UNITS_PER_METRE) + ' м';
+  }
+
   function init() {
+    el('empty-research').onclick = () => { setPane(false); el('nodes').querySelector('.available')?.focus(); };
     el('bay-inspect-tab').addEventListener('click', () => setPane(true));
     el('bay-research-tab').addEventListener('click', () => setPane(false));
     for (const button of el('bay-angles').querySelectorAll('button'))

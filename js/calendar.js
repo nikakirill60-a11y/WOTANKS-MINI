@@ -1,46 +1,27 @@
-// The standalone calendar is not tied to missions or battle rewards.
-function calendarReward(day) {
-  if (day === 7) return { gold: 500, silver: 50000, charges: 2 };
-  if (day === 14) return { gold: 1000, silver: 100000 };
-  if (day === 21) return { gold: 1500, silver: 250000, charges: 5 };
-  if (day === 28 || day === 30) return { gold: 3000, silver: 500000 };
-  return { gold: 50, silver: 10000, xp: 1000 };
+// December dates indicate actual visits; the two tanks count visits, not day-of-month.
+function renderCalendar() {
+  const dates = GameState.advent2026.dates, today = WinterSeason.dateKey(WinterSeason.now());
+  document.getElementById('advent-count').textContent = `${dates.length} / 31`;
+  document.getElementById('advent-status').textContent = today < '2026-12-01' ? 'Первый подарок откроется 1 декабря.' :
+    today > '2026-12-31' ? 'Адвент завершён. Полученные награды остаются в ангаре.' :
+    !dates.includes(today) ? 'Проверьте дату устройства. Уже отмеченные посещения сохранены.' :
+    `Подарок за сегодня: ${rewardText(WinterSeason.reward(dates.indexOf(today)+1))}. Награда сохранена.`;
+  document.getElementById('calendar-days').replaceChildren(...Array.from({length:31}, (_,i) => {
+    const key = `2026-12-${String(i+1).padStart(2,'0')}`, got = dates.indexOf(key), cell = document.createElement('div');
+    cell.className = 'advent-date ' + (got >= 0 ? 'received' : key < today ? 'missed' : 'future');
+    const num = document.createElement('b'), status = document.createElement('small');
+    num.textContent = String(i+1).padStart(2,'0');
+    status.textContent = got >= 0 ? 'Получено' : key < today ? 'Пропуск' : 'Ожидает';
+    if (key === today) cell.setAttribute('aria-current','date');
+    cell.title = got >= 0 ? rewardText(WinterSeason.reward(got+1)) : `${i+1} декабря · ${status.textContent}`;
+    cell.append(num,status); return cell;
+  }));
+  for (const [n,id] of [[15,'BT42'],[31,'TL7OLEN']]) {
+    const status = document.getElementById('milestone-'+n);
+    setVehicleCardArt(status.closest('article').querySelector('img'), DB[id]);
+    status.textContent = dates.length >= n ? (GameState.pendingVehicles.includes(id) ? 'Получено · ожидает слота' : GameState.owned.includes(id) ? 'Получено · в ангаре' : 'Получено · продано') : `Ещё визитов: ${n-dates.length}`;
+  }
 }
 function openCalendar() {
-  const dialog = document.getElementById('calendar-modal');
-  const days = document.getElementById('calendar-days');
-  days.replaceChildren();
-  for (let day = 1; day <= 30; day++) {
-    const button = document.createElement('button'),
-      reward = calendarReward(day);
-    button.className = 'calendar-day';
-    const label = document.createElement('strong');
-    label.textContent = 'День ' + day;
-    const info = document.createElement('small');
-    info.textContent = [
-      reward.gold + ' G',
-      reward.silver.toLocaleString('ru-RU') + ' ₽',
-      reward.xp && reward.xp + ' XP',
-      reward.charges && reward.charges + ' ⚡'
-    ]
-      .filter(Boolean)
-      .join(' · ');
-    button.disabled = GameState.loginCalendar.claimedDays.includes(day);
-    const state = document.createElement('span');
-    state.textContent = button.disabled ? 'Получено' : 'Забрать';
-    button.append(label, info, state);
-    button.onclick = () => {
-      if (GameState.loginCalendar.claimedDays.includes(day)) return;
-      GameState.loginCalendar.claimedDays.push(day);
-      GameState.GOLD += reward.gold;
-      GameState.SILVER += reward.silver;
-      GameState.XP += reward.xp || 0;
-      GameState.charges += reward.charges || 0;
-      updateResources();
-      saveProgress();
-      openCalendar();
-    };
-    days.append(button);
-  }
-  if (!dialog.open) dialog.showModal();
+  WinterSeason.refresh(); renderCalendar(); document.getElementById('calendar-modal').showModal();
 }

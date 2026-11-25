@@ -33,6 +33,7 @@ function updateResources() {
   if (gold) gold.innerText = GameState.GOLD;
   if (silver) silver.innerText = GameState.SILVER;
   if (charges) charges.innerText = GameState.charges || 0;
+  refreshSupplyTab();
   if (!document.getElementById('bay-research').hidden) renderTree();
 }
 
@@ -317,38 +318,18 @@ function activatePromo() {
 }
 
 // ========== Продажа танка ==========
-function sellTank(tid) {
-  if (!DB[tid] || DB[tid].xp === 0 || !GameState.owned.includes(tid)) return;
-  if (GameState.owned.length <= 1) { alert("⚠️ Нельзя продать последний танк!"); return; }
-  var t = DB[tid];
-  var price = t.tier * 5000;
-  if (confirm('💰 Продать ' + t.n + ' за ' + price + '💰?')) {
-    GameState.SILVER += price;
-    GameState.owned = GameState.owned.filter(function(id) { return id !== tid; });
-    if (GameState.selected === tid) {
-      GameState.selected = GameState.owned[0];
-      GameState.curNat = DB[GameState.selected].nat;
-    }
-    delete GameState.upgrades[tid];
-    delete GameState.upgradesBought[tid];
-    delete GameState.modules[tid];
-    updateResources();
-    renderCarousel();
-    renderTree();
-    saveProgress();
-  }
-}
+function sellTank(tid) { TankSales.open(tid); }
 
 // ========== Тренировка ==========
 function fillTrainNatSelect() {
   var s = document.getElementById('train-nat-select');
   if (!s) return;
-  s.replaceChildren(...PLAYABLE_NATIONS.map(nat => new Option(CONFIG.NATIONS[nat],nat)));
+  s.replaceChildren(...TRAINING_NATIONS.map(nat => new Option(CONFIG.NATIONS[nat],nat)));
 }
 
 function fillEnemySelect() {
   const nat = document.getElementById('train-nat-select').value;
-  document.getElementById('enemy-select').replaceChildren(...BRANCHES[nat].tanks.map(t =>
+  document.getElementById('enemy-select').replaceChildren(...Object.values(DB).filter(t => t.nat === nat).map(t =>
     new Option(`${t.n} [${CONFIG.TIER_ROMAN[t.tier]}]`, t.id)));
 }
 
@@ -380,11 +361,13 @@ function renderCarousel(fromCarousel = false) {
     select.type = 'button';
     select.className = 'slot-select';
     select.setAttribute('aria-label', 'Выбрать для боя: ' + t.n);
+    select.setAttribute('aria-description', CONFIG.NATIONS[t.nat]);
+    select.title = t.n + ' · ' + CONFIG.NATIONS[t.nat];
     select.setAttribute('aria-pressed', String(GameState.selected === id));
     (function(tankId) {
       select.onclick = function() {
         GameState.selected = tankId;
-        GameState.curNat = DB[tankId].nat;
+        if (BRANCHES[DB[tankId].nat]) GameState.curNat = DB[tankId].nat;
         saveProgress();
         renderCarousel(true);
         renderTree();
@@ -395,11 +378,13 @@ function renderCarousel(fromCarousel = false) {
     var sb = document.createElement('button');
     sb.className = 'sell-btn';
     sb.setAttribute('aria-label', 'Продать: ' + t.n);
-    sb.innerText = '💰';
+    sb.type = 'button';
+    sb.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h7l7 7-7 7-7-7Z"/><circle cx="7" cy="7" r="1"/></svg><span>Продать</span>';
+    sb.title = t.n + ' · продать за ' + TankSales.quote(t).label;
     (function(tankId) {
       sb.onclick = function(e) { e.stopPropagation(); sellTank(tankId); };
     })(id);
-    if (GameState.owned.length > 1 && t.xp > 0) slot.appendChild(sb);
+    slot.appendChild(sb);
     var upg = GameState.upgrades[id];
     if (upg) {
       var total = (upg.gun || 0) + (upg.engine || 0) + (upg.turret || 0);
@@ -408,12 +393,8 @@ function renderCarousel(fromCarousel = false) {
     var mods = GameState.modules[id] || [null, null, null];
     var modCount = mods.filter(function(m) { return m; }).length;
     if (modCount > 0) { var mi = document.createElement('div'); mi.className = 'mod-indicator'; mi.innerText = '🔧+' + modCount; slot.appendChild(mi); }
-    var wrap = document.createElement('span');
-    wrap.className = 'slot-bg';
-    const thumbnail = document.createElement('img');
-    thumbnail.src = 'models/' + t.thumbnail;
-    thumbnail.alt = '';
-    wrap.appendChild(thumbnail);
+    var wrap = vehicleThumbnail(t);
+    wrap.classList.add('slot-bg');
     var info = document.createElement('span');
     info.className = 'slot-info';
     var tierEl = document.createElement('span');
@@ -478,6 +459,5 @@ window.hideContainerShop = hideContainerShop;
 window.switchTab = switchTab;
 window.openInventoryTab = openInventoryTab;
 window.updateInvCount = updateInvCount;
-window.collectReward = collectReward;
 
 console.log('✅ ui.js загружена полностью!');

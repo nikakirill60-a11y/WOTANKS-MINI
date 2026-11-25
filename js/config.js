@@ -16,7 +16,7 @@ const CONFIG = {
     japan: 'Япония',
     china: 'Китай',
     france: 'Франция',
-    sweden: 'Швеция'
+    sweden: 'Швеция', hungary: 'Венгрия', finland: 'Финляндия'
   },
   TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
   PROMOCODES: {
@@ -99,15 +99,16 @@ const CONFIG = {
 };
 
 // Только эти поля переживают перезапуск. Бой, снаряды и ввод остаются в памяти.
+const BASE_GARAGE_SLOTS = 10;
 function initialProgress() {
   return {
     XP: 500, GOLD: 0, SILVER: 5000, charges: 0,
     owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
-    usedPromos: [],
+    garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [],
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,
-    loginCalendar: { claimedDays: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
+    loginCalendar: { claimedDays: [] }, advent2026: { dates: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
   };
 }
 

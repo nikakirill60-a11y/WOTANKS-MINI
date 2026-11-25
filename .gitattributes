@@ -1,0 +1,4 @@
+# Preserve exact vendor output: the auth bundle contains a literal whitespace alphabet;
+# the upstream tslib copyright notice uses CRLF. Do not reformat these on checkout.
+vendor/auth-2.79.min.js -text -whitespace linguist-generated=true
+vendor/tslib.LICENSE -text -whitespace

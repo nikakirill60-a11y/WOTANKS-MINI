@@ -141,6 +141,8 @@ async function launchBattle(teamSize) {
     updateScale();
     const drum = g.player.usesMagazine;
     document.body.classList.toggle('drum-equipped', drum);
+    document.body.classList.toggle('spg-equipped', g.player.isSPG);
+    document.getElementById('scope-btn').textContent = g.player.isSPG ? 'Арт-прицел' : 'Прицел';
     setShell(drum ? 0 : g.curShell);
     document.getElementById('ui').style.display = 'none';
     BattleView.build();
@@ -244,7 +246,7 @@ function endBattle(won) {
 }
 
 function backToGarage() {
-  document.body.classList.remove('drum-equipped');
+  document.body.classList.remove('drum-equipped', 'spg-equipped');
   if (battleLaunch) {
     battleLaunch.abort();
     battleLaunch = null;

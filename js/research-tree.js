@@ -34,6 +34,7 @@ function showTreeCard(id) {
     ['Лоб корпуса / башни', armorLabel(t) + ' мм'],
     ['Скорость', speedLabel(t) + ' км/ч']
   ];
+  if (t.cls === 'spg') stats.push(['Особенность', 'Арт-прицел · вид сверху']);
   if (t.yawLimits) {
     const [right, left] = t.yawLimits;
     stats.push([
@@ -85,7 +86,7 @@ function updateTreeNav() {
   treeEl('tree-next').disabled = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
 }
 
-// Presentation only: zoom in on one complete I–X route without changing the
+// Presentation only: zoom in on one supplied route without changing the
 // player's tank, progression or the shared vehicle records at a fork.
 function visibleRoute(branch) {
   const picker = treeEl('tree-route');
@@ -132,10 +133,11 @@ function renderTree() {
   const ctx = canvas.getContext('2d');
   ctx.font = getComputedStyle(nodes).getPropertyValue('--node-name-font').trim();
   // Long tier VIII–X names should not push tier II off a small phone screen.
-  const columns = routes[0].map((t) => ({
+  const tiers = Math.max(...routes.map(lane => lane.length)); // a short leaf can share the graph with full routes
+  const columns = Array.from({length: tiers}, (_, i) => ({
     width: Math.max(
       137,
-      ...line.filter((v) => v.tier === t.tier).map((v) => Math.ceil(ctx.measureText(v.n).width) + 20)
+      ...line.filter((v) => v.tier === i + 1).map((v) => Math.ceil(ctx.measureText(v.n).width) + 20)
     )
   }));
   let nextX = inset;

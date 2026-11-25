@@ -8,6 +8,7 @@ class Tank {
     this.name = d.n;
     this.team = team;
     this.stance = d.stance;
+    this.isSPG = d.cls === 'spg';
     this.x = x;
     this.y = y;
 
@@ -81,16 +82,17 @@ class Tank {
     }
   }
 
-  fire(shellType = 0) {
+  fire(shellType = 0, sight = null) {
     const now = BattleClock.now();
     this.updateReload(now);
     if (this.dead || this.isReloading || now < this.nextShot || !this.modelAsset) return false;
     if (this.usesMagazine) shellType = 0; // One clip type, including for AI and touch input.
-    const sh = CONFIG.SHELLS[shellType],
+    if (sight && (!this.isSPG || GameState.holdTurret || !sight.aligned(this))) return false;
+    const sh = this.isSPG ? CONFIG.SPG_ROUND : CONFIG.SHELLS[shellType],
       ray = this.barrelRay();
     const speed = 14 * sh.sMul * this.shellSpeedMul;
     const damage = this.dmg * sh.dMul * getCritMultiplier(this, 'dmg');
-    GameState.bullets.push({
+    const shell = {
       ...ray,
       a: Math.atan2(ray.dy, ray.dx),
       team: this.team,
@@ -100,8 +102,10 @@ class Tank {
       color: sh.color,
       dmg: damage * (this === GameState.player && GameState.paiokActive ? 1.05 : 1),
       pen: this.pen * sh.penMul,
-      st: shellType
-    });
+      st: this.isSPG ? 1 : shellType
+    };
+    if (sight) shell.arc = sight.plot(shell);
+    GameState.bullets.push(shell);
     const yaw = this.tAngle - this.angle,
       kick = Math.min(0.16, 0.035 + this.dmg * 0.0002);
     this.pitchVel += kick * Math.cos(yaw);

@@ -11,7 +11,10 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 function firePlayer() {
   const g = GameState,
     p = g.player;
-  if (g.gameActive && BattleInput.running && p && !p.dead) p.fire(g.curShell);
+  if (!g.gameActive || !BattleInput.running || !p || p.dead) return;
+  const sight = BattleView.artillery;
+  if (sight) BattleInput.consumeLook();
+  p.fire(g.curShell, sight);
 }
 function updatePlayer() {
   const g = GameState,
@@ -21,7 +24,9 @@ function updatePlayer() {
     mountYaw = wrapAngle(p.tAngle - p.angle);
   const forward = Number(!!(k.KeyW || k.ArrowUp)) - Number(!!(k.KeyS || k.ArrowDown)) || -j.dy;
   const turn = Number(!!(k.KeyD || k.ArrowRight)) - Number(!!(k.KeyA || k.ArrowLeft)) || j.dx;
-  TrackDrive.step(p, forward, turn, k.Space || ((k.KeyW || k.ArrowUp) && (k.KeyS || k.ArrowDown)));
+  const brake = k.Space || ((k.KeyW || k.ArrowUp) && (k.KeyS || k.ArrowDown));
+  const assist = !turn && !forward && !brake && !g.holdTurret && !p.isMoving ? BattleView.artillery?.steer(p) : 0;
+  TrackDrive.step(p, forward, turn || assist || 0, brake);
   BattleInput.consumeLook();
   BattleView.stepPlayer(1 / 60, mountYaw);
   if (g.mouseDown || g.mobileFireActive) firePlayer();
@@ -94,7 +99,8 @@ function ramContact(a, b, lossA, lossB) {
 function updateBullets() {
   for (let i = GameState.bullets.length - 1; i >= 0; i--) {
     const b = GameState.bullets[i];
-    const step = traceBattleRay(b.x, b.y, b.h, b.dx, b.dy, b.dh, b.speed, b.shooter);
+    const length = b.arc ? artilleryStep(b) : b.speed;
+    const step = traceBattleRay(b.x, b.y, b.h, b.dx, b.dy, b.dh, length, b.shooter);
     b.x = step.x;
     b.y = step.y;
     b.h = step.h;
@@ -103,8 +109,9 @@ function updateBullets() {
     else if (step.hit) {
       spawnParticles(b.x, b.y, '#e2bc7b', 8, 2, 11, b.h);
       if (step.hit.type === 'building') damageWall(step.hit, b.dmg, GameState.walls.indexOf(step.hit));
+      if (b.arc && step.hit === 'ground') artilleryBurst(b);
     }
-    if (step.hit || b.traveled >= BATTLE_RANGE) {
+    if (step.hit || (b.arc ? b.arc.tick >= b.arc.frames : b.traveled >= BATTLE_RANGE)) {
       GameState.bullets.splice(i, 1);
     }
   }
@@ -135,6 +142,7 @@ function update() {
     WeatherEngine.updateWaterPhysics(u, TICK / 1000);
     if (u.isMoving && !u.airborne && ticks % 5 === 0 && g.settings.showTracks)
       g.tracks.push({
+        unspotted: u.team === 'enemy' && !u.visible,
         x: u.x,
         y: u.y,
         h: surfaceHeight(u.x, u.y),
@@ -183,7 +191,7 @@ function updateHUD() {
   ammo.textContent =
     (p.usesMagazine
       ? `${magazineName(DB[p.id]).toUpperCase()} ${p.curMag}/${p.magSize}`
-      : CONFIG.SHELLS[g.curShell].name) +
+      : p.isSPG ? CONFIG.SPG_ROUND.name : CONFIG.SHELLS[g.curShell].name) +
     '  /  ' +
     (p.isReloading
       ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - BattleClock.now()) / 1000).toFixed(1)} с`

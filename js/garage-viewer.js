@@ -1,7 +1,7 @@
 // The depot displays only the equipped, owned vehicle. Research shows stats and an icon, not a second 3D viewer.
 const GarageViewer = (() => {
   const el = (id) => document.getElementById(id);
-  const classNames = { lt: 'Лёгкий танк', mt: 'Средний танк', ht: 'Тяжёлый танк', td: 'ПТ-САУ' };
+  const classNames = { lt: 'Лёгкий танк', mt: 'Средний танк', ht: 'Тяжёлый танк', td: 'ПТ-САУ', spg: 'Артиллерийская САУ' };
   let selectedId,
     request = null,
     showingId = null;
@@ -109,7 +109,8 @@ const GarageViewer = (() => {
     el('dispatch-hp').textContent = tank.hp;
     el('dispatch-dmg-label').textContent = damageLabel(tank);
     el('dispatch-dmg').textContent = damageSummary(tank);
-    el('dispatch-drum').hidden = !tank.mag;
+    el('dispatch-drum').hidden = !tank.mag && tank.cls !== 'spg';
+    if (tank.cls === 'spg') el('dispatch-drum').textContent = 'Арт-прицел · Shift на ПК или кнопка «Арт-прицел» на телефоне. Остановитесь для сведения.';
     if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · удерживайте огонь для очереди`;
     el('dispatch-reload-label').textContent = tank.mag ? 'Полная перезарядка' : 'Перезарядка';
     el('dispatch-reload').textContent = (tank.reload / 1000).toLocaleString('ru-RU') + ' с';

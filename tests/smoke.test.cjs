@@ -27,12 +27,12 @@ const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
 const usTreeIds = usIds.concat(additions('usa'));
 const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'));
-const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids);
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids,'GPZ');
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
+const meshCounts = {GPZ:2823,...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
   A43:4665,A44:5232,OBJ416:6798,OBJ430II:6909,K91:7883,OBJ430:7137,OBJ430U:5790,
   VK3002M:5762,PANTHER:5830,PANTHERII:4691,E50:4989,E50M:4825,GRILLE15:7315,

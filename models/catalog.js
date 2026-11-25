@@ -1,4 +1,4 @@
-// Each route is ordered I → X; forks reuse their entire shared prefix. Alpha is the TOTAL
+// Each route starts at I and ends at its last supplied tier; forks reuse their entire shared prefix. Alpha is the TOTAL
 // damage of a full load; a clip/machine gun fires mag independent projectiles.
 const RESEARCH_XP = Object.freeze([0,150,350,1500,4000,8000,25000,60000,120000,195000]);
 function defineLine(nat, rows, prefix = []) {
@@ -46,6 +46,10 @@ const GERMAN_BRANCH = defineLine('germany', [
   ['RU251','Spähpanzer Ru 251','lt','ru-251',      1350,250,5800,210,25,20,72, .92,390,.33],
   ['RHMPZW','Rhm. Panzerwagen','lt','rheinmetall-panzerwagen',1650,320,7200,235,30,20,75,.99,405,.30]
 ]);
+// Only the supplied tier II artillery piece; don't invent III–X vehicles to fill a lane.
+const GERMAN_SPG_BRANCH = defineLine('germany', [
+  ['GPZ','G.Pz. Mk. VI (e)','spg','gpz-mk-vi-e',125,220,14500,35,22,null,50,.70,270,.29,{yawLimits:[-5,5],minPitch:-3,maxPitch:42}]
+], GERMAN_BRANCH.slice(0,1));
 // The two heavy routes share the original Leichttraktor and one II–V progression.
 const GERMAN_MAUS_BRANCH = defineLine('germany', [
   ['PZ35T','Pz.Kpfw. 35 (t)','lt','pz-35-t',        175, 45, 2300, 52, 25, 25,35, .75,300,.30,{minPitch:-20,maxPitch:10}],
@@ -233,9 +237,9 @@ function nationTree(number,title,...routes) {
 const BRANCHES = Object.freeze({
   ussr: nationTree('01','ИС-7, ИС-4, Объект 140, Объект 430У, К-91, Т-100 ЛТ и Объект 268',
     USSR_BRANCH, USSR_IS4_BRANCH, USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH),
-  germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Grille 15, Jagdpanzer E 100, Maus, E 50 Ausf. M и E 100',
+  germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Grille 15, Jagdpanzer E 100, Maus, E 50 Ausf. M, E 100 и САУ II уровня',
     GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH,
-    GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH),
+    GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH, GERMAN_SPG_BRANCH),
   usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
     US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),

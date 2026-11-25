@@ -76,7 +76,7 @@ function setNat(nat) {
 
 // ========== Выбор снаряда ==========
 function setShell(i) {
-  if (GameState.player?.usesMagazine) i = 0;
+  if (GameState.player?.usesMagazine || GameState.player?.isSPG) i = 0;
   GameState.curShell = i;
   document.querySelectorAll('.shell-opt').forEach(function(e, j) { e.classList.toggle('active', j === i); });
   document.querySelectorAll('.m-shell').forEach(function(e, j) { e.classList.toggle('active', j === i); });

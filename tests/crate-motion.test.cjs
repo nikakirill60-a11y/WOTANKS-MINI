@@ -53,7 +53,9 @@ test('no WebGL: an actual offline film moves, can be skipped and replayed withou
   await page.locator('.inv-card').filter({hasText:'Полевой ящик'}).getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}).click();
   await page.waitForFunction(()=>new Set(tiles.map(t=>t.join())).size>=3);const bulk=await saved();assert.deepEqual(bulk.inventory,{collection:1});
   await click('Пропустить анимацию');assert.ok(await page.locator('#reward-display').isVisible());await click('Повторить анимацию');await click('ЗАБРАТЬ');assert.deepEqual(await saved(),bulk);
-  await page.emulateMedia({reducedMotion:'reduce'});await click('ОТКРЫТЬ 1');assert.ok(await page.locator('#reward-display').isVisible());assert.ok(await page.locator('.crate-poster').isVisible());assert.equal(await page.locator('.crate-film').count(),0);
+  await page.emulateMedia({reducedMotion:'reduce'});await click('ОТКРЫТЬ 1');assert.ok(await page.locator('#reward-display').isVisible());
+  const poster=page.locator('.crate-poster');await poster.evaluate(img=>img.decode()); // intrinsic width arrives asynchronously, even from file://
+  assert.ok(await poster.isVisible());assert.equal(await page.locator('.crate-film').count(),0);
   const single=await saved();await click('Повторить анимацию');await page.waitForFunction(()=>tiles.filter(t=>t[0]==='collection-motion.webp').length>=3);
   await page.keyboard.press('Escape');await page.getByRole('button',{name:'ЗАБРАТЬ'}).waitFor();await page.reload();assert.deepEqual(await saved(),single);
 });

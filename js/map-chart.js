@@ -189,9 +189,22 @@ const MapChart = (() => {
     c.lineTo(11, 0);
     c.stroke();
     c.restore();
+    const cursor = p.isSPG && BattleView.artillery;
+    if (cursor) {
+      const x = w / 2 + cursor.x * s, y = h / 2 + cursor.y * s;
+      c.strokeStyle = '#ffe5ab'; c.lineWidth = 1.4;
+      c.strokeRect(x - 3.5, y - 3.5, 7, 7);
+    }
+  }
+  // Inverse of the painted board, including its padding and the mobile CSS scale.
+  function boardPoint(canvas, clientX, clientY) {
+    const box = canvas.getBoundingClientRect(), l = layout(GameState.arena, canvas.width, canvas.height, 4);
+    const x = (clientX - box.left - canvas.clientLeft) * canvas.width / canvas.clientWidth;
+    const y = (clientY - box.top - canvas.clientTop) * canvas.height / canvas.clientHeight;
+    return {x:(x - canvas.width / 2) / l.scale, y:(y - canvas.height / 2) / l.scale};
   }
   return {
-    initPicker,
+    initPicker, boardPoint,
     drawHUD,
     reset() {
       cached = null;

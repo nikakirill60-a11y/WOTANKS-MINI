@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/features.css">
   <link rel="stylesheet" href="css/hangar.css">
   <link rel="stylesheet" href="css/battle.css">
+  <link rel="stylesheet" href="css/artillery.css">
   <link rel="stylesheet" href="css/winter.css">
   <link rel="stylesheet" href="css/supplies.css">
   <link rel="stylesheet" href="css/vehicle-cards.css">
@@ -43,7 +44,7 @@
     <button type="button" class="control-option" onclick="selectControl('pc')">
       <div class="control-icon">🖥️</div>
       <h3>ПК / Ноутбук</h3>
-      <p>WASD / стрелки — ход и поворот корпуса<br>Мышь — обзор · ЛКМ — огонь · ПКМ — свободный обзор<br>Shift — оптика · колесо — зум · E — автоприцел</p>
+      <p>WASD / стрелки — ход и поворот корпуса<br>Мышь — обзор · ЛКМ — огонь · ПКМ — свободный обзор<br>Shift — смена прицела · колесо — зум · E — автоприцел</p>
     </button>
     <button type="button" class="control-option" onclick="selectControl('mobile')">
       <div class="control-icon">📱</div>
@@ -295,6 +296,13 @@
   <section id="battle-roster" hidden aria-label="Состав команд"><div><h3>СОЮЗНИКИ</h3><ul id="roster-allies"></ul></div><div><h3>ПРОТИВНИКИ</h3><ul id="roster-enemies"></ul></div></section>
   <small id="relative-hint" hidden>Обзор без захвата · Alt — переставить мышь</small>
   <div id="battle-reticle" aria-hidden="true"><i></i></div>
+  <div id="arty-overlay">
+    <div id="arty-dispersion" aria-hidden="true"><i></i></div>
+    <div class="arty-instrument" aria-label="Состояние арт-прицела">
+      <div class="arty-heading"><span>АРТ-ПРИЦЕЛ</span><b id="arty-zoom">×1</b></div>
+      <strong id="arty-state" role="status">Сведение</strong><span class="arty-meter" aria-hidden="true"><i id="arty-fill"></i></span>
+    </div>
+  </div>
 
   <div id="perf-hud"></div>
   <div id="water-warning" hidden></div>
@@ -369,8 +377,9 @@
 <section id="input-menu" hidden aria-labelledby="input-title">
   <div class="input-panel"><small class="combat-eyebrow">УПРАВЛЕНИЕ · CITY TANKS</small>
     <h2 id="input-title">Готовы к выезду</h2>
-    <p class="pc-help">Мышь вращает обзор, башня следует за прицелом. Удерживайте ПКМ, чтобы осмотреться. Shift — оптика, E — автоприцел, Esc — пауза.</p>
+    <p class="pc-help">Мышь вращает обзор, башня следует за прицелом. Удерживайте ПКМ, чтобы осмотреться. Shift — смена прицела, E — автоприцел, Esc — пауза.</p>
     <p class="touch-help">Слева тяните джойстик, справа ведите пальцем для обзора. Можно наводиться и на самой кнопке огня.</p>
+    <p class="spg-help">Арт-прицел показывает поле сверху. Ведите прицел мышью или пальцем. Корпус довернётся сам, а при остановке круг сузится.</p>
     <button type="button" id="resume-input" class="btn">Взять управление</button><button type="button" class="battle-cancel" onclick="leaveBattle()">В ангар</button>
     <button type="button" class="menu-skip battle-cancel" onclick="skipTutorial()">Пропустить обучение</button>
   </div>
@@ -442,6 +451,7 @@
     <script src="js/depot-view.js"></script>
     <script src="js/battle-world.js"></script>
     <script src="js/battle-look.js"></script>
+    <script src="js/artillery.js"></script>
     <script src="js/battle-view.js"></script>
     <script src="js/battle.js"></script>
     <script src="js/main.js"></script>

@@ -18,7 +18,8 @@ const CONFIG = {
     france: 'Франция',
     sweden: 'Швеция', hungary: 'Венгрия', finland: 'Финляндия'
   },
-  TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ' },
+  TANK_CLASSES: { lt: 'ЛТ', mt: 'СТ', ht: 'ТТ', td: 'ПТ', spg: 'САУ' },
+  SPG_ROUND: { name: 'ОФ', sMul: 1, dMul: 1, penMul: 1, color: '#ffd48b' },
   PROMOCODES: {
     "BETA_TEST": { gold: 500 },
     "START2025": { gold: 100, silver: 5000 },

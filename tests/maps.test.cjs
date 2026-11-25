@@ -227,7 +227,11 @@ test('separate rosters: every player model and size, all research nations, premi
         for (const id of (side === 0 ? team.slice(1) : team)) if (DB[id].source) specialBots[side].add(id);
         assert.equal(team.length, size); assert.equal(new Set(team).size, size);
         assert.ok(team.every(id => Math.abs(DB[id].tier - player.tier) <= 1));
-        assert.ok(PLAYABLE_NATIONS.every(nat => team.some(id => DB[id].nat === nat)));
+        // With a non-research player (the Finnish Advent BT-42), only six of
+        // seven places remain in a 7×7. Every seat still represents a different nation.
+        const seats = size - Number(side === 0 && !PLAYABLE_NATIONS.includes(player.nat));
+        const represented = new Set(team.map(id => DB[id].nat).filter(n => PLAYABLE_NATIONS.includes(n)));
+        assert.equal(represented.size, Math.min(seats, PLAYABLE_NATIONS.length));
       }
       assert.ok(enemies.some(id => !allies.includes(id)), player.id+' '+size+' distinct sets, not a permutation');
     }

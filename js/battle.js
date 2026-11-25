@@ -59,17 +59,20 @@ function makeRosters(playerId, size, random = Math.random) {
     if (!byNation.has(tank.nat)) byNation.set(tank.nat, []);
     byNation.get(tank.nat).push(tank.id);
   }
-  const pools = [...byNation.values()];
+  const nations = [...byNation.keys()];
   function deal(first) {
     const deck = first ? [first] : [];
-    const groups = pools.map(ids => ids.filter(id => id !== first));
+    const groups = nations.map(nat => byNation.get(nat).filter(id => id !== first));
     const start = Math.floor(random() * groups.length);
-    // One draw per nation per round; a large research tree doesn't monopolise a side.
+    // One draw per nation per round. The player already filled their nation's
+    // first seat: even a 7×7 can now field all seven research nations.
+    let seatedNation = first ? nations.indexOf(DB[first].nat) : -1;
     while (groups.some(g => g.length)) {
       for (let i = 0; i < groups.length; i++) {
-        const g = groups[(start + i) % groups.length];
-        if (g.length) deck.push(g.splice(Math.floor(random() * g.length), 1)[0]);
+        const index = (start + i) % groups.length, g = groups[index];
+        if (index !== seatedNation && g.length) deck.push(g.splice(Math.floor(random() * g.length), 1)[0]);
       }
+      seatedNation = -1;
     }
     return deck;
   }

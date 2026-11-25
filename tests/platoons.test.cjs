@@ -52,6 +52,12 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   const register=async(p,name)=>{ await p.locator('#entry-register').click(); await p.locator('#profile-handle').fill(name);
     await p.locator('#profile-pass').fill('local fixture password');await p.locator('#account-submit').click();await p.waitForFunction(()=>Accounts.active && !Accounts.switching);};
   await Promise.all([register(a,'commander'),register(b,'friend_2')]);
+  // A researched French tank (including its hyphenated save ID) can take the
+  // commander's seat just like the original starter in the fallback run.
+  if (!fallback) {
+    for (const name of ['Дерево развития','ФРАНЦИЯ','Исследовать: Renault FT','Исследовать: Renault FT AC','Мой танк'])
+      await a.getByRole('button',{name,exact:true}).click();
+  }
   await a.locator('#map-select').selectOption('field');
   // Preexisting garage with a fitted rental; check that only a real launch uses it.
   await b.evaluate(()=>{GameState.owned.push('T67');GameState.selected='T67';GameState.rentalBattles.T67=2; GameState.modules.T67=['spall'];saveProgress();renderCarousel();});
@@ -71,7 +77,7 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   const manifest=p=>p.evaluate(()=>({ids:GameState.units.map(u=>u.id),drivers:GameState.units.filter(u=>u.callsign).map(u=>[u.driverSeat,u.callsign,!!u.bot]),
     weather:WeatherEngine.currentWeather,sector:GameState.arena.id,bots:GameState.units.filter(u=>u.bot).length}));
   const m=await manifest(a);assert.deepEqual(await manifest(b),m);assert.equal(m.ids.length,14);assert.equal(m.sector,'field');assert.equal(m.bots,12);assert.deepEqual(m.drivers,[[0,'commander',false],[1,'friend_2',false]]);
-  assert.deepEqual(await a.evaluate(()=>[GameState.player.id,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),['MS1',['friend_2'],'commander']);
+  assert.deepEqual(await a.evaluate(()=>[GameState.player.id,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),[fallback?'MS1':'FT-AC',['friend_2'],'commander']);
   assert.deepEqual(await b.evaluate(()=>[GameState.player.id,GameState.player.maxHp,GameState.rentalBattles.T67,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),['T67',475,1,['commander'],'friend_2']);
   // Hide the host's local input menu over the running world; the ally still drives.
   await a.evaluate(()=>BattleInput.pause());assert.match(await a.locator('#input-title').innerText(),/бой взвода продолжается/);

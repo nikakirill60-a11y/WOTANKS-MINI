@@ -252,6 +252,47 @@ const JAPANESE_HEAVY_BRANCH = defineLine('japan', [
   ['TYPE-4-H','Type 4 Heavy','ht','type-4-h',    2350,550,14500,245,250,250,20,1.20,370,.06,{minPitch:-10,maxPitch:20}],
   ['TYPE-5-H','Type 5 Heavy','ht','type-5-h',    2900,600,15000,255,260,260,25,1.22,385,.05,{minPitch:-10,maxPitch:20}]
 ], JAPANESE_MEDIUM_BRANCH.slice(0,1));
+// French sheets: dashes in repeated rows refer to the original node. A dash *inside*
+// the armour column means no separate turret plate. Clip sizes are sequential shots.
+const FRENCH_TD_BRANCH = defineLine('france', [
+  ['FT','Renault FT','lt','ft',                    115,35,2300,36,22,22,20, .65,270,.33,{minPitch:-10,maxPitch:35}],
+  ['FT-AC','Renault FT AC','td','ft-ac',         135,45,2300,62,16,null,20, .69,280,.35,{yawLimits:[-10,10],minPitch:-7,maxPitch:15}],
+  ['UE-57','Renault UE 57','td','ue-57',         185,75,3000,105,9,null,36, .68,300,.39,{yawLimits:[-7,7],minPitch:-2,maxPitch:20}],
+  ['SAU-40','Somua SAu 40','td','sau-40',      320,115,4000,115,40,null,37, .85,310,.31,{yawLimits:[-7,7],minPitch:-10,maxPitch:30}],
+  ['S35-CA','S35 CA','td','s35-ca',             470,240,6800,155,56,null,37, .85,320,.38,{yawLimits:[-29,15],minPitch:-9,maxPitch:22}],
+  ['ARL-V39','ARL V39','td','arl-v39',          680,240,6200,185,60,null,42, .95,330,.35,{yawLimits:[-10,10],minPitch:-6,maxPitch:18}],
+  ['AMX-AC-46','AMX AC mle. 46','td','amx-ac-46',950,300,7200,212,120,null,50,1.05,340,.30,{yawLimits:[-10,10],minPitch:-10,maxPitch:15}],
+  ['AMX-AC-48','AMX AC mle. 48','td','amx-ac-48',1200,400,9200,248,150,null,50,1.10,350,.28,{yawLimits:[-10,10],minPitch:-6,maxPitch:18}],
+  ['FOCH','AMX 50 Foch','td','foch',          1650,400,7800,257,180,null,50,1.12,370,.25,{yawLimits:[-10,10],minPitch:-6,maxPitch:18}],
+  ['FOCH-155','AMX 50 Foch (155)','td','foch-155',1900,750*3,40000,293,180,null,50,1.12,380,.22,{weapon:'drum',mag:3,yawLimits:[-10,10],minPitch:-6,maxPitch:18}]
+]);
+const FRENCH_50B_BRANCH = defineLine('france', [
+  ['D1','D1','lt','d1',                             195,45,2400,46,35,35,20, .73,285,.31,{minPitch:-18,maxPitch:20}],
+  ['D2','D2','mt','d2',                             290,55,2600,62,40,46,23, .80,310,.28,{minPitch:-10,maxPitch:20}],
+  ['B1','B1','ht','b1',                             460,65,2400,66,60,60,30, .95,310,.19,{minPitch:-13,maxPitch:18}],
+  ['BDR-G1-B','BDR G1 B','ht','bdr-g1-b',          710,240,7800,135,60,70,30,1.00,320,.15,{minPitch:-8,maxPitch:17}],
+  ['ARL-44','ARL 44','ht','arl-44',                960,240,6800,212,120,110,37,1.04,330,.12,{minPitch:-10,maxPitch:15}],
+  ['AMX-M4-45','AMX M4 mle. 45','ht','amx-m4-45',1320,240,6200,212,90,100,40,1.08,350,.10,{minPitch:-10,maxPitch:12}],
+  ['AMX-50-100','AMX 50 100','ht','amx-50-100',1450,300*6,38000,232,90,90,51,1.10,370,.10,{weapon:'drum',mag:6,oscillating:true,minPitch:-9,maxPitch:13}],
+  ['AMX-50-120','AMX 50 120','ht','amx-50-120',1850,400*4,30000,257,100,100,65,1.13,380,.08,{weapon:'drum',mag:4,oscillating:true,minPitch:-9,maxPitch:11}],
+  ['AMX-50-B','AMX 50 B','ht','amx-50-b',      2200,400*4,26000,257,170,100,65,1.15,400,.07,{weapon:'drum',mag:4,oscillating:true,minPitch:-10,maxPitch:12}]
+], FRENCH_TD_BRANCH.slice(0,1));
+const FRENCH_M454_BRANCH = defineLine('france', [
+  ['AMX-65-T','AMX 65 t','ht','amx-65-t',          1550,300,7600,232,100,250,38,1.12,360,.09,{minPitch:-8,maxPitch:13}],
+  ['AMX-M4-51','AMX M4 mle. 51','ht','amx-m4-51', 1950,400,9500,257,180,280,40,1.15,380,.07,{minPitch:-8,maxPitch:15}],
+  ['AMX-M4-54','AMX M4 mle. 54','ht','amx-m4-54',2400,520,11800,255,220,300,40,1.18,390,.06,{minPitch:-8,maxPitch:15}]
+], FRENCH_50B_BRANCH.slice(0,7));
+const FRENCH_BATCHAT_BRANCH = defineLine('france', [
+  ['H35','Hotchkiss H35','lt','h35',                 175,40,2200,45,40,40,28, .70,285,.32,{minPitch:-10,maxPitch:13}],
+  ['AMX-38','AMX 38','lt','amx-38',                 270,50,2400,58,60,40,25, .75,300,.31,{minPitch:-14,maxPitch:18}],
+  ['AMX-40','AMX 40','lt','amx-40',                 390,75,3000,74,70,70,35, .82,315,.30,{minPitch:-7,maxPitch:17}],
+  ['AMX-ELC-BIS','AMX ELC bis','lt','amx-elc-bis', 460,220,7500,140,14,14,65, .75,360,.45,{yawLimits:[-15,15],minPitch:-5,maxPitch:13}],
+  ['AMX-12-T','AMX 12 t','lt','amx-12-t',        650,135*4,14000,144,30,40,60, .80,370,.40,{weapon:'drum',mag:4,oscillating:true,minPitch:-6,maxPitch:12}],
+  ['AMX-13-75','AMX 13 75','lt','amx-13-75',     870,135*4,12000,155,40,40,61, .85,380,.38,{weapon:'drum',mag:4,oscillating:true,minPitch:-6,maxPitch:9}],
+  ['B-C-12-T','Bat.-Châtillon 12 t','lt','b-c-12-t',1100,170*4,15000,175,40,25,68,.90,390,.36,{weapon:'drum',mag:4,oscillating:true,minPitch:-6,maxPitch:13}],
+  ['B-C-25-T-AP','Bat.-Châtillon 25 t AP','mt','b-c-25-t-ap',1600,300*6,34000,232,50,30,65,1.00,400,.28,{weapon:'drum',mag:6,oscillating:true,minPitch:-6,maxPitch:13}],
+  ['B-C-25-T','Bat.-Châtillon 25 t','mt','b-c-25-t',1850,390*5,34000,259,60,50,65,1.05,410,.28,{weapon:'drum',mag:5,oscillating:true,minPitch:-6,maxPitch:11}]
+], FRENCH_TD_BRANCH.slice(0,1));
 // These forks reuse the existing parent records. The sheets give damage per
 // projectile: a salvo fires both barrels now; a drum fires on successive inputs.
 const USSR_277_BRANCH = defineLine('ussr', [
@@ -320,7 +361,9 @@ const BRANCHES = Object.freeze({
     US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
   hungary: nationTree('05','Путь к танку: T-55AM',HUNGARIAN_BRANCH),
-  japan: nationTree('06','STB-1 и Type 5 Heavy',JAPANESE_MEDIUM_BRANCH,JAPANESE_HEAVY_BRANCH)
+  japan: nationTree('06','STB-1 и Type 5 Heavy',JAPANESE_MEDIUM_BRANCH,JAPANESE_HEAVY_BRANCH),
+  france: nationTree('07','AMX 50 Foch (155), AMX 50 B, AMX M4 mle. 54 и Bat.-Châtillon 25 t',
+    FRENCH_TD_BRANCH, FRENCH_50B_BRANCH, FRENCH_M454_BRANCH, FRENCH_BATCHAT_BRANCH)
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
 // Special vehicles have a real tier, but no XP price or research parent.

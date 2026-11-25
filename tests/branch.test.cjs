@@ -148,7 +148,7 @@ test('two forks, one starter each: all Object 140 and Waffenträger route stats 
   assert.equal(armorLabel(DB.STEMIL),'50 / —');assert.equal(DB.WTE100.alpha,2080);
   for(const [nation,route] of [['ussr',med],['germany',td]]){
     const tree=BRANCHES[nation],old=tree.routes[0];
-    assert.ok(tree.routes.includes(route));assert.equal(old[0],route[0]);assert.equal(tree.tanks.length,nation==='germany'?47:46);
+    assert.ok(tree.routes.includes(route));assert.equal(old[0],route[0]);assert.equal(tree.tanks.length,46);
     assert.equal(new Set(tree.tanks.map(t=>t.id)).size,tree.tanks.length);assert.equal(route.length,10);
     for(const [i,t] of route.entries()){
       assert.equal(DB[t.id],t);assert.equal(t.nat,nation);assert.equal(t.tier,i+1);assert.equal(t.xp,old[i].xp);
@@ -241,8 +241,7 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
   const maus = route('germany', 'MAUS'), e100 = route('germany', 'E100');
   const scout = route('ussr', 'T100LT'), medium = route('ussr', 'OBJ140');
   const routes = Object.values(BRANCHES).flatMap(tree => Array.from(tree.routes));
-  assert.equal(routes.filter(r => r.length === 10).length,22);
-  assert.deepEqual(routes.filter(r => r.length !== 10).map(r => Array.from(r,t => t.id)),[['LTR','GPZ']]);
+  assert.equal(routes.length,22);assert.ok(routes.every(r => r.length === 10));
   assert.equal(maus[0], DB.LTR);
   for (let i = 0; i < 5; i++) assert.equal(e100[i], maus[i]);
   for (let i = 0; i < 4; i++) assert.equal(scout[i], medium[i]);
@@ -288,10 +287,10 @@ test('Maus, E 100 and T-100 LT: supplied rows, shared prerequisites and single-s
   }
 });
 
-test('12 special vehicles use the supplied combat stats, nonresearch acquisition and decorated submeshes',()=>{
+test('13 special vehicles use the supplied combat stats, nonresearch acquisition and decorated submeshes',()=>{
   const {DB,BRANCHES,Tank,BATTLE_UNITS_PER_METRE:m}=game();
-  assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,155);
-  const rows=[['M4A3E2',6,880,140,1,4000,138,102,152,35],['T71DA',7,860,150,6,20000,175,25,25,64],
+  assert.equal(Object.values(BRANCHES).flatMap(b=>b.tanks).length,154);
+  const rows=[['GPZ',2,125,220,1,14500,35,22,null,50],['M4A3E2',6,880,140,1,4000,138,102,152,35],['T71DA',7,860,150,6,20000,175,25,25,64],
     ['JPANTHERII',8,1200,490,1,10800,246,100,null,55],['T62A',10,1950,320,1,5600,255,102,240,50],
     ['TL7',9,1500,360,4,32000,252,100,200,50],['IS6',8,1550,390,1,10800,196,100,150,35],
     ['LOWE',8,1650,320,1,9200,234,150,120,35],['T34HEAVY',8,1550,400,1,12200,248,102,279,35],
@@ -300,7 +299,7 @@ test('12 special vehicles use the supplied combat stats, nonresearch acquisition
   for (const [i,row] of rows.entries()) {
     const u=new Tank(row[0],0,0,'player'),t=DB[u.id];
     assert.deepEqual([u.id,t.tier,u.maxHp,u.dmg,u.magSize,u.reloadTime,u.pen,u.armor,u.turretArmor,Math.round(u.baseSpeed*60*3.6/m)],row);
-    assert.equal(t.source,i<5?'collection':i<10?'premium':'advent');assert.equal(t.xp,undefined);assert.equal(t.parent,undefined);
+    assert.equal(t.source,i<6?'collection':i<11?'premium':'advent');assert.equal(t.xp,undefined);assert.equal(t.parent,undefined);
   }
   const data=id=>JSON.parse(fs.readFileSync(path.join(root,'models',DB[id].file),'utf8').slice('BattleModels.receive('.length,-3));
   const regular=data('TL7'),deer=data('TL7OLEN');assert.deepEqual(deer.meshes.slice(0,5),regular.meshes);

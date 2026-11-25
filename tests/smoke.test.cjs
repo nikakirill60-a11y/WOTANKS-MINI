@@ -27,7 +27,7 @@ const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
 const usTreeIds = usIds.concat(additions('usa'));
 const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'));
-const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids,'GPZ');
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids);
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
@@ -671,7 +671,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LEOPARD'],selected:'LEOPARD'})}});
   assert.equal(await page.locator('#dispatch-dmg-label').innerText(),'Урон кассеты');assert.equal(await page.locator('#dispatch-dmg').innerText(),'240 (8 × 30)');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('germany');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['JPANTHERII','LOWE']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['GPZ','JPANTHERII','LOWE']));
   await page.locator('#enemy-select').selectOption('VK2801');await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);
   const units=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));

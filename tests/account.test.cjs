@@ -96,6 +96,19 @@ test('berths, pending Advent tank and box receipt belong only to the signed-in p
   assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#fleet-count').innerText(),'1 / 12');assert.deepEqual(api.forbidden,[]);
 });
 
+test('ARTA receipt and tank sync together to the signed-in profile; the guest keeps a separate claim',async t=>{
+  const api=service(),uid=randomUUID(),password='test promo pass'; api.time='2026-11-22T10:00:00Z';
+  api.users.set('promo_pilot@players.citytanks.invalid',{id:uid,email:'promo_pilot@players.citytanks.invalid',password});
+  const {page,click,saved}=await openGame(t,{route:api.route}); const guest=await saved();
+  const redeem=async()=>{await click('Код');await page.getByLabel('Промокод',{exact:true}).fill('arta');await click('АКТИВИРОВАТЬ');};
+  await form(page,'promo_pilot',password,'Войти'); await active(page); await click('В ангар'); await redeem(); await synced(page);
+  const cloud=api.rows.get(uid).progress; assert.deepEqual([cloud.owned,cloud.usedPromos],[['MS1','GPZ'],['ARTA']]); assert.deepEqual(await saved(),guest);
+  await page.reload(); await active(page); await redeem(); assert.match(await page.locator('#promo-result').innerText(),/Уже использован/);
+  await click('ЗАКРЫТЬ'); await logout(page); assert.deepEqual(await saved(),guest); await click('В ангар');
+  await redeem(); const local=await saved(); assert.deepEqual(local.owned,['MS1','GPZ']);assert.deepEqual(local.usedPromos,['ARTA']);
+  assert.deepEqual(api.rows.get(uid).progress,cloud); assert.deepEqual(api.forbidden,[]);
+});
+
 test('a last-vehicle gold sale syncs the empty fleet and its balance, never pays or empties the guest',async t=>{
   const api=service(),uid=randomUUID(),email='trade_pilot@players.citytanks.invalid';api.time='2026-11-22T10:00:00Z';api.users.set(email,{id:uid,email,password:'trade testing'});
   api.rows.set(uid,{revision:3,progress:{owned:['T62A'],selected:'T62A',SILVER:7000,GOLD:80,garageSlots:12}});

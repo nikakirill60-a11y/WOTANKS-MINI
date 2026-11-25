@@ -46,10 +46,6 @@ const GERMAN_BRANCH = defineLine('germany', [
   ['RU251','Spähpanzer Ru 251','lt','ru-251',      1350,250,5800,210,25,20,72, .92,390,.33],
   ['RHMPZW','Rhm. Panzerwagen','lt','rheinmetall-panzerwagen',1650,320,7200,235,30,20,75,.99,405,.30]
 ]);
-// Only the supplied tier II artillery piece; don't invent III–X vehicles to fill a lane.
-const GERMAN_SPG_BRANCH = defineLine('germany', [
-  ['GPZ','G.Pz. Mk. VI (e)','spg','gpz-mk-vi-e',125,220,14500,35,22,null,50,.70,270,.29,{yawLimits:[-5,5],minPitch:-3,maxPitch:42}]
-], GERMAN_BRANCH.slice(0,1));
 // The two heavy routes share the original Leichttraktor and one II–V progression.
 const GERMAN_MAUS_BRANCH = defineLine('germany', [
   ['PZ35T','Pz.Kpfw. 35 (t)','lt','pz-35-t',        175, 45, 2300, 52, 25, 25,35, .75,300,.30,{minPitch:-20,maxPitch:10}],
@@ -237,9 +233,9 @@ function nationTree(number,title,...routes) {
 const BRANCHES = Object.freeze({
   ussr: nationTree('01','ИС-7, ИС-4, Объект 140, Объект 430У, К-91, Т-100 ЛТ и Объект 268',
     USSR_BRANCH, USSR_IS4_BRANCH, USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH),
-  germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Grille 15, Jagdpanzer E 100, Maus, E 50 Ausf. M, E 100 и САУ II уровня',
+  germany: nationTree('02','Rhm. Panzerwagen, WT auf E 100, Grille 15, Jagdpanzer E 100, Maus, E 50 Ausf. M и E 100',
     GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH,
-    GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH, GERMAN_SPG_BRANCH),
+    GERMAN_MAUS_BRANCH, GERMAN_E50M_BRANCH, GERMAN_E100_BRANCH),
   usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
     US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
@@ -247,9 +243,10 @@ const BRANCHES = Object.freeze({
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
 // Special vehicles have a real tier, but no XP price or research parent.
-// The three acquisition pools are disjoint (the two TL-7s are separate models).
+// The category determines the garage label and resale currency, not the contents of a seasonal box.
 const SPECIAL_TANKS = Object.freeze([
   // source, ID, name, nation, tier, class, slug, HP, full load, reload ms, pen, hull, turret, km/h, model limits
+  ['collection','GPZ','G.Pz. Mk. VI (e)','germany',2,'spg','gpz-mk-vi-e',125,220,14500,35,22,null,50,{s:.70,vr:270,camo:.29,yawLimits:[-5,5],minPitch:-3,maxPitch:42}],
   ['collection','M4A3E2','M4A3E2 Sherman Jumbo','usa',6,'mt','m4a3e2-sherman-jumbo',880,140,4000,138,102,152,35,{minPitch:-25,maxPitch:10}],
   ['collection','T71DA','T71 DA','usa',7,'lt','t71-da',860,900,20000,175,25,25,64,{mag:6,weapon:'drum',oscillating:true,minPitch:-20,maxPitch:7}],
   ['collection','JPANTHERII','Jagdpanther II','germany',8,'td','jagdpanther-ii',1200,490,10800,246,100,null,55,{yawLimits:[-10,10],minPitch:-15,maxPitch:6.5}],

@@ -1,7 +1,8 @@
 // Ordinary supply boxes keep their original resource tables. The collection has its own vehicle pool.
 const CONTAINERS = {
   collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 150}, color: '#91c7d4',
-    vehicleChance: 0.05, vehicles: SPECIAL_TANKS.filter(t => t.source === 'collection').map(t => t.id),
+    // This box has its own published manifest; a promo collectible is not automatically a crate prize.
+    vehicleChance: 0.05, vehicles: ['M4A3E2','T71DA','JPANTHERII','T62A','TL7'],
     drops: [['silver', 10000, 30000], ['gold', 25, 100]] },
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
     drops: [['silver', 5000, 15000], ['xp', 2000, 8000], ['gold', 50, 200]] },

@@ -2,19 +2,51 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const {openGame} = require('./winter-harness.cjs');
 const name = 'G.Pz. Mk. VI (e)', seed = {owned:['MS1','LTR','GPZ'], selected:'GPZ'};
 
-test('the German artillery fork ends at II: inspect before purchase, one 150 XP node, supplied stats and a persistent flagged vehicle', async t => {
+async function redeem(page, code='ARTA', enter=false) {
+  const input = page.getByLabel('Промокод',{exact:true});
+  await input.fill(code);
+  if (enter) await input.press('Enter');
+  else await page.getByRole('button',{name:'АКТИВИРОВАТЬ',exact:true}).click();
+  return page.locator('#promo-result').innerText();
+}
+
+test('ARTA grants the German collectible once, without research, a purchase or a new slot; selling cannot reset the code', async t => {
   const {page,click,saved} = await openGame(t,{mobile:true});
   await click('Дерево развития'); await click('ГЕРМАНИЯ');
-  await page.getByLabel('Показать ветку').selectOption('GPZ');
-  assert.deepEqual(await page.locator('#nodes .node').evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),['LTR','GPZ']);
-  await click('Характеристики: '+name);
-  assert.equal(await page.locator('#tree-status').innerText(),'Сначала исследуйте Leichttraktor');
-  assert.deepEqual(await page.locator('#tree-stats dd').allTextContents(),['125 HP','220','14,5 с','35 мм','22 / — мм','50 км/ч','Арт-прицел · вид сверху','±5° от корпуса']);
-  await click('Исследовать: Leichttraktor'); await click('Исследовать: '+name); await click('Выбрать: '+name);
-  const s = await saved(); assert.equal(s.XP,350); assert.deepEqual(s.owned,['MS1','LTR','GPZ']);
-  await page.reload(); assert.equal((await saved()).selected,'GPZ');
+  assert.equal(await page.locator('#tree-route option[value="GPZ"],#nodes [data-tank-id="GPZ"]').count(),0);
+  const before = await saved(); await page.evaluate(()=>researchTank('GPZ')); assert.deepEqual(await saved(),before);
+  await click('Код'); assert.match(await redeem(page,'AR TA'),/Неверный код/); assert.deepEqual(await saved(),before);
+  assert.ok((await redeem(page,'  aRtA  ',true)).includes(name+' добавлена в ангар'));
+  const claimed = {...before,owned:[...before.owned,'GPZ'],usedPromos:[...before.usedPromos,'ARTA']};
+  assert.deepEqual(await saved(),claimed); assert.match(await redeem(page),/Уже использован/); assert.deepEqual(await saved(),claimed);
+  await click('ЗАКРЫТЬ'); await click('Выбрать для боя: '+name); await page.reload();
+  assert.equal((await saved()).selected,'GPZ'); assert.equal(await page.locator('#bay-kind').innerText(),'КОЛЛЕКЦИОННАЯ МАШИНА');
   assert.match(await page.locator('#dispatch-meta').innerText(),/Германия.*II.*САУ/);
   assert.equal(await page.locator('.tank-slot.selected [data-card-nation]').getAttribute('data-card-nation'),'germany');
+  await click('Продать: '+name); assert.equal(await page.locator('#sale-price').innerText(),'200 G');
+  assert.match(await page.locator('#sale-terms').innerText(),/Промокод.*уже использован/);
+  await click('Подтвердить продажу'); const sold=await saved(); assert.equal(sold.GOLD,before.GOLD+200);
+  await click('Код'); assert.match(await redeem(page),/Уже использован/); assert.deepEqual(await saved(),sold);
+});
+
+test('full garage: the promo saves one reservation, survives reload and delivers once when a berth opens',async t=>{
+  const fleet=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','IS7'];
+  const {page,click,saved}=await openGame(t,{seed:{owned:fleet,selected:'IS7'}}); const before=await saved();
+  await click('Код'); assert.ok((await redeem(page)).includes(name+' ожидает слота'));
+  const waiting={...before,pendingVehicles:['GPZ'],usedPromos:['ARTA']}; assert.deepEqual(await saved(),waiting);
+  await page.reload(); await click('Ожидают слота: 1');assert.ok((await page.locator('#vehicle-deliveries').innerText()).includes(name));
+  await click('В ангар'); await click('Код');assert.match(await redeem(page,'arta',true),/Уже использован/);assert.deepEqual(await saved(),waiting);
+  await click('ЗАКРЫТЬ'); await page.getByRole('button',{name:'Выбрать для боя: Т-26',exact:true}).focus();
+  await click('Продать: Т-26');await click('Подтвердить продажу');await page.reload();
+  const delivered=await saved();assert.deepEqual(delivered.owned,fleet.filter(id=>id!=='T26').concat('GPZ'));
+  assert.equal(delivered.selected,'IS7');assert.deepEqual(delivered.pendingVehicles,[]);assert.deepEqual(delivered.usedPromos,['ARTA']);
+});
+
+test('already researched GPZ retains selection and equipment; entering ARTA neither clones nor compensates it',async t=>{
+  const {page,click,saved}=await openGame(t,{seed:{...seed,XP:350,modules:{GPZ:['optics']},upgrades:{GPZ:{gun:1}}}});
+  const old=await saved();assert.deepEqual([old.owned,old.selected,old.XP,old.modules.GPZ,old.upgrades.GPZ],[seed.owned,'GPZ',350,['optics'],{gun:1}]);
+  await click('Код'); assert.ok((await redeem(page)).includes(name+' уже в ангаре. Код не потрачен.'));
+  await page.reload();assert.deepEqual(await saved(),old);
 });
 
 async function practice(page,click,type) {
@@ -31,7 +63,8 @@ async function practice(page,click,type) {
 }
 
 test('PC artillery: Shift, relative cursor, real convergence, one arcing 220/35 shot and a shared 14.5s reload across views',async t=>{
-  const {page,click} = await openGame(t,{webgl:true,seed});
+  const {page,click} = await openGame(t,{webgl:true});
+  await click('Код'); await redeem(page); await click('ЗАКРЫТЬ'); await click('Выбрать для боя: '+name);
   await practice(page,click,'pc'); await page.keyboard.press('Shift');
   const stops = await page.evaluate(()=>{
     const a=BattleView.artillery, p=GameState.player, start=[a.x,a.y], c=document.querySelector('#game');

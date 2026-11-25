@@ -22,6 +22,8 @@ const TankSales = (() => {
     const notes = ['Установленные модули и улучшения будут сняты без компенсации.'];
     if (t.xp === 0) notes.push('Стартовую машину можно снова получить бесплатно, поэтому цена продажи — 0 ₽.');
     if (t.source === 'advent') notes.push('Этот подарок Адвента повторно не выдаётся.');
+    if (GameState.usedPromos.some(code => CONFIG.PROMOCODES[code]?.vehicle === id))
+      notes.push('Промокод на эту машину уже использован. После продажи он не выдаст её снова.');
     if (GameState.pendingVehicles.length) notes.push('Освободившееся место займёт ' + DB[GameState.pendingVehicles[0]].n + '.');
     else if (GameState.owned.length === 1) notes.push('Это последняя машина. После продажи можно бесплатно взять танк I уровня в дереве развития.');
     el('sale-terms').textContent = notes.join(' ');

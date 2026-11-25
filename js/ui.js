@@ -284,7 +284,7 @@ function showPromo() {
   var modal = document.getElementById('promo-modal');
   if (modal) modal.classList.add('show');
   var input = document.getElementById('promo-input');
-  if (input) input.value = '';
+  if (input) { input.value = ''; input.focus(); }
   var result = document.getElementById('promo-result');
   if (result) result.innerText = '';
 }
@@ -292,29 +292,37 @@ function showPromo() {
 function hidePromo() { var modal = document.getElementById('promo-modal'); if (modal) modal.classList.remove('show'); }
 
 function activatePromo() {
-  var code = document.getElementById('promo-input').value.trim().toUpperCase();
-  var result = document.getElementById('promo-result');
+  if (GameState.gameActive || Accounts.switching) return;
+  const code = document.getElementById('promo-input').value.trim().toUpperCase();
+  const result = document.getElementById('promo-result');
+  const say = (text, color) => { result.textContent = text; result.style.color = color; };
   if (!code) return;
-  if (GameState.usedPromos.indexOf(code) !== -1) { if (result) { result.innerText = "⚠️ Уже использован!"; result.style.color = "#e74c3c"; } return; }
-  var reward = CONFIG.PROMOCODES[code];
-  if (reward) {
-    var msg = "";
-    if (reward.gold) { GameState.GOLD += reward.gold; msg += reward.gold + 'G '; }
-    if (reward.silver) { GameState.SILVER += reward.silver; msg += reward.silver + '💰 '; }
-    if (reward.xp) { GameState.XP += reward.xp; msg += reward.xp + 'XP '; }
-    if (reward.charges) {
-      GameState.charges = (GameState.charges || 0) + reward.charges;
-      msg += reward.charges + ' ⚡ ';
+  if (!Object.hasOwn(CONFIG.PROMOCODES, code)) return say('❌ Неверный код!', '#e74c3c');
+  if (GameState.usedPromos.includes(code)) return say('⚠️ Уже использован!', '#e74c3c');
+
+  const reward = CONFIG.PROMOCODES[code], id = reward.vehicle;
+  const items = [];
+  if (id) {
+    const name = DB[id].n;
+    if (HangarSlots.received(id)) {
+      const where = GameState.owned.includes(id) ? 'уже в ангаре' : 'уже ожидает слота';
+      return say(`${name} ${where}. Код не потрачен.`, '#eabb70');
     }
-    if (reward.boosterXP) { GameState.boosterStock.xp += (reward.boosterXP || 0); }
-    if (reward.boosterSilver) { GameState.boosterStock.silver += (reward.boosterSilver || 0); }
-    GameState.usedPromos.push(code);
-    if (result) { result.innerText = "✅ Успешно! " + msg; result.style.color = "#2ecc71"; }
-    updateResources();
-    renderCarousel();
-    updateBoosterUI();
-    if (typeof saveProgress === 'function') saveProgress();
-  } else { if (result) { result.innerText = "❌ Неверный код!"; result.style.color = "#e74c3c"; } }
+    HangarSlots.award(id);
+    items.push(GameState.pendingVehicles.includes(id)
+      ? `${name} ожидает слота в инвентаре. Освободите место в ангаре.`
+      : `${name} добавлена в ангар.`);
+  }
+  if (reward.gold) { GameState.GOLD += reward.gold; items.push(reward.gold + 'G'); }
+  if (reward.silver) { GameState.SILVER += reward.silver; items.push(reward.silver + '💰'); }
+  if (reward.xp) { GameState.XP += reward.xp; items.push(reward.xp + 'XP'); }
+  if (reward.charges) { GameState.charges += reward.charges; items.push(reward.charges + ' ⚡'); }
+  if (reward.boosterXP) GameState.boosterStock.xp += reward.boosterXP;
+  if (reward.boosterSilver) GameState.boosterStock.silver += reward.boosterSilver;
+  GameState.usedPromos.push(code);
+  saveProgress(); // receipt and vehicle (parked or reserved) in the same profile snapshot
+  say('✅ Успешно! ' + items.join(' '), '#2ecc71');
+  updateResources(); renderCarousel(); updateBoosterUI();
 }
 
 // ========== Продажа танка ==========

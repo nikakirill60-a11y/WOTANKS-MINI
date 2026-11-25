@@ -13,7 +13,7 @@ test('resale desk: all 167 owned models can be quoted, only collectors pay gold;
     for(const id of ['constructor','fake','IS6','T62A']){sellTank(id);if(document.getElementById('sale-modal').open)throw Error(id);}
     GameState.pendingVehicles=[];return offers;
   });assert.equal(Object.keys(offers).length,167);
-  assert.deepEqual(Object.keys(offers).filter(k=>offers[k][0]==='GOLD').sort(),['JPANTHERII','M4A3E2','T62A','T71DA','TL7']);
+  assert.deepEqual(Object.keys(offers).filter(k=>offers[k][0]==='GOLD').sort(),['GPZ','JPANTHERII','M4A3E2','T62A','T71DA','TL7']);
   for(const id of ['IS6','LOWE','STA2','STRVS1','T34HEAVY'])assert.deepEqual(offers[id],['SILVER',40000]);
   assert.deepEqual(offers.BT42,['SILVER',20000]);assert.deepEqual(offers.TL7,['GOLD',900]);assert.deepEqual(offers.MS1,['SILVER',0]);assert.deepEqual(offers.V440,['SILVER',0]);
   assert.deepEqual(await saved(),initial);

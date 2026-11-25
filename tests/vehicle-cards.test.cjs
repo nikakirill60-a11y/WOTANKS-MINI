@@ -37,7 +37,7 @@ test('all twenty supplied flag plates decode from disk, including reserves, with
 });
 
 test('mobile: every research and special vehicle keeps its own cut-out over its national flag, independent of the browsed tree', async t => {
-  const specials = ['M4A3E2','T71DA','JPANTHERII','T62A','TL7','IS6','LOWE','T34HEAVY','STA2','STRVS1','BT42','TL7OLEN'];
+  const specials = ['GPZ','M4A3E2','T71DA','JPANTHERII','T62A','TL7','IS6','LOWE','T34HEAVY','STA2','STRVS1','BT42','TL7OLEN'];
   const owned = ['MS1','T54','T54A',...specials];
   const {page,click,saved} = await openGame(t,{mobile:true,seed:{owned,selected:'T54A'}});
   const cards = page.locator('#tank-carousel .slot-bg img');

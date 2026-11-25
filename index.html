@@ -121,13 +121,13 @@
 
 <!-- ========== ПРОМОКОД ========== -->
 <div id="promo-modal">
-  <div class="promo-content">
+  <form class="promo-content" onsubmit="event.preventDefault(); activatePromo()">
     <h2>🎟️ ПРОМОКОД</h2>
-    <input type="text" id="promo-input" placeholder="Введите код...">
-    <button class="btn" onclick="activatePromo()">АКТИВИРОВАТЬ</button>
-    <button class="btn btn-close" onclick="hidePromo()">ЗАКРЫТЬ</button>
-    <div id="promo-result"></div>
-  </div>
+    <input type="text" id="promo-input" aria-label="Промокод" placeholder="Введите код..." autocapitalize="characters" autocomplete="off" spellcheck="false">
+    <button class="btn" type="submit">АКТИВИРОВАТЬ</button>
+    <button class="btn btn-close" type="button" onclick="hidePromo()">ЗАКРЫТЬ</button>
+    <div id="promo-result" role="status"></div>
+  </form>
 </div>
 
 <!-- ========== ОТКРЫТИЕ КОНТЕЙНЕРА ========== -->

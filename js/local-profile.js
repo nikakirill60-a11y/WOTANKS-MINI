@@ -49,7 +49,14 @@ const oldTankKeys = Object.freeze({
   STUG3:'STUG3G', JGPZ4:'JGPZIV', JPANTHER:'JAGDP', JAGTIGER:'JAGDTIGER', JGE100:'JGPZE100',
   T1HVY:'T1HEAVY', T57HVY:'T57HEAVY', M3YOH:'MIIIY', M5YOH:'MVY', M6YOH:'MVIY',
   M3STUART:'M3ST', M5STUART:'M5ST', CHAFFEE:'M24', XM551:'SHERIDAN',
-  S85B:'SU85B', S85:'SU85', S100:'SU100', S152:'SU152', OB704:'OBJ704', OB268:'OBJ268'
+  S85B:'SU85B', S85:'SU85', S100:'SU100', S152:'SU152', OB704:'OBJ704', OB268:'OBJ268',
+  RENOTSU:'R-OTSU', CHIHA_JP:'CHI-HA', CHIHE:'CHI-HE', CHINU:'CHI-NU', CHITO:'CHI-TO', CHIRI:'CHI-RI',
+  STA1:'STA-1', TYPE61:'TYPE-61', STB1:'STB-1', MITSU108:'MITSU-108', OI:'O-I', ONI:'O-NI', OHO:'O-HO',
+  TYPE4:'TYPE-4-H', TYPE5:'TYPE-5-H',
+  // OB263 in the original saves was X after S12254, never the new IX after SU-101.
+  S100M1:'SU-100M1', S101:'SU-101', S12254:'SU-122-54', OB263:'OBJ-263-X',
+  VK30D:'VK-3001-D', VK30D2:'VK-3002-D', INDIEN:'INDIEN-PZ', LEOPA:'LEOPARD-PT-A', LEO1:'LEOPARD-1',
+  VK45A:'VK-4502-A', VK45B:'VK-4502-B', VK72:'VK-7201-K'
 });
 function savedTankId(id) {
   if (typeof id !== 'string') return null;
@@ -65,7 +72,7 @@ function decodeProgress(data) {
   const savedEmpty = Array.isArray(data.owned) && !data.owned.length && data.selected === null;
   if (!restored.owned.length && !savedEmpty) restored.owned = defaults.owned;
   restored.selected = savedTankId(data.selected);
-  HangarSlots.restore(restored);
+  HangarSlots.restore(restored, !Object.hasOwn(data, 'rentalBattles'));
   if (!PLAYABLE_NATIONS.includes(data.curNat)) {
     const nat = DB[restored.selected]?.nat;
     restored.curNat = PLAYABLE_NATIONS.includes(nat) ? nat : defaults.curNat;

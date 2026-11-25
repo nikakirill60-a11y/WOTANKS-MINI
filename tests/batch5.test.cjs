@@ -48,13 +48,13 @@ test('batch5 legacy keys migrate ownership and equipment by identity, not by tie
   const {page, saved} = await openGame(t, {seed:{owned:prev,selected:'M6YOH',XP:4321,
     modules:{M5YOH:['optics'],T71:['optics'],OB268:['rammer']}, upgrades:{T57HVY:{gun:1}}}});
   const s=await saved(); assert.deepEqual(s.owned,['T1HEAVY','T57HEAVY','MIIIY','MVY','MVIY','M3ST','M5ST','M24','SHERIDAN',
-    'SU85B','SU85','SU100','SU152','OBJ704','OBJ268','T49','T71DA']);
+    'SU85B','SU85','SU100','SU152','OBJ704','OBJ268','T49','T71DA','SU-100M1']);
   assert.equal(s.selected,'MVIY'); assert.equal(s.XP,4321);
   assert.deepEqual(s.modules,{MVY:['optics'],OBJ268:['rammer']}); assert.deepEqual(s.upgrades,{T57HEAVY:{gun:1}});
   await page.reload(); assert.deepEqual(await saved(),s);
 });
 
-test('all 32 batch5 exports deploy in offline WebGL: actual model geometry, separate rounds and a mirrored team sortie', async t => {
+test('all 32 batch5 exports deploy in offline WebGL: actual model geometry, separate rounds and a mixed team sortie', async t => {
   // Each model plays on one side of a real practice sortie. No target needs a modified HP/armour value.
   const pairs = [['T69','M41'],['T54E1','SHERIDAN'],['T57HEAVY','OBJ268'],['M2LT','AT1'],['M3ST','SU76M'],
     ['M5ST','SU85B'],['M24','SU85'],['T37','SU100'],['T71CMCD','SU152'],['ISU152','T49'],['OBJ704','M6'],
@@ -97,8 +97,9 @@ test('all 32 batch5 exports deploy in offline WebGL: actual model geometry, sepa
   await click('Выбрать для боя: Объект 268'); await click('7×7');
   const team=await page.evaluate(async()=>{
     if (!await selectControl('mobile')) throw Error(document.querySelector('#battle-notice-text').textContent);
-    stopBattleLoop(); const p=GameState.player,b=GameState.units[7];
-    const info=[BattleView.stats().units,p.id,b.id,b.team,!!b.bot,p.modelAsset===b.modelAsset]; backToGarage();return info;
+    stopBattleLoop(); const allies=GameState.units.slice(0,7), enemies=GameState.units.slice(7);
+    const info=[BattleView.stats().units,GameState.player.id,enemies.some(e=>!allies.some(a=>a.id===e.id)),
+      enemies.every(e=>e.team==='enemy' && e.bot && e.modelAsset)];backToGarage();return info;
   });
-  assert.deepEqual(team,[14,'OBJ268','OBJ268','enemy',true,true]);
+  assert.deepEqual(team,[14,'OBJ268',true,true]);
 });

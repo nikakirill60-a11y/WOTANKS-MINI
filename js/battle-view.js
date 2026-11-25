@@ -11,7 +11,7 @@ const BattleView = (() => {
     tint = new T.Color();
   let renderer, scene, camera, world, avatars, layers, noticeLoss, canvas;
   let weatherSeeds = [];
-  let look,
+  let look, artillery,
     autoTarget,
     width = 0,
     height = 0,
@@ -169,7 +169,31 @@ const BattleView = (() => {
     draw();
   }
   function rotate(dx, dy) {
-    look?.rotate(dx, dy, GameState.settings.lookSensitivity || 1);
+    const sensitivity = GameState.settings.lookSensitivity || 1;
+    if (artillery) artillery.pan(dx, dy, height, sensitivity);
+    else look?.rotate(dx, dy, sensitivity);
+  }
+  function toggleScope() {
+    if (!look) return;
+    if (!GameState.player.isSPG) { look.toggleScope(); return; }
+    if (artillery) artillery = null;
+    else {
+      syncCamera();
+      const p = GameState.player, q = pickSight();
+      // Start at the existing sight if it found the board; never seek an unspotted enemy.
+      const point = q.hit && Math.hypot(q.x - p.x, q.y - p.y) > 35 ? q :
+        {x:p.x + 280 * Math.cos(look.yaw), y:p.y + 280 * Math.sin(look.yaw)};
+      artillery = new ArtillerySight(GameState.arena.bounds, point);
+      autoTarget = null;
+    }
+    document.body.classList.toggle('artillery-view', !!artillery);
+    syncCamera(); aim();
+  }
+  function focusDistance(delta) {
+    if (!look || !delta) return;
+    if (artillery) artillery.level = bounded(artillery.level - Math.sign(delta), 0, 2);
+    else if (GameState.player.isSPG && delta < 0 && look.targetDistance <= 6.01) toggleScope();
+    else look.wheel(delta);
   }
   function syncCamera(dt = 0) {
     if (!look || !camera) return;
@@ -182,10 +206,19 @@ const BattleView = (() => {
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
     }
-    if (resized || camera.fov !== look.fov) {
-      camera.fov = look.fov;
+    const fov = artillery ? ArtillerySight.fov : look.fov;
+    if (resized || camera.fov !== fov) {
+      camera.fov = fov;
       camera.updateProjectionMatrix();
     }
+    if (artillery) {
+      const {x, y, h, altitude} = artillery;
+      camera.up.set(0, 0, -1); // north up, the same axes as the minimap
+      camera.position.set(x, h + altitude, y);
+      camera.lookAt(x, h, y); camera.updateMatrixWorld();
+      return;
+    }
+    camera.up.set(0, 1, 0);
     const p = GameState.player,
       m = BATTLE_UNITS_PER_METRE,
       dx = Math.cos(look.yaw) * Math.cos(look.pitch),
@@ -229,6 +262,10 @@ const BattleView = (() => {
     return { x: (temp.x + 1) / 2, y: (1 - temp.y) / 2 };
   }
   function pickSight() {
+    if (artillery) {
+      const {x, y, h} = artillery;
+      return (GameState.aim = {x, y, h, hit:null});
+    }
     picker.setFromCamera(sight, camera);
     const { origin: o, direction: d } = picker.ray,
       m = BATTLE_UNITS_PER_METRE,
@@ -260,7 +297,7 @@ const BattleView = (() => {
     );
   }
   function toggleAutoAim() {
-    if (!look || !GameState.gameActive) return;
+    if (!look || !GameState.gameActive || artillery) return;
     if (autoTarget) {
       autoTarget = null;
       combatMessage('Автоприцел снят', '#ded2b6');
@@ -284,7 +321,7 @@ const BattleView = (() => {
   }
   // Advance the mount only on simulation ticks. A click or a slow/fast display
   // must never add an extra slew step or snap a shot to the camera ray.
-  const traverseDegrees = { lt: 52, mt: 42, ht: 30, td: 34 }; // class defaults for the local vehicle catalogue
+  const traverseDegrees = { lt: 52, mt: 42, ht: 30, td: 34, spg: 34 }; // class defaults for the local vehicle catalogue
   function stepPlayer(dt, mountYaw) {
     if (!look || !camera) return; // non-rendered battle simulation
     const g = GameState,
@@ -292,6 +329,10 @@ const BattleView = (() => {
     p.tAngle = wrapAngle(p.angle + mountYaw);
     p.constrainTraverse();
     syncCamera(dt);
+    if (artillery) {
+      artillery.step(p, dt, g.holdTurret);
+      return;
+    }
     const q = pickSight();
     if (autoTarget && !lockable(autoTarget)) autoTarget = null;
     if (g.holdTurret) return;
@@ -308,6 +349,23 @@ const BattleView = (() => {
       p = g.player,
       picked = pickSight(),
       reticle = el('battle-reticle');
+    if (artillery) {
+      const a = artillery, aligned = a.aligned(p);
+      const state = a.close(p) ? 'Слишком близко' : g.holdTurret ? 'Обзор' :
+        !p.canTraverseTo(a.bearing(p)) ? 'Доворот корпуса' : !aligned ? 'Наведение' :
+        p.isMoving ? 'В движении' : p.isReloading ? 'Перезарядка' : a.focus < 1 ? 'Сведение' : 'Сведено';
+      const overlay = el('arty-overlay');
+      overlay.classList.toggle('ready', state === 'Сведено');
+      overlay.classList.toggle('blocked', !aligned || g.holdTurret);
+      el('arty-dispersion').style.setProperty('--diameter', (2 * a.radius * height / a.span).toFixed(1) + 'px');
+      el('arty-fill').style.transform = `scaleX(${a.focus.toFixed(3)})`;
+      if (el('arty-state').textContent !== state) el('arty-state').textContent = state;
+      el('arty-zoom').textContent = el('zoom-btn').textContent = '×' + a.zoom;
+      el('scope-btn').setAttribute('aria-pressed', 'true');
+      el('autoaim-btn').setAttribute('aria-pressed', 'false');
+      el('zoom-btn').hidden = false;
+      return;
+    }
     reticle.classList.toggle('locked', picked.hit?.team === 'enemy');
     reticle.classList.toggle('loading', p.isReloading);
     const actual = p.sightHit(BATTLE_RANGE, false, true),
@@ -321,7 +379,7 @@ const BattleView = (() => {
     marker.classList.toggle('on-target', actual.hit?.team === 'enemy' && actual.hit.visible);
     el('hud').classList.toggle('scoped', look.scoped);
     const info = el('sight-mode'),
-      text = [look.scoped ? 'ОПТИКА ×' + look.zoom : '', g.holdTurret ? 'ОБЗОР' : autoTarget ? 'АВТО' : '']
+      text = [look.scoped ? 'ОПТИКА ×' + look.zoom : p.isSPG && g.controlMode === 'pc' ? 'SHIFT · АРТ-ПРИЦЕЛ' : '', g.holdTurret ? 'ОБЗОР' : autoTarget ? 'АВТО' : '']
         .filter(Boolean)
         .join(' · ');
     if (info.textContent !== text) info.textContent = text;
@@ -349,11 +407,13 @@ const BattleView = (() => {
   function draw() {
     const g = GameState,
       now = BattleClock.date();
+    const markerScale = artillery ? bounded(1.5 * artillery.span / Math.max(height, 1), .8, 4) : 1;
     for (const [u, v] of avatars) {
       const distant =
         u !== g.player && u.modelAsset.far && Math.hypot(u.x - g.player.x, u.y - g.player.y) > 87 * look.zoom;
       const lod = distant ? u.modelAsset.far : u.modelAsset;
-      v.root.visible = v.shade.visible = !(u === g.player && look.scoped);
+      v.root.visible = v.shade.visible = !(u === g.player && look.scoped) &&
+        !(artillery && u.team === 'enemy' && !u.visible);
       v.hull.geometry = lod.body || lod.hull;
       v.turret.geometry = lod.turret;
       v.gun.geometry = lod.gun;
@@ -378,6 +438,8 @@ const BattleView = (() => {
       v.marker.visible = !u.dead && u !== g.player && (u.team !== 'enemy' || u.visible);
       if (v.marker.visible) {
         v.marker.position.set(u.x, u.rideHeight + u.modelScale * u.modelAsset.height + 3, u.y);
+        v.marker.scale.setScalar(markerScale);
+        if (artillery) v.marker.position.z -= 20 + 2 * markerScale; // clear the silhouette in plan view
         v.marker.quaternion.copy(camera.quaternion);
         v.hp.scale.set(14 * Math.max(0, u.hp / u.maxHp), 1.05, 1);
         v.hp.position.x = (v.hp.scale.x - 14) / 2;
@@ -415,7 +477,8 @@ const BattleView = (() => {
         c.rot
       );
     if (g.settings.showTracks)
-      for (const tr of g.tracks)
+      for (const tr of g.tracks) {
+        if (artillery && tr.unspotted) continue; // no live trail to an unseen vehicle on the board
         for (const sign of [-1, 1]) {
           const d = sign * tr.s * 10.3;
           stamp(
@@ -432,6 +495,7 @@ const BattleView = (() => {
             tr
           );
         }
+      }
     for (const s of CombatMechanics.smokeClouds)
       for (let i = 0; i < 7; i++) {
         const a = i * 2.4,
@@ -516,15 +580,16 @@ const BattleView = (() => {
       canvas.replaceWith(fresh);
     }
     weatherSeeds = [];
-    look = autoTarget = null;
+    look = artillery = autoTarget = null;
+    document.body.classList.remove('artillery-view');
     canvas = renderer = scene = camera = world = avatars = layers = noticeLoss = null;
   }
   // Also useful for checking a hardware/driver issue without exposing saved progress.
   function stats() {
     return renderer && avatars
       ? {
-          mode: look?.mode,
-          zoom: look?.zoom,
+          mode: artillery ? 'artillery' : look?.mode,
+          zoom: artillery?.zoom ?? look?.zoom,
           fov: camera.fov,
           yaw: look?.yaw,
           pitch: look?.pitch,
@@ -549,12 +614,13 @@ const BattleView = (() => {
     rotate,
     stepPlayer,
     toggleAutoAim,
-    toggleScope: () => look?.toggleScope(),
-    cycleZoom: () => look?.cycleZoom(),
+    toggleScope,
+    get artillery() { return artillery; },
+    cycleZoom: () => { if (artillery) artillery.level = (artillery.level + 1) % 3; else look?.cycleZoom(); },
     screenPoint,
     aim,
     draw,
-    focusDistance: (delta) => look?.wheel(delta),
+    focusDistance,
     dispose,
     stats
   };

@@ -6,7 +6,7 @@ const TrackDrive = (() => {
     g = 9.81;
   // The local roster provides top speeds but not power, weight or reverse gears.
   // These are game profiles, NOT historical specifications for individual tanks.
-  const classes = { lt: [17, 25, 53, 22], mt: [31, 21, 42, 18], ht: [56, 16, 30, 13], td: [36, 18, 33, 16] };
+  const classes = { lt: [17, 25, 53, 22], mt: [31, 21, 42, 18], ht: [56, 16, 30, 13], td: [36, 18, 33, 16], spg: [17, 20, 40, 16] };
   const toward = (v, to, d) => v + bounded(to - v, -d, d);
   function profile(u) {
     if (u._mobility) return u._mobility;

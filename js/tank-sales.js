@@ -9,7 +9,7 @@ const TankSales = (() => {
     const amount = gold ? tank.tier * 100 : tank.xp === 0 ? 0 : tank.tier * 5000;
     return {field: gold ? 'GOLD' : 'SILVER', amount, label: amount.toLocaleString('ru-RU') + (gold ? ' G' : ' ₽')};
   }
-  const canSell = id => Object.hasOwn(DB,id) && GameState.owned.includes(id) && !GameState.gameActive && !battleLaunch && !Accounts.switching;
+  const canSell = id => Object.hasOwn(DB,id) && GameState.owned.includes(id) && !GameState.rentalBattles[id] && !GameState.gameActive && !battleLaunch && !Accounts.switching;
   function open(id) {
     if (dialog.open || !canSell(id)) return;
     offered = id;
@@ -22,6 +22,8 @@ const TankSales = (() => {
     const notes = ['Установленные модули и улучшения будут сняты без компенсации.'];
     if (t.xp === 0) notes.push('Стартовую машину можно снова получить бесплатно, поэтому цена продажи — 0 ₽.');
     if (t.source === 'advent') notes.push('Этот подарок Адвента повторно не выдаётся.');
+    if (GameState.usedPromos.some(code => CONFIG.PROMOCODES[code]?.vehicle === id))
+      notes.push('Промокод на эту машину уже использован. После продажи он не выдаст её снова.');
     if (GameState.pendingVehicles.length) notes.push('Освободившееся место займёт ' + DB[GameState.pendingVehicles[0]].n + '.');
     else if (GameState.owned.length === 1) notes.push('Это последняя машина. После продажи можно бесплатно взять танк I уровня в дереве развития.');
     el('sale-terms').textContent = notes.join(' ');
@@ -34,10 +36,8 @@ const TankSales = (() => {
     close();
     if (!canSell(id)) return;
     const g = GameState, price = quote(DB[id]);
-    g.owned.splice(g.owned.indexOf(id),1);
     g[price.field] += price.amount;
-    for (const key of ['modules','upgrades','upgradesBought']) delete g[key][id];
-    const arrivals = HangarSlots.deliver(); // selects a remaining/delivered tank, or null in an empty garage
+    const arrivals = HangarSlots.release(id);
     saveProgress(); updateResources(); renderCarousel(); renderTree();
     const status = el('sale-status'); status.hidden = false;
     status.textContent = `${DB[id].n}: продажа за ${price.label}.` + (arrivals.length ? ` Доставлено: ${arrivals.map(i=>DB[i].n).join(', ')}.` : '');

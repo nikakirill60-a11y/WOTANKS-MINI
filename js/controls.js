@@ -201,6 +201,10 @@ const BattleInput = (() => {
     lastSignal = BattleClock.now();
     combatMessage(g.player.name + ' · ' + signals[code], '#bce4d3');
   }
+  function toggleSight() {
+    if (g.player.isSPG) consumeLook();
+    BattleView.toggleScope();
+  }
   function autoAim() {
     consumeLook();
     BattleView.toggleAutoAim();
@@ -220,7 +224,7 @@ const BattleInput = (() => {
     if (e.repeat) return;
     if (state === 'relative' && e.code.startsWith('Alt')) document.body.classList.add('rest-mouse');
     if (e.code === 'Tab') showRoster(true);
-    else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') BattleView.toggleScope();
+    else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleSight();
     else if (e.code === 'KeyE') autoAim();
     else if (Object.hasOwn(signals, e.code)) signal(e.code);
     else if (/^Digit[1-3]$/.test(e.code)) setShell(Number(e.code.slice(-1)) - 1);
@@ -343,6 +347,13 @@ const BattleInput = (() => {
       },
       { passive: false }
     );
+    el('minimap').addEventListener('pointerdown', e => {
+      const sight = BattleView.artillery;
+      if (!sight || !running() || e.button !== 0) return;
+      e.preventDefault(); consumeLook();
+      const q = MapChart.boardPoint(e.currentTarget, e.clientX, e.clientY);
+      sight.moveTo(q.x, q.y); // jump the camera, never fire or teleport the vehicle
+    });
     document.addEventListener('pointerdown', touchDown);
     window.addEventListener('pointermove', touchMove);
     window.addEventListener('pointerup', touchUp);
@@ -356,7 +367,7 @@ const BattleInput = (() => {
     });
     el('resume-input').addEventListener('click', acquire);
     for (const [id, action] of [
-      ['scope-btn', BattleView.toggleScope],
+      ['scope-btn', toggleSight],
       ['zoom-btn', BattleView.cycleZoom],
       ['autoaim-btn', autoAim],
       ['signal-btn', () => showSignals(el('touch-signals').hidden)]

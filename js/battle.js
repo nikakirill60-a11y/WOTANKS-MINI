@@ -50,25 +50,41 @@ function startBattle(mode) {
 function startTraining() {
   return launchBattle(1);
 }
-// Draw different vehicles before repeats. Deal one per nation per pass so a
-// fork with twice as many vehicles can't crowd another nation out of a 7×7.
-function makeRoster(playerId, size) {
-  const start = Math.floor(Math.random() * PLAYABLE_NATIONS.length),
-    deck = [playerId];
-  const groups = PLAYABLE_NATIONS.map((_, i) =>
-    BRANCHES[PLAYABLE_NATIONS[(start + i) % PLAYABLE_NATIONS.length]].tanks
-      .filter((t) => t.id !== playerId && Math.abs(t.tier - DB[playerId].tier) <= 1)
-      .map((t) => t.id)
-  );
-  for (let more = true; more; ) {
-    more = false;
-    for (const g of groups)
-      if (g.length) {
-        deck.push(g.splice(Math.floor(Math.random() * g.length), 1)[0]);
-        more = true;
-      }
+// Deal each side its own shuffled nation decks. The player's garage (including
+// rentals) is not the bot pool; fielding a bot never grants or spends a vehicle.
+function makeRosters(playerId, size, random = Math.random) {
+  const tier = DB[playerId].tier;
+  const byNation = new Map();
+  for (const tank of Object.values(DB)) {
+    if (Math.abs(tank.tier - tier) > 1) continue;
+    if (tank.source && tank.source !== 'premium' && tank.source !== 'collection') continue;
+    if (!byNation.has(tank.nat)) byNation.set(tank.nat, []);
+    byNation.get(tank.nat).push(tank.id);
   }
-  return Array.from({ length: size }, (_, i) => deck[i % deck.length]);
+  const pools = [...byNation.values()];
+  function deal(first) {
+    const deck = first ? [first] : [];
+    const groups = pools.map(ids => ids.filter(id => id !== first));
+    const start = Math.floor(random() * groups.length);
+    // One draw per nation per round; a large research tree doesn't monopolise a side.
+    while (groups.some(g => g.length)) {
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[(start + i) % groups.length];
+        if (g.length) deck.push(g.splice(Math.floor(random() * g.length), 1)[0]);
+      }
+    }
+    return deck;
+  }
+  const take = deck => Array.from({length:size}, (_, i) => deck[i % deck.length]);
+  const allies = take(deal(playerId)), awayDeck = deal(null), enemies = take(awayDeck);
+  // At tier I almost the whole pool fits in a 15×15. If the same set happened to
+  // be drawn, use a reserve from the enemy deck, not just a different display order.
+  const reserve = awayDeck[size];
+  if (reserve && enemies.every(id => allies.includes(id))) {
+    const slot = enemies.findIndex(id => DB[id].nat === DB[reserve].nat);
+    enemies[slot < 0 ? size - 1 : slot] = reserve;
+  }
+  return [allies, enemies];
 }
 async function launchBattle(teamSize) {
   if (GameState.gameActive || battleLaunch || !GameState.owned.includes(GameState.selected)) return false;
@@ -85,17 +101,11 @@ async function launchBattle(teamSize) {
     const arena = BattleMaps.create(map),
       navigation = new BattleNavigation(arena);
     const playerId = g.selected;
-    const roster = makeRoster(playerId, teamSize);
-    const formation = battleFormation(
-      arena,
-      navigation,
-      roster,
-      training ? document.getElementById('enemy-select').value : null
-    );
-    // A large roster may need 15 different mesh files. Bound peak
-    // memory on phones; duplicate tanks still share one set of geometries.
+    const teams = training ? [[playerId], [document.getElementById('enemy-select').value]] : makeRosters(playerId, teamSize);
+    const formation = battleFormation(arena, navigation, teams);
+    // Load only unique meshes, four at a time even with two different 15-vehicle teams.
     const assets = new Map(),
-      ids = [...new Set(formation.map((slot) => slot.id))];
+      ids = [...new Set(formation.map((slot) => modelKey(slot.id)))];
     for (let i = 0; i < ids.length; i += 4) {
       if (ticket.signal.aborted) return false;
       await Promise.all(
@@ -129,7 +139,7 @@ async function launchBattle(teamSize) {
         slot.team === 'player' ? getAllBonuses(slot.id) : null
       );
       u.angle = u.tAngle = u.lookYaw = slot.angle;
-      u.modelAsset = assets.get(slot.id);
+      u.modelAsset = assets.get(modelKey(slot.id));
       TrackDrive.place(u);
       u.practiceTarget = !!slot.practice;
       u.visible = slot.team !== 'enemy' || training;
@@ -141,6 +151,8 @@ async function launchBattle(teamSize) {
     updateScale();
     const drum = g.player.usesMagazine;
     document.body.classList.toggle('drum-equipped', drum);
+    document.body.classList.toggle('spg-equipped', g.player.isSPG);
+    document.getElementById('scope-btn').textContent = g.player.isSPG ? 'Арт-прицел' : 'Прицел';
     setShell(drum ? 0 : g.curShell);
     document.getElementById('ui').style.display = 'none';
     BattleView.build();
@@ -163,6 +175,12 @@ async function launchBattle(teamSize) {
     startPerfMonitor();
     BattleInput.begin();
     startBattleLoop();
+    // Count a successfully launched match, not a click, failed load, result or exit.
+    // Persist now so closing the tab cannot refund it. The fourth match plays normally.
+    if (HangarSlots.useRentalBattle(playerId)) {
+      g.player.rented = true;
+      saveProgress();
+    }
     return true;
   } catch (error) {
     if (!ticket.signal.aborted) battleFailed(error.message || 'Не удалось открыть поле боя.');
@@ -222,6 +240,11 @@ function endBattle(won) {
   if (silverMul > 1) boostInfo += '<br><span style="color:#bdc3c7">💰 Бустер ₽ x' + silverMul + '</span>';
   if (goldMul > 1) boostInfo += '<br><span style="color:#f1c40f">🪙 Бустер G x' + goldMul + '</span>';
 
+  if (GameState.player?.rented) {
+    const term = HangarSlots.rentalTerm(GameState.player.id);
+    boostInfo += '<br>' + (term ? `Остаток аренды: ${term}.` : `Аренда ${DB[GameState.player.id].n} завершена.`);
+  }
+
   document.getElementById('result-stats').innerHTML =
     'Урон: ' +
     Math.floor(GameState.battleDmg) +
@@ -244,7 +267,7 @@ function endBattle(won) {
 }
 
 function backToGarage() {
-  document.body.classList.remove('drum-equipped');
+  document.body.classList.remove('drum-equipped', 'spg-equipped');
   if (battleLaunch) {
     battleLaunch.abort();
     battleLaunch = null;

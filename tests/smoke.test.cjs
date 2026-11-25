@@ -25,14 +25,20 @@ const e50Ids = ['VK3002M','PANTHER','PANTHERII','E50','E50M'];
 const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGPZE100'];
 const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
+const sovger = require('./fixtures/soviet-german.cjs');
+const newIds = end => sovger.find(path=>path.end===end).rows.map(row=>row[0]);
 const usTreeIds = usIds.concat(additions('usa'));
-const sovietTreeIds = sovietIds.concat(is4Ids,mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'));
-const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,e50Ids,e100Ids);
+const sovietTreeIds = sovietIds.concat(newIds('OBJ-277'),newIds('OBJ-705A'),newIds('ST-II'),is4Ids,newIds('TET-100'),
+  mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'));
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,newIds('PZKPFW-VII'),
+  newIds('VK-7201-K'),e50Ids,newIds('LEOPARD-1'),e100Ids,newIds('KPZ-67'));
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
+const meshCounts = {GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
+  ...Object.fromEntries(require('./fixtures/japan.cjs').unique.map(row=>[row[0],row.at(-1)])),
+  ...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
   A43:4665,A44:5232,OBJ416:6798,OBJ430II:6909,K91:7883,OBJ430:7137,OBJ430U:5790,
   VK3002M:5762,PANTHER:5830,PANTHERII:4691,E50:4989,E50M:4825,GRILLE15:7315,
@@ -120,7 +126,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.equal(await page.locator('#advent-count').innerText(),'0 / 31');
   await click('В ангар');
   await click('Дерево развития');
-  assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ']);
+  assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ','ЯПОНИЯ']);
   await click('Выбрать для боя: МС-1');
   await page.locator('button[onclick="showSettings()"]').click();
   await page.locator('#volume-slider').press('Home');await page.locator('#look-sensitivity').press('End');
@@ -156,7 +162,7 @@ test('one legacy local profile: keep earned progress, exclude credentials and re
   assert.equal(data.SILVER, 0);
   assert.equal(data.charges, 4);
   assert.equal(data.selected, 'PZII');assert.equal(data.curNat,'germany');
-  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T34HEAVY','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN']); // no grants for similarly named tanks or a retired event boss
+  assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T34HEAVY','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN','VK-4502-A']); // no grants for similarly named tanks or a retired event boss
   assert.deepEqual(data.modules,{T1C:['optics'],RHMBWT:['turbo'],STI:['optics'],T54L:['rammer']});assert.deepEqual(data.upgrades,{T1C:{engine:1},TIGERI:{gun:2}});
   checkClean(data);assert.equal(data.GOLD,2500);
   assert.doesNotMatch(JSON.stringify(data), /obsolete-test-marker|Former|old-code|mail_event/);
@@ -418,13 +424,14 @@ test('offline team modes use the shared 3D asset; touch driving/firing, replay a
     await page.locator('#map-select').selectOption(map);await click(name);await chooseControls(page,type);await ready(page);
     const units=await page.evaluate(()=>{
       const pool=Object.values(DB).filter(t=>Math.abs(t.tier-GameState.player.tier)<=1).map(t=>t.id);
+      const mover=GameState.units.findIndex(u=>u.bot && !u.isSPG);
       return {n:BattleView.stats().units,poolSize:pool.length,
         shared:GameState.units.every(u=>pool.includes(u.id)&&u.modelAsset===GameState.units.find(t=>t.id===u.id).modelAsset),
         types:new Set(GameState.units.map(u=>u.id)).size,
-        allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[GameState.units[1].x,GameState.units[1].y]};
+        allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[mover,GameState.units[mover].x,GameState.units[mover].y]};
     });
-    assert.equal(units.n,count);assert.equal(units.types,Math.min(units.poolSize,count/2));assert.ok(units.shared&&units.allFinite);
-    await page.waitForFunction(([x,y])=>Math.hypot(GameState.units[1].x-x,GameState.units[1].y-y)>4,units.start);
+    assert.equal(units.n,count);assert.ok(units.types>count/2 && units.types<=Math.min(units.poolSize,count));assert.ok(units.shared&&units.allFinite);
+    await page.waitForFunction(([i,x,y])=>Math.hypot(GameState.units[i].x-x,GameState.units[i].y-y)>4,units.start);
     if(type==='pc'){
       // Real RAF motion was checked above. On the full-size map walk the remaining
       // fixed steps to first contact without tying the result to software GPU speed.
@@ -597,6 +604,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
         stopBattleLoop();const g=GameState,a=g.arena,nav=g.navigation,r=nav.recon;
         const initialCounts=r.teams.map(t=>t.count), initialScore=['allies-list','enemies-list'].map(id=>Number(document.getElementById(id).textContent));
         const orders=new Set(g.units.filter(u=>u.bot).map(u=>u.bot.order)).size;
+        const mobileBots=g.units.filter(u=>u.bot && !u.isSPG).length;
         const starts=g.units.map(u=>[u.x,u.y]);let moved=0,invalid=false,spotted=false,damage=0,both=false;
         const clock=Date.now,start=performance.now(),date=clock();let time=0;
         const rng=Math.random;let state=650+size;
@@ -606,19 +614,21 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
           for(let i=0;i<7200 && g.gameActive;i++){
             time+=TICK; update();
             if(ticks%12===0){
-              moved=Math.max(moved,g.units.filter((u,k)=>u.bot && Math.hypot(u.x-starts[k][0],u.y-starts[k][1])>110).length);
+              moved=Math.max(moved,g.units.filter((u,k)=>u.bot && !u.isSPG && Math.hypot(u.x-starts[k][0],u.y-starts[k][1])>110).length);
               invalid ||= g.units.some(u=> !Number.isFinite(u.x+u.y+u.angle+u.tAngle+u.rideHeight+u.groundPitch+u.groundRoll) || u.drownTimer!=null || !nav.clear(u.x,u.y,u.x,u.y));
               spotted ||= g.units.some(u=>u.team==='enemy' && u.visible);
               damage=g.units.reduce((s,u)=>s+u.maxHp-u.hp,0);
               both=g.units.some(u=>u.team==='ally' && u.lastShot>0) && g.units.some(u=>u.team==='enemy' && u.lastShot>0);
-              if(both && damage>0 && moved===size*2-1 && r.teams.every((t,i)=>t.count>=initialCounts[i]+2))break;
+              if(both && damage>0 && moved===mobileBots && r.teams.every((t,i)=>t.count>=initialCounts[i]+2))break;
             }
           }
           BattleView.syncCamera();BattleView.aim();BattleView.draw();updateHUD();
         } finally {delete performance.now;Date.now=clock;Math.random=rng;}
         const allies=g.units.filter(u=>u.team!=='enemy'),enemies=g.units.filter(u=>u.team==='enemy');
-        const mirrored=allies.every((u,k)=>enemies[k].id===u.id && Math.abs(u.tier-g.player.tier)<=1);
-        const info={player:g.player.name,nations:[...new Set(allies.map(u=>DB[u.id].nat))],mirrored,id:a.id,sizeOK:document.querySelector('#map-size').textContent===spec.size.join(' × ')+' м',
+        const different=enemies.some(e=>!allies.some(u=>u.id===e.id));
+        const inBand=g.units.every(u=>Math.abs(u.tier-g.player.tier)<=1);
+        const onBase=g.units.filter(u=>u.bot && u.isSPG).every(u=>!u.bot.scout && u.bot.sector<0 && Math.hypot(u.x-u.bot.post.x,u.y-u.bot.post.y)<65);
+        const info={player:g.player.name,nations:[...new Set(allies.map(u=>DB[u.id].nat))],different,inBand,onBase,mobileBots,id:a.id,sizeOK:document.querySelector('#map-size').textContent===spec.size.join(' × ')+' м',
           hudOK:document.querySelector('#combat-map').textContent===spec.name && document.querySelector('#combat-sector').textContent.endsWith(size+' × '+size),
           surveyLabel:document.querySelector('#recon-status').textContent, expectedLabel:`Разведано: ${r.teams[0].count}/${r.total}`,
           growth:r.teams.map((t,i)=>t.count-initialCounts[i]), initialScore, orders,plan,mesh:BattleView.stats(),moved,spotted,damage,both,invalid};
@@ -626,13 +636,13 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
         return info;
       },{id,size});
       const label=id+' '+size+'×'+size;
-      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','hungary','sweden','usa','ussr']);assert.ok(info.mirrored);
+      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','hungary','japan','sweden','usa','ussr']);assert.ok(info.different && info.inBand && info.onBase,label+' different rosters, matched range and SPG base duty');
       assert.equal(info.id,id);assert.ok(info.sizeOK && info.hudOK,label);plans.add(info.plan);
       assert.ok(info.mesh.triangles>1000 && info.mesh.units===size*2,label+' scene');
       assert.deepEqual(info.initialScore,[size,size],label+' initial HUD counts the actual line-ups');
       assert.equal(info.orders,size*2-1);assert.ok(info.growth.every(g=>g>=2),label+' both teams enter new sectors');
       assert.equal(info.surveyLabel,info.expectedLabel);
-      assert.equal(info.moved,size*2-1,label+' all non-player tanks advance');
+      assert.equal(info.moved,info.mobileBots,label+' non-artillery bots leave their starts');
       assert.ok(!info.invalid && info.spotted && info.both && info.damage>0 && info.reset,label+' fight');
     }
   }
@@ -671,7 +681,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LEOPARD'],selected:'LEOPARD'})}});
   assert.equal(await page.locator('#dispatch-dmg-label').innerText(),'Урон кассеты');assert.equal(await page.locator('#dispatch-dmg').innerText(),'240 (8 × 30)');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('germany');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['JPANTHERII','LOWE']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['GPZ','JPANTHERII','LOWE']));
   await page.locator('#enemy-select').selectOption('VK2801');await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);
   const units=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -1029,7 +1039,7 @@ test('multi-lane research on a phone: Maus, E 100 and T-100 LT charge each disti
   assert.equal(await page.locator('#dispatch-speed').innerText(),'72 км/ч');
 });
 
-test('winter lineup: all 12 new 3D vehicles enter offline practice; Finnish/Japanese selection works without a research tree',async t=>{
+test('winter lineup: all 12 new 3D vehicles enter offline practice; Finnish and Japanese specials remain playable without research',async t=>{
   const pairs=[['BT42','M4A3E2'],['STA2','LOWE'],['JPANTHERII','T62A'],['T71DA','IS6'],['TL7','T34HEAVY'],['TL7OLEN','STRVS1']];
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1',...pairs.flat()],selected:'BT42'})}});
   for (const [id,enemy] of pairs) {
@@ -1103,7 +1113,7 @@ test('twenty supplied meshes for the five new routes deploy offline in ten 3D tr
 test('renamed legacy vehicles migrate by identity without confusing the 430s, Panthers or E 100s',async t=>{
   const legacy=['OB430II','OB430U','PANTHER2','GRILLE','STUG3','JGPZ4','JPANTHER','JPANTHER2','JAGTIGER','JGE100','VK30D2'];
   const {page}=await offlineGame(t,{seed:{[saveKey]:JSON.stringify({owned:legacy,selected:'OB430II',XP:150,modules:{JPANTHER:['optics'],JPANTHER2:['turbo']}})}});
-  const s=await saved(page);assert.deepEqual(s.owned,['OBJ430II','OBJ430U','PANTHERII','GRILLE15','STUG3G','JGPZIV','JAGDP','JPANTHERII','JAGDTIGER','JGPZE100']);
+  const s=await saved(page);assert.deepEqual(s.owned,['OBJ430II','OBJ430U','PANTHERII','GRILLE15','STUG3G','JGPZIV','JAGDP','JPANTHERII','JAGDTIGER','JGPZE100','VK-3002-D']);
   assert.equal(s.selected,'OBJ430II');assert.equal(s.XP,150);assert.deepEqual(s.modules,{JAGDP:['optics'],JPANTHERII:['turbo']});
   await page.reload();assert.deepEqual(await saved(page),s);
 });

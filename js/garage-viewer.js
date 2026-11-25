@@ -1,14 +1,15 @@
 // The depot displays only the equipped, owned vehicle. Research shows stats and an icon, not a second 3D viewer.
 const GarageViewer = (() => {
   const el = (id) => document.getElementById(id);
-  const classNames = { lt: 'Лёгкий танк', mt: 'Средний танк', ht: 'Тяжёлый танк', td: 'ПТ-САУ' };
+  const classNames = { lt: 'Лёгкий танк', mt: 'Средний танк', ht: 'Тяжёлый танк', td: 'ПТ-САУ', spg: 'Артиллерийская САУ' };
   let selectedId,
     request = null,
     showingId = null;
   let inspecting = true;
 
   function description(tank) {
-    return [CONFIG.NATIONS[tank.nat], CONFIG.TIER_ROMAN[tank.tier] + ' ур.', classNames[tank.cls]]
+    const term = HangarSlots.rentalTerm(tank.id);
+    return [CONFIG.NATIONS[tank.nat], CONFIG.TIER_ROMAN[tank.tier] + ' ур.', classNames[tank.cls], term && 'Аренда: ' + term]
       .filter(Boolean)
       .join(' · ');
   }
@@ -45,7 +46,7 @@ const GarageViewer = (() => {
     el('bay-kind').textContent = ({collection:'КОЛЛЕКЦИОННАЯ МАШИНА',premium:'ПРЕМИУМ-МАШИНА',advent:'НАГРАДА АДВЕНТА'})[tank.source] || 'ИССЛЕДУЕМАЯ МАШИНА';
     el('bay-name').textContent = tank.n;
     el('bay-meta').textContent =
-      description(tank) + (tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');
+      description(tank) + (tank.salvo ? ` · Залп: ${tank.salvo} × ${shotDamage(tank)}` : tank.mag ? ` · ${magazineName(tank)}: ${tank.mag} × ${shotDamage(tank)}` : '');
     if (showingId === selectedId) return;
     request?.abort();
     const ticket = new AbortController();
@@ -91,10 +92,11 @@ const GarageViewer = (() => {
       for (const btn of document.querySelectorAll('[data-needs-tank],#battle-controls button')) btn.disabled = empty;
       if (empty) {
         el('dispatch-name').textContent = el('bay-name').textContent = 'Ангар пуст';
-        el('dispatch-meta').textContent = ''; el('dispatch-drum').hidden = true;
+        el('dispatch-drum').hidden = true;
         el('bay-kind').textContent = 'МОЯ ТЕХНИКА'; el('bay-meta').textContent = 'Ни одной машины для выезда';
       } else describeSelection(DB[id]);
     }
+    el('dispatch-meta').textContent = id ? description(DB[id]) : ''; // balance can change without changing selection
     el('fleet-count').textContent = `${GameState.owned.length} / ${GameState.garageSlots}`;
     const waiting = el('fleet-pending');
     waiting.hidden = !GameState.pendingVehicles.length;
@@ -105,13 +107,14 @@ const GarageViewer = (() => {
 
   function describeSelection(tank) {
     el('dispatch-name').textContent = tank.n;
-    el('dispatch-meta').textContent = description(tank);
     el('dispatch-hp').textContent = tank.hp;
     el('dispatch-dmg-label').textContent = damageLabel(tank);
     el('dispatch-dmg').textContent = damageSummary(tank);
-    el('dispatch-drum').hidden = !tank.mag;
+    el('dispatch-drum').hidden = !tank.mag && !tank.salvo && tank.cls !== 'spg';
+    if (tank.cls === 'spg') el('dispatch-drum').textContent = 'Арт-прицел · Shift на ПК или кнопка «Арт-прицел» на телефоне. Остановитесь для сведения.';
+    if (tank.salvo) el('dispatch-drum').textContent = 'Два ствола · одно нажатие выпускает оба снаряда одновременно';
     if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · удерживайте огонь для очереди`;
-    el('dispatch-reload-label').textContent = tank.mag ? 'Полная перезарядка' : 'Перезарядка';
+    el('dispatch-reload-label').textContent = reloadLabel(tank);
     el('dispatch-reload').textContent = (tank.reload / 1000).toLocaleString('ru-RU') + ' с';
     el('dispatch-pen').textContent = tank.pen + ' мм';
     el('dispatch-armor').textContent = armorLabel(tank) + ' мм';

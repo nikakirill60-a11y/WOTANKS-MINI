@@ -53,12 +53,13 @@ const { chromium } = require('../tests/node_modules/playwright-core'),
       sun.shadow.bias = -0.0004;
       scene.add(sun, rim);
       const cam = new T.PerspectiveCamera(12, 900 / 460, 0.1, 200),
-        dir = new T.Vector3(1, 0.37, 0.49).normalize(),
-        right = new T.Vector3().crossVectors(cam.up, dir).normalize(),
-        up = new T.Vector3().crossVectors(dir, right),
         vec = new T.Vector3();
       window.renderIcon = async (id) => {
         const a = await BattleModels.load(id, new AbortController().signal),
+          // A more frontal view separates the two tips on the double-barrelled tanks.
+          dir = (a.muzzles ? new T.Vector3(0.55, 0.43, 1) : new T.Vector3(1, 0.37, 0.49)).normalize(),
+          right = new T.Vector3().crossVectors(cam.up, dir).normalize(),
+          up = new T.Vector3().crossVectors(dir, right),
           group = new T.Group();
         const h = new T.Mesh(a.hull, mat),
           t = new T.Mesh(a.turret, mat),

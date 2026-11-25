@@ -8,26 +8,29 @@ const BotAI = (() => {
   function attach(u, slot, nav) {
     if (!nav.recon) nav.recon = new BattleRecon(nav);
     const hub = nav.arena.hubs[slot.lane];
+    const post = u.isSPG ? { x:u.x, y:u.y } : null;
+    const scout = !!slot.scout && !post;
     // Supporters open in the same five corridors, but not at a scout's exact
     // destination or at each other's parking spot. Then they also survey sectors.
     const offset = ((slot.index % 3) - 1) * 76,
       side = slot.side ? 1 : -1;
-    const opening = nav.point(
+    const opening = post || scout ? null : nav.point(
       nav.nearest(hub.x + offset * side, hub.y + side * ((slot.index % 4) - 1.5) * 54)
     );
     u.bot = {
       order: slot.index * 2 + slot.side,
       side: slot.side,
-      scout: !!slot.scout,
-      hub,
-      opening: slot.scout ? null : opening,
+      scout, hub, opening, post,
+      board: post ? new ArtillerySight(nav.arena.bounds, post) : null,
+      regroupUntil: 0,
+      rally: null,
       openingDistance: Infinity,
       openingUntil: 0,
-      firstSurvey: !!slot.scout,
+      firstSurvey: scout,
       sector: -1,
       skipSector: -1,
       radio: null,
-      mode: 'advance',
+      mode: post ? 'base' : 'advance',
       ideal: 155 + (DB[u.id].cls === 'ht' ? 70 : 25) + (slot.index % 3) * 12,
       target: null,
       memory: null,
@@ -59,16 +62,32 @@ const BotAI = (() => {
     }
     if (now === 1 || now % 12 === 0) nav.recon?.sample(GameState.units, now);
   }
+  // Take one short step back towards the team's map marker, then wait there.
+  // If home is beyond the contact, holding is better than driving through it.
+  function rallyPoint(u, b, contact, nav) {
+    const home = nav.arena.bases[b.side], dx = home.x - u.x, dy = home.y - u.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 80 || dx * (contact.x - u.x) + dy * (contact.y - u.y) > 0) return null;
+    const k = Math.min(1, 230 / d);
+    const n = nav.nearest(u.x + dx * k, u.y + dy * k);
+    return n < 0 ? null : nav.point(n);
+  }
   function observe(u, b, now) {
     const previous = b.target;
     let best = null,
       score = Infinity,
-      line = false;
+      line = false, friends = 1, contacts = 0;
     for (const t of GameState.units) {
-      if (t.dead || !t.spotted || (t.team === 'enemy') === (u.team === 'enemy')) continue;
+      if (t === u || t.dead) continue;
+      if ((t.team === 'enemy') === (u.team === 'enemy')) {
+        if ((t.x - u.x) ** 2 + (t.y - u.y) ** 2 <= 480 ** 2) friends++;
+        continue;
+      }
+      if (!t.spotted) continue;
       const d = Math.hypot(t.x - u.x, t.y - u.y);
-      if (d > 1250) continue;
-      const open = d <= 580 && clearBattleSight(u, t);
+      if (!b.post && d > 1250) continue;
+      if (d <= 600) contacts++;
+      const open = !b.post && d <= 580 && clearBattleSight(u, t);
       const s = d + (open ? 0 : 400) - (t === previous ? 90 : 0) - (t.hp <= u.dmg ? 48 : 0);
       if (s < score) {
         best = t;
@@ -85,6 +104,16 @@ const BotAI = (() => {
     b.target = best;
     b.open = line;
     b.nextLook = now + 16;
+    if (b.post) {
+      // Only a current team sighting can move the NPC's arcade board cursor.
+      if (previous !== best) b.board.focus = 0;
+      if (best) b.board.moveTo(best.x, best.y);
+      return;
+    }
+    if (best && (contacts > friends || u.hp <= u.maxHp * .35)) {
+      if (now >= b.regroupUntil) b.rally = rallyPoint(u, b, best, GameState.navigation);
+      b.regroupUntil = now + 120; // don't immediately chase when a contact blinks out
+    }
     b.radio = !best && !b.scout ? GameState.navigation.recon.report(u, now) : null;
     if (best) b.memory = { x: best.x, y: best.y, until: now + BattleRecon.reportLife };
   }
@@ -110,7 +139,7 @@ const BotAI = (() => {
   // Only react to feedback from an actual blocked hit on the current, spotted target.
   function onBlockedHit(u, t) {
     const b = u.bot;
-    if (b?.target !== t || !t.spotted) return;
+    if (b?.target !== t || !t.spotted || b.post) return;
     b.shell = u.usesMagazine ? 0 : 2;
     b.shift = true;
   }
@@ -198,6 +227,53 @@ const BotAI = (() => {
     }
     steer(u, b, b.path[b.at], nav, now);
   }
+  function drive(u, b, mode, dest, nav, now) {
+    if (mode !== 'survey' && b.sector >= 0) nav.recon.release(u);
+    if (b.mode !== mode) {
+      b.goal = null;
+      b.path = [];
+      b.at = 0;
+      b.planAfter = now;
+      b.steerAt = 0;
+      if (mode === 'regroup' || mode === 'return') {
+        b.backup = b.blocked = 0; // discard recovery inputs for the previous route
+        b.crowded = false;
+      }
+      b.mode = mode;
+    }
+    if (dest) follow(u, b, dest, nav, now);
+    TrackDrive.step(u, b.throttle, b.steer, b.brake, nav);
+    if (b.throttle > 0 && u.driveBlocked) {
+      b.steerAt = 0;
+      if (++b.blocked >= 35) {
+        b.crowded = true;
+        b.backup = 96;
+        b.blocked = 0;
+        b.planAfter = now + b.backup;
+      }
+    } else if (u.isMoving) b.blocked = 0;
+  }
+  function guardBase(u, b, nav, now) {
+    // Collisions still apply. If pushed away, drive back to the original safe
+    // berth; never give an SPG a scout, search, sidestep or pursuit destination.
+    if (Math.hypot(u.x - b.post.x, u.y - b.post.y) > (b.mode === 'return' ? 24 : 65)) {
+      b.board.focus = 0;
+      drive(u, b, 'return', b.post, nav, now);
+      return;
+    }
+    const sight = b.board;
+    if (b.target) {
+      b.steer = sight.steer(u);
+      sight.step(u, 1 / 60, false);
+      if (!u.isReloading && sight.focus >= .55) {
+        const margin = ArtillerySight.burstRadius + sight.radius;
+        const allyInCircle = GameState.units.some(a => !a.dead && (a.team === 'enemy') === (u.team === 'enemy') &&
+          (a.x - sight.x) ** 2 + (a.y - sight.y) ** 2 < margin ** 2);
+        if (!allyInCircle) u.fire(0, sight); // same in-game cursor, projectile and reload as the player
+      }
+    } else sight.focus = 0;
+    drive(u, b, 'base', null, nav, now);
+  }
   function step(u, now) {
     u.isMoving = false;
     if (u.practiceTarget) return;
@@ -216,7 +292,9 @@ const BotAI = (() => {
       b.nextLook = now;
     }
     if (now >= b.nextLook) observe(u, b, now);
-    const t = b.target;
+    if (b.post) return guardBase(u, b, nav, now);
+    const t = b.target, cautious = now < b.regroupUntil;
+    const rally = cautious && b.rally && Math.hypot(u.x - b.rally.x, u.y - b.rally.y) > 28 ? b.rally : null;
     let dest = null,
       mode = 'advance';
     if (t) {
@@ -233,24 +311,27 @@ const BotAI = (() => {
       b.aimTicks = ready ? b.aimTicks + 1 : 0;
       const closeAlly = b.open && friendInWay(u, t);
       const stand = b.ideal + (u.hp < u.maxHp * 0.4 ? 40 : 0);
-      if (b.open && now >= b.yieldUntil && (b.shift || (closeAlly && d < stand + 80))) {
+      if (!cautious && b.open && now >= b.yieldUntil && (b.shift || (closeAlly && d < stand + 80))) {
         b.sideStep = sidestep(u, b, dx / d, dy / d, nav);
         b.yieldUntil = now + 90;
       }
       b.shift = false;
-      if (b.open && d < stand * 0.62) {
+      if (cautious) {
+        mode = 'regroup';
+        // Hold an available shot, otherwise fall back a short distance, not all
+        // the way across the map. Still use ordinary movement and shot checks.
+        if (!b.open || closeAlly || u.isReloading || d < stand) dest = rally;
+      } else if (b.open && d < stand * 0.62) {
         mode = 'space';
         dest = { x: u.x - (dx / d) * 85, y: u.y - (dy / d) * 85 };
       } else if (b.open && now < b.yieldUntil) {
         mode = 'space';
         dest = b.sideStep;
-      } else if (!b.open || d > stand + 28) {
+      } else if (!b.open) {
         mode = 'approach';
         dest = t;
-      } else {
-        mode = 'engage';
-        if (outOfArc) b.steer = limit(turn(bearing, u.angle) / 0.12, 1);
-      }
+      } else mode = 'engage'; // already in range: don't keep closing just to reach a waypoint
+      if (!dest && outOfArc) b.steer = limit(turn(bearing, u.angle) / 0.12, 1);
       // Recheck the shot now; a sighting/clear segment from the last decision isn't a firing permit.
       if (
         b.aimTicks >= 18 + (b.order % 9) &&
@@ -259,11 +340,15 @@ const BotAI = (() => {
         BattleClock.now() >= u.nextShot &&
         clearBattleSight(u, t)
       ) {
-        // Same model muzzle as the player's reticle and projectile. Friends block a bot's shot.
-        const shot = u.sightHit(d + 40, true);
-        if (shot.hit === t) u.fire(b.shell);
+        // Check the actual barrel(s), including friendly cover, not an imaginary centre shot.
+        const clear = u.modelAsset?.muzzles
+          ? u.modelAsset.muzzles.every(tip => u.sightHit(d + 40, true, false, tip).hit === t)
+          : u.sightHit(d + 40, true).hit === t;
+        if (clear) u.fire(b.shell);
         else if (b.mode === 'engage') b.shift = true;
       }
+    } else if (cautious) {
+      mode = 'regroup'; dest = rally;
     } else {
       if (b.opening) {
         const d = Math.hypot(u.x - b.opening.x, u.y - b.opening.y);
@@ -301,26 +386,7 @@ const BotAI = (() => {
       u.setLook(look, 0);
       u.slewSight(0.035);
     }
-    if (mode !== 'survey' && b.sector >= 0) nav.recon.release(u);
-    if (b.mode !== mode) {
-      b.goal = null;
-      b.path = [];
-      b.at = 0;
-      b.planAfter = now;
-      b.steerAt = 0;
-      b.mode = mode;
-    }
-    if (dest) follow(u, b, dest, nav, now);
-    TrackDrive.step(u, b.throttle, b.steer, b.brake, nav);
-    if (b.throttle > 0 && u.driveBlocked) {
-      b.steerAt = 0;
-      if (++b.blocked >= 35) {
-        b.crowded = true;
-        b.backup = 96;
-        b.blocked = 0;
-        b.planAfter = now + b.backup;
-      }
-    } else if (u.isMoving) b.blocked = 0;
+    drive(u, b, mode, dest, nav, now);
   }
   return { attach, beginTick, step, onBlockedHit };
 })();

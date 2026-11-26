@@ -1,0 +1,3 @@
+-r ../requirements.txt
+# Decode the end-card QR directly from phone-size frames of the released MP4.
+zxing-cpp==2.3.0

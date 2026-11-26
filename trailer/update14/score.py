@@ -1,14 +1,13 @@
-"""An original instrumental, arcade foley and direct edits of the archived 1.3 voice.
-No new speaker, imitation, TTS prompt, model weights or network required.
+"""Score and mix the winter film around whole takes from the selected narrator.
+No speech generation or network access is needed for a rebuild.
 """
-from pathlib import Path
 import subprocess
 import wave
 import imageio_ffmpeg
 import numpy as np
-from edit import CUTS, SECONDS, VOICE
+from edit import CUTS, SECONDS, AT, SPAN, KPZ_ACTION, CASE_OPEN
+from narration import TAKES
 
-TAKES = Path(__file__).resolve().parents[1] / 'editions' / 'voice'
 SR = 48000
 
 
@@ -47,8 +46,9 @@ def write_mix(path):
         put(s,x*(t/d if up else np.exp(-6*t/d))*env(t,.003,.04),g,pan)
     # Distinct arrangements for the technical opening, travelling theme, lamp-lit
     # social chapter, winter break, then an eight-route reprise and a resolved chord.
-    sections=[(0,18.75,100,'machine'),(18.75,52,100,'journey'),(52,89.5,104,'company'),
-              (89.5,111.25,88,'winter'),(111.25,139.5,112,'fleet'),(139.5,144,86,'end')]
+    sections=[(0,AT['quarry'],100,'machine'),(AT['quarry'],AT['squad'],100,'journey'),
+              (AT['squad'],AT['tree'],104,'company'),(AT['tree'],AT['fr1'],88,'winter'),
+              (AT['fr1'],AT['end'],112,'fleet'),(AT['end'],SECONDS,86,'end')]
     harmony=[(50,57,62,65),(46,53,62,65),(53,60,64,69),(48,55,62,67),
              (43,50,58,62),(46,53,60,65),(48,55,64,67),(45,52,61,64)]
     for left,right,bpm,mode in sections:
@@ -81,26 +81,30 @@ def write_mix(path):
         brush(at-.57,.57,.13,True,.4)
         if k in ('guide','burgstadt','squad','promo','tree','fr1','sturm'):beat(at,41,.42)
     # One real calibrated shot in this filmed take; two selector latches, not two shots.
-    for at in (5.25,6.25,8.75,9.75):pluck(at,79,.13,.28)
-    shot=4.75+38/16
+    for i in (8,24,64,80):pluck(KPZ_ACTION+i/16,79,.13,.28)
+    shot=KPZ_ACTION+38/16
     brush(shot,.47,.56,pan=-.25);beat(shot,33,.74);brush(shot+.125,.65,.19,pan=.47)
-    for s,d,mode in [(4.75,5.9,'engine'),(31,6.6,'sea'),(38,6.6,'leaves'),(52,8.4,'engine')]:
-        t=clock(d);v=(noise(t,95)*.40+np.sin(tau*(42*t+.35*t*t))*.35)*(1+.22*np.cos(t*64)) if mode=='engine' else (noise(t,900)*.63+noise(t,3200)*.24)*(.51+.39*np.cos(1.51*t))
+    for k,mode in [('kpz','engine'),('cape','sea'),('sawmill','leaves'),('squad','engine')]:
+        s,d=AT[k],SPAN[k];t=clock(d);v=(noise(t,95)*.40+np.sin(tau*(42*t+.35*t*t))*.35)*(1+.22*np.cos(t*64)) if mode=='engine' else (noise(t,900)*.63+noise(t,3200)*.24)*(.51+.39*np.cos(1.51*t))
         put(s,v*env(t,.48,.55),.16 if mode=='engine' else .092,-.23)
-    brush(97.15,.24,.22);pluck(97.43,81,.17,.34,True);pluck(98.12,86,.11,-.27,True)
+    brush(CASE_OPEN,.24,.22);pluck(CASE_OPEN+.28,81,.17,.34,True);pluck(CASE_OPEN+.99,86,.11,-.27,True)
     for delay,gain in ((.042,.074),(.129,.048)):
         k=round(delay*SR);mix[k:]+=gain*mix[:-k,::-1]
-    # Source-local cuts are placed in the silent handles between complete phrases.
-    cache={}
-    for at,name,begin,stop,_ in VOICE:
-        if name not in cache:
-            cache[name]=np.frombuffer(subprocess.check_output([imageio_ffmpeg.get_ffmpeg_exe(),'-nostdin','-loglevel','error','-i',str(TAKES/(name+'.mp3')),'-ac','1','-ar',str(SR),'-f','f32le','pipe:1']),'<f4')
-        x=cache[name][round(begin*SR):round(stop*SR)].copy();assert len(x)>=round((stop-begin)*SR)-1
-        active=x[np.abs(x)>.018];assert len(active)>SR*.16,name
-        x*=min(2.6,.162/np.sqrt(np.mean(active**2)));k=round(.011*SR);x[:k]*=np.linspace(0,1,k);x[-k:]*=np.linspace(1,0,k)
-        i=round(at*SR);voice[i:i+len(x)]=x
-    block=960;p=np.sqrt(np.mean(voice.reshape(-1,block)**2,axis=1));duck=np.convolve(np.minimum(1,p/.047),np.ones(17)/17,'same');
-    mix*=np.interp(np.arange(end)/block,np.arange(len(duck)),.91-.72*duck).astype('float32')[:,None]
+    # Full, gapless-decoded sources, no time stretching or pitch change. The intro
+    # is decoded straight from the approved reference, not a second performance.
+    for name,take in TAKES.items():
+        pcm=subprocess.check_output([imageio_ffmpeg.get_ffmpeg_exe(),'-nostdin','-v','error',
+            '-i',str(take.path),'-ac','1','-ar',str(SR),'-f','f32le','pipe:1'])
+        x=np.frombuffer(pcm,'<f4');assert abs(len(x)-take.duration*SR)<SR*.002,name
+        active=x[np.abs(x)>.018];assert len(active)>SR*.5,name
+        i=round(take.at*SR);voice[i:i+len(x)]=x*(.16/np.sqrt(np.mean(active**2)))
+    # Look ahead/hold across tiny gaps between syllables, then ramp smoothly.
+    # Do not let the score jump back up in the middle of the channel name.
+    block=960;rms=np.sqrt(np.mean(voice.reshape(-1,block)**2,axis=1))
+    busy=np.clip(np.convolve((rms>.014).astype(float),np.ones(14),'same'),0,1)
+    duck=np.convolve(busy,np.ones(13)/13,'same')
+    gain=np.interp(np.arange(end)/block,np.arange(len(duck)),.88-.73*duck).astype('float32')
+    mix*=gain[:,None]
     mix+=voice[:,None];mix=np.tanh(mix*1.16);mix*=.84/max(.01,float(np.max(np.abs(mix))))
     k=round(1.45*SR);mix[-k:]*=np.linspace(1,0,k)[:,None];mix[:SR//10]*=np.linspace(0,1,SR//10)[:,None]
     with wave.open(str(path),'wb') as w:

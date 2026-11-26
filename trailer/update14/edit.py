@@ -1,28 +1,50 @@
-"""Locked 24 fps edit. All speech cues are trims of the dry 1.3 master takes.
-The voice is not reconstructed from a reference or assigned to a different TTS preset.
-"""
+"""24 fps picture edit for the complete, user-selected Russian narration."""
+from bisect import bisect_right
+from narration import cue_start
+
 FPS = 24
-SECONDS = 144
+SECONDS = 245
 TITLE = 'CITY TANKS 1.4 — Зимний выезд'
-CUTS = [(0,'cover'),(4.75,'kpz'),(10.75,'guide'),(18.75,'quarry'),(24,'burgstadt'),
-        (31,'cape'),(38,'sawmill'),(45,'airfield'),(52,'squad'),(60.5,'link'),(66.5,'gift'),
-        (72.75,'reserve'),(77.75,'boards'),(83.25,'promo'),(89.5,'tree'),(95.75,'case'),
-        (102,'toys'),(111.25,'fr1'),(117.5,'fr2'),(124,'td'),(130,'ares'),(134.5,'sturm'),(139.5,'end')]
-CHAPTERS = [(0,'Зимний выезд'),(4.75,'Калибровка KPz 67'),(18.75,'Улучшенные карты'),
-            (24,'Бургштадт'),(31,'Мыс Фонарный'),(38,'Янтарная лесопилка'),(45,'Аэродром «Вираж»'),
-            (52,'Взвод против ботов'),(60.5,'Пригласи друга'),(72.75,'Офицерский резерв'),
-            (77.75,'Три рейтинга'),(83.25,'Промокод 15_zar'),(89.5,'Ёлка и ларец'),
-            (102,'Четыре украшения'),(111.25,'Франция'),(124,'США'),(134.5,'Германия'),(139.5,'CITY TANKS 1.4')]
-# Output start, original file, source in / out (seconds), actual spoken words.
-VOICE = [(.45,'u1',.19,1.43,'CITY TANKS.'),
-         (4.94,'u6',16.065,17.91,'Kampfpanzer 67.'),
-         (18.98,'u3',1.97,4.92,'Разведчики расходятся по разным секторам.'),
-         (60.70,'u1',3.89,5.28,'Впервые в игре.'),
-         (83.63,'u2',.18,2.12,'В ангаре введи промокод.'),
-         (87.38,'u2',7.09,8.61,'Один раз на профиль.'),
-         (124.24,'u4',3.48,4.96,'Отсюда два пути.'),
-         (134.84,'u6',.14,1.08,'У Германии…'),
-         (140.13,'u6',18.04,19.75,'Какую ветку откроешь первой?')]
+# Same destination as the original full trailer (editions/cuts.py: FULL['telegram']).
+HANDLE = '@blitz_legacy'
+TELEGRAM = 'https://t.me/' + HANDLE[1:]
+QR_ORIGIN = (878, 167)  # Native 296 px code, including its four-module quiet zone.
+
+CUTS = [(0, 'cover'), (13.875, 'kpz'), (20.375, 'guide'), (40, 'quarry'),
+        (47.25, 'burgstadt'), (53.75, 'cape'), (62.5, 'sawmill'), (72.375, 'airfield'),
+        (82, 'squad'), (96.625, 'link'), (105.5, 'gift'), (119.125, 'reserve'),
+        (126.75, 'boards'), (136.875, 'promo'), (147.625, 'tree'), (157.375, 'case'),
+        (167.75, 'toys'), (195.25, 'fr1'), (208, 'fr2'), (213.25, 'td'),
+        (223.5, 'ares'), (228.25, 'sturm'), (237.125, 'end')]
+AT = {k: s for s,k in CUTS}
+SPAN = {k: e-s for (s,k),(e,_) in zip(CUTS, CUTS[1:]+[(SECONDS, '')])}
+assert all(s*FPS == int(s*FPS) and SPAN[k]>0 for s,k in CUTS)
+
+CHAPTER_NAMES = {'cover':'Зимний выезд', 'kpz':'Калибровка KPz 67', 'quarry':'Улучшенные карты',
+                 'burgstadt':'Бургштадт', 'cape':'Мыс Фонарный', 'sawmill':'Янтарная лесопилка',
+                 'airfield':'Аэродром «Вираж»', 'squad':'Взвод против ботов', 'link':'Пригласи друга',
+                 'reserve':'Офицерский резерв', 'boards':'Три рейтинга', 'promo':'Промокод 15_zar',
+                 'tree':'Ёлка и ларец', 'toys':'Четыре украшения', 'fr1':'Франция', 'td':'США',
+                 'sturm':'Германия', 'end':'Telegram · '+HANDLE}
+CHAPTERS = [(s,CHAPTER_NAMES[k]) for s,k in CUTS if k in CHAPTER_NAMES]
+
+# A diagram or pair of tanks follows the sentence being read, not an even division
+# of the shot. The calibration demo itself runs in real time at 16 source fps.
+KPZ_ACTION = AT['kpz'] + .25
+CASE_OPEN = cue_start('winter',6)
+FOCUS = {k:[cue_start(take,i) for i in indices] for k,take,indices in [
+    ('guide','calibration',(3,4,5,6)), ('boards','ranks',(1,2,3)),
+    ('toys','ornaments',(0,2,4,5)), ('fr1','france',(1,2)),
+    ('fr2','france',(3,4)), ('td','usa-germany',(1,2))]}
+
+
+def film_time(k,u):
+    return AT[k] + u*(SPAN[k]-1/FPS)
+
+
+def focus(k,u):
+    return bisect_right(FOCUS[k],film_time(k,u))-1
+
 # Names and sizes on screen come from BattleMaps; descriptions are editorial copy.
 MAPS = {
  'quarry': ('Изменённый рельеф','В порту дороги спускаются к причалам. Здесь, в Медном карьере,','уклоны ведут с верхних уступов на дно чаши.'),
@@ -54,5 +76,5 @@ TEXT = {
  'td':'От T82 расходятся американские ветки T110E3 и T110E4.',
  'ares':'США: Ares 75 → Ares 85 → Ares 90. Семь снарядов по 105, полная перезарядка 8 секунд.',
  'sturm':'Германия: от Marder II к Sturmtiger. Семь новых машин. На X уровне — 1300 урона за выстрел.',
- 'end':'CITY TANKS. Обновление 1.4. Какую ветку откроешь первой?'}
+ 'end':f'CITY TANKS. Telegram-канал {HANDLE}: {TELEGRAM}. На экране также QR-код канала.'}
 assert set(dict((k,t) for t,k in CUTS)) == set(TEXT)

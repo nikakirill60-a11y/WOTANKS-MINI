@@ -8,7 +8,9 @@ import subprocess
 import sys
 import numpy as np
 from PIL import Image,ImageDraw
-from edit import CUTS,SECONDS,FPS,MAPS,BRANCHES,PAIR
+from edit import (CUTS, SECONDS, FPS, MAPS, BRANCHES, PAIR, AT, SPAN,
+                  HANDLE, TELEGRAM, QR_ORIGIN, KPZ_ACTION, CASE_OPEN, film_time, focus)
+from narration import cue_start
 
 HERE=Path(__file__).resolve().parent; ROOT=HERE.parents[1]; sys.path.insert(0,str(HERE.parent/'editions'))
 from picture import txt,face,smooth
@@ -131,21 +133,42 @@ class Film:
         im=rgb(d/f'{i:03d}.jpg');j=min(i+1,n-1)
         if i!=j and t-i>.03 and not (k in MAPS and k!='quarry' and j==n//2):im=Image.blend(im,rgb(d/f'{j:03d}.jpg'),t-i)
         im=im.point(LUT);return Image.composite(NIGHT,im,MASK[overlay]) if overlay else im
-    def opener(self,u,last=False):
-        im=board('cover' if not last else 'night').copy();top(im,'СПЕЦВЫПУСК   /   ИГРОВОЙ ТРЕЙЛЕР',True)
-        rings(im,914,519,314);self.plate(im,'STURMTIGER' if last else 'KPZ-67',.12+.79*u,919,385,709)
-        dx=round(19*(1-smooth(u*6)))
-        chip(im,'ОБНОВЛЕНИЕ',58+dx,112,DARK,GOLD,21)
-        text(im,'CITY TANKS',54+dx,254,99,MILK,640,599);text(im,'1.4',45+dx,485,239,GOLD,680,558)
-        if last:
-            text(im,'Какую ветку откроешь первой?',59,568,43,MILK,510,790)
-            text(im,'ИГРА В БРАУЗЕРЕ   /   КОМПЬЮТЕР И ТЕЛЕФОН',60,621,22,MINT,480)
-        else:
-            text(im,'Зимний выезд',59,567,59,MILK,570)
-            text(im,'4 КАРТЫ     /     8 ВЕТОК     /     1 ЁЛКА',61,622,23,MINT,520)
-        text(im,'X   /   '+('STURMTIGER' if last else 'KAMPFPANZER 67'),1209,574,19,FOG,440,align='right')
-        return im
+    def cover(self,u):
+        sec=film_time('cover',u)
+        if sec<6.875:
+            yard=sec<4.25
+            im=self.take('tree' if yard else 'cape',.12+.42*sec/4.25 if yard else .04+.4*(sec-4.25)/2.625,'left')
+            chip(im,'CITY TANKS    /    ОБНОВЛЕНИЕ 1.4',55,58,DARK,GOLD,21)
+            if yard:
+                text(im,'Зимний',52,317,114,MILK,655);text(im,'выезд',50,442,128,GOLD,650)
+                text(im,'СЕВЕРНОЕ ДЕПО',58,597,32,MILK,520)
+            else:
+                text(im,'Куда поедем',53,301,78,MILK,600);text(im,'сначала?',52,406,100,GOLD,630)
+                text(im,'МЫС ФОНАРНЫЙ   /   СЕКТОР 08',56,597,29,MILK,490)
+            return im
+        v=(sec-6.875)/(SPAN['cover']-6.875)
+        im=board('cover').copy();top(im,'СПЕЦВЫПУСК   /   ИГРОВОЙ ТРЕЙЛЕР',True)
+        rings(im,914,519,314);self.plate(im,'KPZ-67',.12+.79*v,919,385,709)
+        chip(im,'ОБНОВЛЕНИЕ',58,112,DARK,GOLD,21)
+        text(im,'CITY TANKS',54,254,99,MILK,640,599);text(im,'1.4',45,485,239,GOLD,680,558)
+        text(im,'Зимний выезд',59,567,59,MILK,570);text(im,'4 КАРТЫ     /     8 ВЕТОК     /     1 ЁЛКА',61,622,23,MINT,520)
+        text(im,'X   /   KAMPFPANZER 67',1209,574,19,FOG,440,align='right');return im
+    def end(self,u):
+        # The CTA is part of the picture, not a browser overlay. Keep its type and
+        # QR still, high-contrast and fully visible through the last encoded frame.
+        im=board('night').copy();top(im,'07   /   СООБЩЕСТВО ИГРЫ',True)
+        chip(im,'НАШ TELEGRAM-КАНАЛ',56,118,DARK,MINT,24)
+        text(im,'Увидимся в игре!',52,267,77,MILK,575,750)
+        text(im,HANDLE,48,405,108,GOLD,640,770)
+        box(im,55,448,817,526,INK);box(im,55,448,61,526,GOLD)
+        text(im,TELEGRAM,83,506,46,MILK,510,701)
+        x,y=QR_ORIGIN;qr=rgb(HERE/'telegram.png');assert qr.size==(296,296)
+        box(im,x-7,y-7,x+302,y+302,MINT);im.paste(qr,(x,y))
+        text(im,'НАВЕДИ КАМЕРУ',x+148,524,26,MINT,510,315,'center')
+        line(im,(55,584,1225,584),(84,118,121));line(im,(55,584,55+1170*smooth(u*2),584),GOLD,2)
+        text(im,'CITY TANKS  1.4     /     ЗИМНИЙ ВЫЕЗД',55,632,26,FOG,500);return im
     def calibration(self,u):
+        u=min(1,max(0,(film_time('kpz',u)-KPZ_ACTION)/6))
         im=self.take('kpz',u,'hud');chip(im,'НА ПОЛИГОНЕ    /    ГЕРМАНИЯ  ·  X',55,37,DARK,GOLD)
         text(im,'Калибровка снаряда',54,139,70,MILK,630);text(im,'Kampfpanzer 67',57,179,30,MINT,460)
         state=self.slates['kpz']['status'][min(96,round(u*96))]
@@ -161,10 +184,10 @@ class Film:
         text(im,'ОБЫЧНЫЙ',593,248,20,MILK,520,align='center');text(im,'КАЛИБРОВКА',768,248,20,GOLD,540,align='center')
         rows=[('Урон БП и КС','420','380'),('Рикошет БП','70°','75°'),('Нормализация БП','2°','7°'),('Потеря пробития КС','5%','2%')]
         for j,(name,a,b) in enumerate(rows):
-            y=270+j*73;active=j==min(3,int(4*u));
+            y=270+j*73;active=j==focus('guide',u);
             if active:box(im,54,y,863,y+63,(220,226,206));box(im,54,y,61,y+63,TEAL)
             text(im,name,72,y+45,32,INK,490);text(im,a,593,y+46,36,GREY,480,align='center');text(im,'→',679,y+42,31,GREY,500,align='center');text(im,b,766,y+46,38,TEAL,620,align='center');line(im,(54,y+65,863,y+65),(159,175,162))
-        ix=int(u>=.56);x=917;y=216;a=rgba(self.work/'inserts'/f'guide-{ix}.png');w=292;h=round(w*a.height/a.width)
+        ix=int(focus('guide',u)==3);x=917;y=216;a=rgba(self.work/'inserts'/f'guide-{ix}.png');w=292;h=round(w*a.height/a.width)
         box(im,x-6,y-6,x+w+6,y+h+6,(155,166,150));paste(im,a,x+w/2,y+h/2,w)
         text(im,'ОФ остаётся без изменений.',56,624,32,RED,490);return im
     def map(self,k,u):
@@ -215,7 +238,7 @@ class Film:
         box(im,55,214,381,546,INK);text(im,'ТОП',78,307,66,MINT,520);text(im,'10',72,499,172,MILK,640)
         for j,(tag,note) in enumerate([('Танки','Постоянные машины в ангаре'),('Победы','Все победы аккаунта'),('Золото','Текущий баланс')]):
             y=219+j*113
-            if j==min(2,int(u*3)):box(im,413,y-2,1215,y+98,(224,228,209));box(im,413,y-2,418,y+98,TEAL)
+            if j==focus('boards',u):box(im,413,y-2,1215,y+98,(224,228,209));box(im,413,y-2,418,y+98,TEAL)
             text(im,str(j+1).zfill(2),424,y+44,25,RED,560);text(im,tag,486,y+45,48,INK,570);text(im,note,487,y+84,27,GREY,420);line(im,(424,y+102,1214,y+102),(144,161,147))
         text(im,'Открой «Топы» в ангаре. Своё место видно и за пределами десятки.',55,627,32,TEAL,450,1160);return im
     def promo(self,u):
@@ -233,20 +256,27 @@ class Film:
         text(im,'Ёлка в ангаре',54,172,65,MILK,610,475);text(im,'04',48,369,165,GOLD,620)
         text(im,'СЛОТА ДЛЯ ИГРУШЕК',58,416,28,MILK,520);line(im,(57,446,355,446),MINT,2)
         for j,s in enumerate(['Украшения — в инвентаре.','Сам выбираешь, какие повесить.','Бонус дают только игрушки на ёлке.']):text(im,s,57,496+43*j,27,MILK,425,412)
+        if film_time('tree',u)>=cue_start('winter',2):
+            thumb=rgb(self.work/'inserts'/'hooks.png');box(im,923,368,1193,576,MINT);paste(im,thumb,1058,472,264)
         return im
     def case(self,u):
         im=board('winter').copy();top(im,'05   /   БОЕВАЯ НАГРАДА',True);text(im,'Ёлочный ларец',53,151,76,MILK,620)
         text(im,'20%',46,394,146,GOLD,650,429);text(im,'ПОСЛЕ БОЯ',57,448,38,MILK,520)
         text(im,'И за победу, и за поражение.',57,509,27,MINT,435,423)
-        box(im,507,185,1226,590,(110,148,141));paste(im,self.take('case',u),866,388,712,400)
+        # Time the photographed lid to «Подними крышку», preserving the final reveal.
+        t=film_time('case',u);hinge=22/88
+        phase=hinge*(t-AT['case'])/(CASE_OPEN-AT['case']) if t<CASE_OPEN else hinge+(1-hinge)*(t-CASE_OPEN)/(AT['toys']-CASE_OPEN-1/FPS)
+        box(im,507,185,1226,590,(110,148,141));paste(im,self.take('case',phase),866,388,712,400)
         text(im,'Внутри одно украшение. Ни танков, ни валюты, ни слотов.',56,639,33,MILK,450,1158);return im
     def toys(self,u):
         im=board('paper').copy();top(im,'05   /   КОЛЛЕКЦИЯ');text(im,'Что можно повесить на ёлку?',52,140,64,INK,610,1170)
         colors=[(147,100,50),(52,115,91),(111,79,141),(156,98,36)];ds=['+5% серебра','+5% опыта','+5% золота','+10% ко всем трём']
         for j,(id,toy) in enumerate(self.catalog['toys'].items()):
-            x=54+j*300;box(im,x,197,x+271,517,(229,229,208));box(im,x,197,x+271,202,colors[j]);cx=x+135
+            x=54+j*300;active=j==focus('toys',u);cx=x+135
+            box(im,x,197,x+271,517,(253,248,227) if active else (229,229,208));box(im,x,197,x+271,207 if active else 202,colors[j])
+            if active:ImageDraw.Draw(im).rectangle((x,197,x+271,517),outline=colors[j],width=3)
             text(im,toy['rarity'].upper(),x+15,235,18,colors[j],550);text(im,str(toy['odds'])+'%',x+251,238,23,INK,600,align='right')
-            bob=3*math.sin(2*math.pi*(u+j*.16));paste(im,rgba(ROOT/'assets/ornaments'/(id+'.webp')),cx,331+bob,150)
+            bob=3*math.sin(2*math.pi*(u+j*.16));paste(im,rgba(ROOT/'assets/ornaments'/(id+'.webp')),cx,331+bob,173 if active else 146)
             text(im,toy['name'],cx,455,43,INK,580,245,'center');text(im,ds[j],cx,495,26,colors[j],510,250,'center')
         text(im,'С шаром на ёлке шанс ларца: 20%  →  30%.',55,588,44,TEAL,590,1162)
         text(im,'Копии в четырёх слотах складывают бонусы. Второй шар не повышает шанс выше 30%.',57,638,28,GREY,435,1160);return im
@@ -256,7 +286,9 @@ class Film:
         line(im,(640,183,640,582),(104,144,136),1)
         for j,id in enumerate(ids):
             x=55+j*597;cx=x+278;t=self.fleet[id];par=self.fleet[t['parent']]['name'];cl={'ht':'ТЯЖЁЛЫЙ ТАНК','td':'ПТ-САУ','mt':'СРЕДНИЙ ТАНК'}[t['cls']]
-            chip(im,'X     /     '+cl,x+8,194,DARK,MINT,17);rings(im,cx,418,220);self.plate(im,id,.09+.83*u,cx,340,521)
+            chip(im,'X     /     '+cl,x+8,194,DARK,GOLD if j==focus(k,u) else MINT,17)
+            if j==focus(k,u):line(im,(x+9,557,x+547,557),GOLD,3)
+            rings(im,cx,418,220);self.plate(im,id,.09+.83*u,cx,340,521)
             text(im,t['name'],cx,491,48,MILK,590,553,'center');text(im,desc[j],cx,539,30,GOLD,465,548,'center');text(im,'IX   /   '+par,cx,584,22,FOG,430,544,'center')
         text(im,{'fr1':'Четыре французские ветки начинаются с одного Renault FT.', 'fr2':'Два разных барабана: у тяжёлого танка и у ПТ-САУ.', 'td':'На III уровне от T82 расходятся две американские ветки ПТ-САУ.'}[k],56,647,29,MINT,450,1170)
         return im
@@ -275,7 +307,6 @@ class Film:
         if k in MAPS:im=self.map(k,u)
         elif k in PAIR:im=self.pair(k,u)
         elif k in ('ares','sturm'):im=self.single(k,u)
-        elif k in ('cover','end'):im=self.opener(u,k=='end')
         elif k=='kpz':im=self.calibration(u)
         else:im=getattr(self,k)(u)
         folio(im,idx,n/FPS)
@@ -283,5 +314,4 @@ class Film:
         dt=(n-a)/FPS
         if idx and dt<.22:
             w=round(46*(1-smooth(dt/.22)));ImageDraw.Draw(im).polygon([(0,0),(w+2,0),(0,520)],fill=VERM)
-        if k=='end' and u>.88:im=Image.blend(im,NIGHT,.83*smooth((u-.88)/.12))
         return im

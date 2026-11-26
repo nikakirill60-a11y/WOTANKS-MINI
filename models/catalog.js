@@ -84,6 +84,35 @@ const US_BRANCH = defineLine('usa', [
   ['M46PATTON','M46 Patton','mt','m46-patton',       1700,360,7600,218,102,127,48,1.04,380,.20],
   ['M48PATTON','M48 Patton','mt','m48-patton',       2050,390,7200,255,120,254,45,1.06,395,.18]
 ]);
+// The two TD routes share the actual I–III records. A dash on the sheets
+// means no separate turret armour, not zero hull armour or a discarded hit.
+const US_E3_BRANCH = defineLine('usa', [
+  ['T18','T18','td','t18',                        150, 75, 3600, 45, 51,null,48,.72,280,.34,{yawLimits:[-15,15],minPitch:-5,maxPitch:20}],
+  ['T82','T82','td','t82',                        200,115, 4200, 95, 13,null,48,.77,300,.35,{yawLimits:[-12,12],minPitch:-5,maxPitch:27}],
+  ['T40','T40','td','t40',                        315,125, 3800,128, 51,null,38,.91,315,.31,{yawLimits:[-10,15],minPitch:-10,maxPitch:30}],
+  ['WOLVERINE','M10 Wolverine','td','wolverine',   480,115, 3100,128, 51,  57,48,.94,335,.30,{minPitch:-10,maxPitch:30}],
+  ['JACKSON','M36 Jackson','td','jackson',         690,240, 6200,160,114,  76,42,.99,345,.28,{minPitch:-10,maxPitch:20}],
+  ['T25-AT','T25 AT','td','t25-at',                940,320, 7600,198, 89,null,56,.98,350,.30,{yawLimits:[-10,10],minPitch:-10,maxPitch:20}],
+  ['T28-US','T28','td','t28',                     1400,400, 8200,248,254,null,22,1.14,350,.25,{yawLimits:[-10,10],minPitch:-5,maxPitch:20}],
+  ['T95','T95','td','t95',                        1900,750,15000,276,305,null,20,1.24,360,.23,{yawLimits:[-10,10],minPitch:-5,maxPitch:20}],
+  ['T110E3','T110E3','td','t110e3',               2150,750,14200,295,305,null,24,1.20,370,.21,{yawLimits:[-8,8],minPitch:-8,maxPitch:16}]
+], US_BRANCH.slice(0,1));
+const US_E4_BRANCH = defineLine('usa', [
+  ['M8A1','M8A1','td','m8a1',                      290,110, 3400,110, 29, 38,58,.80,320,.35,{minPitch:-10,maxPitch:20}],
+  ['HELLCAT-V','Hellcat','td','hellcat-v',          450,115, 2900,128, 13, 25,72,.89,335,.34,{minPitch:-10,maxPitch:20}],
+  ['HELLCAT','M18 Hellcat','td','hellcat',          640,240, 6400,160, 13, 76,72,.90,350,.33,{minPitch:-10,maxPitch:20}],
+  ['T252','T25/2','td','t252',                      920,240, 5800,170, 76, 76,56,1.0,355,.28,{minPitch:-10,maxPitch:25}],
+  ['T28-PROTOTYPE','T28 Prototype','td','t28-prototype',1300,400,8600,248,203,203,28,1.12,360,.25,{yawLimits:[-143,143],minPitch:-10,maxPitch:15}],
+  ['T30','T30','td','t30',                         1750,750,16000,276,102,279,35,1.19,370,.19,{minPitch:-10,maxPitch:15}],
+  ['T110E4','T110E4','td','t110e4',                2050,750,15200,295,260,203,35,1.17,375,.19,{yawLimits:[-90,90],minPitch:-6,maxPitch:12}]
+], US_E3_BRANCH.slice(0,3));
+// Ares shares I–VII with Patton. Each shell is fired separately from the clip;
+// the cooldown in the sheet starts after the last shell, not each trigger pull.
+const US_ARES_BRANCH = defineLine('usa', [
+  ['ARES-75','Ares 75','mt','ares-75', 1400,448,6000,195, 80,150,50,1.02,365,.22,{mag:8,weapon:'machinegun',minPitch:-7,maxPitch:45}],
+  ['ARES-85','Ares 85','mt','ares-85', 1700,600,7000,210, 95,178,50,1.05,380,.21,{mag:8,weapon:'machinegun',minPitch:-7,maxPitch:45}],
+  ['ARES-90','Ares 90','mt','ares-90', 1950,735,8000,225,100,248,50,1.07,390,.20,{mag:7,weapon:'machinegun',minPitch:-9,maxPitch:45}]
+], US_BRANCH.slice(0,7));
 // The T20 fork reuses I–VII of the Patton route. Store full-clip alpha,
 // not per-round damage: reload is the cooldown AFTER the fourth shot.
 const US_T57_BRANCH = defineLine('usa', [
@@ -357,8 +386,9 @@ const BRANCHES = Object.freeze({
   germany: nationTree('02','Rhm. Panzerwagen, Leopard 1, Maus и другие ветки Германии',
     GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH,
     GERMAN_MAUS_BRANCH, GERMAN_PZVII_BRANCH, GERMAN_VK72_BRANCH, GERMAN_E50M_BRANCH, GERMAN_LEOPARD1_BRANCH, GERMAN_E100_BRANCH, GERMAN_KPZ67_BRANCH),
-  usa: nationTree('03','M48 Patton, T57 Heavy, T110E5, M-V-Y и XM551 Sheridan',
-    US_BRANCH, US_T57_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH),
+  usa: nationTree('03','M48 Patton, T110E3, T110E4, Ares 90 и другие ветки США',
+    US_BRANCH, US_T57_BRANCH, US_ARES_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH,
+    US_E3_BRANCH, US_E4_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
   hungary: nationTree('05','Путь к танку: T-55AM',HUNGARIAN_BRANCH),
   japan: nationTree('06','STB-1 и Type 5 Heavy',JAPANESE_MEDIUM_BRANCH,JAPANESE_HEAVY_BRANCH),

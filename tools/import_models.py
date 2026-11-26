@@ -1,6 +1,7 @@
 """Import mesh DATA, not model cards or scripts. python3 tools/import_models.py <export directory>
 
-Retains the original signed millimetre coordinates, indices, local pivots and credit.
+Extracts signed millimetre coordinates, indices, local pivots and credit.
+Writing applies the documented fit corrections in model_fit.py.
 The small fixed wrapper permits on-demand loading offline via a classic local script.
 """
 import base64
@@ -64,11 +65,13 @@ def extract(src):
 
 
 if __name__ == '__main__':
+    from model_fit import prepare
     directory = Path(sys.argv[1])
     sources = {p.name:p for p in directory.glob('*-game.html')}
     sources.update({p.name.replace('-game-fixed.html','-game.html'):p for p in directory.glob('*-game-fixed.html')})
     for name, src in sorted(sources.items()):
         data = extract(src)
-        out = ROOT/'models'/name.replace('-game.html','.mesh.js')
+        slug = prepare(data, name.removesuffix('-game.html'))
+        out = ROOT/'models'/(slug + '.mesh.js')
         out.write_text('BattleModels.receive('+json.dumps(data, separators=(',',':'), allow_nan=False)+');\n',encoding='utf-8')
         print(out.name, data['id'], data['triangles'])

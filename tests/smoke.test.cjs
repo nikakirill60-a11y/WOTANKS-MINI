@@ -27,7 +27,9 @@ const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
 const sovger = require('./fixtures/soviet-german.cjs');
 const newIds = end => sovger.find(path=>path.end===end).rows.map(row=>row[0]);
-const usTreeIds = usIds.concat(additions('usa'));
+const {e3,e4,ares} = require('./fixtures/american.cjs');
+const americanRows = batch5.filter(r=>r.nation==='usa').flatMap(r=>r.end==='T57HEAVY' ? [...r.rows,...ares] : r.rows);
+const usTreeIds = usIds.concat([...americanRows,...e3,...e4].map(row=>row[0]));
 const sovietTreeIds = sovietIds.concat(newIds('OBJ-277'),newIds('OBJ-705A'),newIds('ST-II'),is4Ids,newIds('TET-100'),
   mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'));
 const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,newIds('PZKPFW-VII'),
@@ -37,6 +39,7 @@ const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clan
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
 const meshCounts = {'PZ-II-J':4155,T67:4437,
+  ...Object.fromEntries([...e3,...e4,...ares].map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(require('./fixtures/france.cjs').unique.map(row=>[row[0],row.at(-1)])),
   GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
   ...Object.fromEntries(require('./fixtures/japan.cjs').unique.map(row=>[row[0],row.at(-1)])),
@@ -722,7 +725,7 @@ test('US M3 Lee: real depot and mobile sortie, limited traverse, swipe to aim, t
   const {page,click}=await offlineGame(t,{webgl:true,mobile:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','M3LEE'],selected:'M3LEE'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.M3LEE);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('usa');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['T67','M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
   await page.locator('#enemy-select').selectOption('M4SHERMAN');await click('НАЧАТЬ');await chooseControls(page,'mobile');await ready(page);
   const models=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.hp,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));

@@ -22,6 +22,7 @@ const CONFIG = {
   SPG_ROUND: { name: 'ОФ', sMul: 1, dMul: 1, penMul: 1, color: '#ffd48b' },
   PROMOCODES: {
     "ARTA": { vehicle: "GPZ", rentalBattles: 4 },
+    "15_ZAR": { gold: 500, xp: 2500 },
     "BETA_TEST": { gold: 500 },
     "START2025": { gold: 100, silver: 5000 },
     "TANKS": { xp: 1000 },

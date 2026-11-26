@@ -165,3 +165,22 @@ test('blocking both storage areas does not block offline guest entry',async t=>{
   await page.addInitScript(()=>{for(const k of ['sessionStorage','localStorage'])Object.defineProperty(window,k,{get(){throw new DOMException('Blocked','SecurityError');}});});
   await page.reload();await click('ГОСТЬ');assert.equal(await page.locator('#dispatch-name').innerText(),'МС-1');assert.match(await page.locator('#save-status').innerText(),/без сохранения/);
 });
+
+test('15_zar credits both resources once per profile, including after a reload', async t => {
+  const api = service(); api.time = '2026-11-22T10:00:00Z';
+  const {page,click,saved} = await openGame(t,{mobile:true,route:api.route,seed:{GOLD:17,XP:93}});
+  const input = page.getByLabel('Промокод',{exact:true}), result = page.locator('#promo-result');
+  const enter = async code => { await input.fill(code); await input.press('Enter'); return result.innerText(); };
+  const receipt = p => ({...p, GOLD:p.GOLD+500, XP:p.XP+2500, usedPromos:[...p.usedPromos,'15_ZAR']});
+  const local = await saved(); await click('Код');
+  assert.match(await enter('15zar'),/Неверный код/); assert.deepEqual(await saved(), local);
+  assert.match(await enter('15_zar'),/500G 2500XP/); assert.deepEqual(await saved(), receipt(local));
+  await page.reload(); await click('Код'); assert.match(await enter('15_ZAR'),/Уже использован/);
+  assert.deepEqual(await saved(), receipt(local)); await click('ЗАКРЫТЬ');
+  await form(page,'reward_pilot','promo fixture phrase','Создать аккаунт'); await active(page); await synced(page);
+  const uid = api.users.get('reward_pilot@players.citytanks.invalid').id, before = api.rows.get(uid).progress;
+  await click('В ангар'); await click('Код'); assert.match(await enter(' 15_zAr '),/500G 2500XP/); await synced(page);
+  assert.deepEqual(api.rows.get(uid).progress, receipt(before));
+  await page.reload(); await active(page); await click('Код'); assert.match(await enter('15_zar'),/Уже использован/);
+  assert.deepEqual(api.rows.get(uid).progress, receipt(before)); assert.deepEqual(await saved(), receipt(local));
+});

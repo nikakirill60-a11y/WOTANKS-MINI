@@ -26,7 +26,7 @@
 .tree-bonuses { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid #456367; background:#20383f; border-radius:5px; }
 .tree-bonuses div { padding:7px 9px; min-width:0; }.tree-bonuses div+div { border-left:1px solid #415a60; }
 .tree-bonuses dt { color:#c1d3d3; font-size:11px; }.tree-bonuses dd { color:#f6dfad; font:650 clamp(14px,2.8vw,22px) Consolas,monospace; overflow-wrap:anywhere; }
-#tree-manifest { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }.tree-toy { --toy:#d0b394; display:flex; align-items:center; gap:7px; min-width:0; padding:7px; background:#20363d; border:1px solid #435a5e; border-radius:5px; border-left:3px solid var(--toy); }
+.ornament-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }.tree-toy { --toy:#d0b394; display:flex; align-items:center; gap:7px; min-width:0; padding:7px; background:#20363d; border:1px solid #435a5e; border-radius:5px; border-left:3px solid var(--toy); }
 .tree-toy[data-toy=deer] { --toy:#94cbad; }.tree-toy[data-toy=fir] { --toy:#c1a6d8; }.tree-toy[data-toy=bauble] { --toy:#ebbd76; }
 .tree-toy img { width:38px; height:42px; object-fit:contain; }.tree-toy h4 { color:#f3efe6; font-size:15px; }.tree-toy small { color:var(--toy); letter-spacing:0; }.tree-toy p,.tree-foot { font-size:12px; color:#c1d0cd; }.tree-foot { margin:12px 0 0; }
 #result-tree { font:600 13px/1.4 'Segoe UI',sans-serif; color:#f2d59b; margin:8px auto 0; max-width:39ch; } .unpack-row .reward-ornament { width:42px; height:42px; object-fit:contain; }
@@ -38,6 +38,6 @@
   #tree-case-inspect { grid-area:1 / 1 / span 4 / 2; align-self:center; padding:0; } #tree-case-inspect img { height:60px; }
   .tree-case .season-kicker,.tree-case h3,.tree-stock,.tree-actions { grid-column:2; }
   .tree-case h3 { font-size:17px; margin:0; text-align:left; }.tree-actions { justify-content:start; }.tree-actions button { padding:7px; font-size:12px; }
-  #tree-manifest { grid-template-columns:1fr; }.tree-bonuses div { padding:5px; }.tree-toy { padding:4px 8px; }.tree-toy img { width:35px; height:40px; }.tree-bonuses dt { font-size:10px; }
+  .ornament-list { grid-template-columns:1fr; }.tree-bonuses div { padding:5px; }.tree-toy { padding:4px 8px; }.tree-toy img { width:35px; height:40px; }.tree-bonuses dt { font-size:10px; }
 }
 #result-screen.show { max-height:100svh; overflow-y:auto; touch-action:pan-y; }

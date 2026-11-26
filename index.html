@@ -97,9 +97,16 @@
     <div class="supply-inner"><div class="supply-subhead"><div><p class="season-kicker">КАТАЛОГ / 04 ПОСТАВКИ</p><h3>Выберите контейнер</h3><p id="supply-balance"></p></div>
       <button class="winter-back" onclick="buyCharges(1)">+1 заряд · 100 G</button></div><div id="container-grid"></div></div>
   </section>
-  <section id="tab-inventory" class="tab-content" aria-label="Запас контейнеров"><div class="supply-inner">
-    <div id="vehicle-deliveries" hidden></div><h3>Ваши контейнеры</h3>
-    <p id="inventory-empty" hidden>Пока пусто. Здесь хранятся купленные контейнеры и ёлочные ларцы за бои.</p><div id="inventory-grid"></div>
+  <section id="tab-inventory" class="tab-content" aria-label="Инвентарь игрока"><div class="supply-inner">
+    <div id="vehicle-deliveries" hidden></div>
+    <section class="inventory-toys" aria-labelledby="inventory-toys-title">
+      <div class="supply-subhead"><div><p class="season-kicker">ЗИМНИЙ ИВЕНТ</p><h3 id="inventory-toys-title">Ёлочные игрушки</h3></div>
+        <button type="button" class="winter-back" id="inventory-to-tree" aria-haspopup="dialog" aria-controls="tree-modal">К ёлке</button></div>
+      <p id="inventory-toys-empty">Игрушек пока нет. Откройте ёлочный ларец за бой, чтобы получить первую.</p>
+      <div id="inventory-toys" class="ornament-list"></div>
+    </section>
+    <h3>Ваши контейнеры</h3>
+    <p id="inventory-empty" hidden>Неоткрытых контейнеров нет.</p><div id="inventory-grid"></div>
   </div></section>
 </dialog>
 
@@ -128,7 +135,7 @@
   <p id="tree-change" role="status"></p>
   <h3 class="tree-subhead">Ваши бонусы за бой</h3>
   <dl class="tree-bonuses"><div><dt>Серебро</dt><dd id="tree-silver"></dd></div><div><dt>Опыт</dt><dd id="tree-xp"></dd></div><div><dt>Золото</dt><dd id="tree-gold"></dd></div><div><dt>Шанс ларца</dt><dd id="tree-chance"></dd></div></dl>
-  <div class="tree-subhead"><h3>Коллекция игрушек</h3><span>Шанс при открытии ларца</span></div><div id="tree-manifest"></div>
+  <div class="tree-subhead"><h3>Коллекция игрушек</h3><span>Шанс при открытии ларца</span></div><div id="tree-manifest" class="ornament-list"></div>
   <p class="tree-foot">Из боевого ларца выпадает одна игрушка. Каждая повешенная копия даёт бонус. С шаром на ёлке шанс ларца — 30%, без него — 20%. Победа и поражение дают одинаковый шанс; досрочный выход не считается.</p>
 </dialog>
 

@@ -82,6 +82,7 @@ function hideContainerShop() {
 document.getElementById('container-modal').addEventListener('close',()=>GarageViewer.syncSelection());
 function switchTab(tab, btn) {
   const dialog=document.getElementById('container-modal');
+  document.getElementById('supply-title').textContent=tab==='inventory'?'Инвентарь':'Контейнеры';
   document.getElementById('supply-feedback').textContent='';
   for(const t of dialog.querySelectorAll('.modal-tab')){
     t.classList.toggle('active',t===btn);t.setAttribute('aria-pressed',String(t===btn));
@@ -257,6 +258,7 @@ function renderContainerGrid() {
 }
 function renderInventoryGrid() {
   renderSupplyStatus();
+  TreeDesk.renderInventory();
   const grid=document.getElementById('inventory-grid');grid.replaceChildren();
   document.getElementById('inventory-empty').hidden=!!getInvTotal();
   const waiting=document.getElementById('vehicle-deliveries');waiting.hidden=!GameState.pendingVehicles.length;

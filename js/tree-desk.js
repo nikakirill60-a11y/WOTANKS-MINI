@@ -25,7 +25,7 @@ const TreeDesk = (() => {
 
   function refresh() {
     if (!dialog.open) return;
-    const owned = GameState.tree2026, slots = GameState.treeSlots2026;
+    const slots = GameState.treeSlots2026;
     const pct = TreeEvent.bonuses(slots), stock = GameState.inventory[boxId] || 0;
     el('tree-stock').textContent = fmt.format(stock); el('tree-unpack').disabled = !stock; el('tree-unpack-all').hidden = stock < 2;
     for (const k of ['silver','xp','gold']) el('tree-'+k).textContent = `+${fmt.format(pct[k])}%`;
@@ -43,22 +43,38 @@ const TreeDesk = (() => {
       }
       select.value = id || '';
     });
-    const list = el('tree-manifest'); list.replaceChildren();
+    renderCollection(el('tree-manifest'));
+  }
+  // Inventory shows acquired toys (including equipped copies); the tree also previews undiscovered ones.
+  // Read both views from this profile's collection and assignments, never from the crate ledger.
+  function renderCollection(list, ownedOnly = false) {
+    list.replaceChildren();
     for (const id of keys) {
-      const toy = items[id], count = owned[id], free = TreeEvent.freeCopies(GameState, id);
+      const toy = items[id], count = GameState.tree2026[id];
+      if (ownedOnly && !count) continue;
+      const free = TreeEvent.freeCopies(GameState, id);
       const row = document.createElement('article'); row.className='tree-toy'; row.dataset.toy=id;
+      const label = ownedOnly ? toy.rarity : `${toy.rarity} · ${toy.odds}%`;
+      const title = ownedOnly ? `${toy.name} × ${fmt.format(count)}` : toy.name;
       // Names, descriptions and asset paths come from the fixed manifest, never from a save.
-      row.innerHTML = `<img src="assets/ornaments/${id}.webp" alt=""><div><small>${toy.rarity} · ${toy.odds}%</small><h4>${toy.name}</h4><p>${toy.effect}</p><p class="tree-quantity">На ёлке: ${count-free} · В запасе: ${fmt.format(free)}</p></div>`;
+      row.innerHTML = `<img src="assets/ornaments/${id}.webp" alt=""><div><small>${label}</small><h4>${title}</h4><p>${toy.effect}</p><p class="tree-quantity">На ёлке: ${count-free} · В запасе: ${fmt.format(free)}</p></div>`;
       list.append(row);
     }
   }
-  el('tree-open').addEventListener('click', () => {
+  function renderInventory() {
+    const list = el('inventory-toys'); renderCollection(list, true);
+    el('inventory-toys-empty').hidden = list.childElementCount > 0;
+  }
+  function open() {
     if (dialog.open || CrateView.active || GameState.gameActive || battleLaunch || Accounts.switching) return;
+    if (el('container-modal').open) hideContainerShop();
     dialog.showModal(); dialog.scrollTop=0; el('tree-change').textContent=''; GarageViewer.suspend(); refresh();
-  });
+  }
+  el('tree-open').addEventListener('click', open);
+  el('inventory-to-tree').addEventListener('click', open);
   el('tree-case-inspect').addEventListener('click', () => CrateView.show(boxId));
   el('tree-unpack').addEventListener('click', () => openFromInventory(boxId));
   el('tree-unpack-all').addEventListener('click', () => openAllFromInventory(boxId));
   dialog.addEventListener('close', () => GarageViewer.syncSelection());
-  return {refresh};
+  return {refresh, renderInventory};
 })();

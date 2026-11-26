@@ -64,18 +64,39 @@ test('mobile tree: open, manually hang, replace and take down; single/bulk never
   assert.ok(await hook(page,4).locator('[value=gingerbread]').evaluate(opt=>opt.disabled));assert.ok(await hook(page,4).locator('[value=bauble]').evaluate(opt=>opt.disabled));
   assert.deepEqual(await perks(page),['+20%','+10%','+10%','30%']);
   await click('В ангар');await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
+  const shelf=page.locator('#inventory-toys');
+  assert.deepEqual(await shelf.locator('h4').allInnerTexts(),['Пряник × 2','Шар × 1']);
+  assert.deepEqual(await shelf.locator('.tree-quantity').allInnerTexts(),['На ёлке: 2 · В запасе: 0','На ёлке: 1 · В запасе: 0']);
   const card=page.locator('.inv-card').filter({hasText:'Ёлочный ларец'});assert.doesNotMatch(await card.locator('.c-desc').innerText(),/слот|танк/i);
   assert.equal(await withRolls(card.getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[.01,.69999,.70,.94,.999]),0);
   assert.deepEqual((await page.locator('#reward-lines strong').allInnerTexts()).sort(),['Пряник × 2','Олень × 1','Ёлка × 1','Шар × 1'].sort());
   const done=await saved();assert.deepEqual(done,{...start,inventory:{collection:1},tree2026:{gingerbread:4,deer:1,fir:1,bauble:2},treeSlots2026:['gingerbread','gingerbread','bauble',null]});
-  await click('Повторить анимацию');await click('Пропустить анимацию');await click('ЗАБРАТЬ');await click('В ангар');await click('Ёлка');
+  await click('Повторить анимацию');await click('Пропустить анимацию');await click('ЗАБРАТЬ');
+  assert.deepEqual(await shelf.locator('h4').allInnerTexts(),['Пряник × 4','Олень × 1','Ёлка × 1','Шар × 2']);
+  assert.equal(await shelf.locator('[data-toy=bauble] .tree-quantity').innerText(),'На ёлке: 1 · В запасе: 1');
+  await click('К ёлке');assert.ok(await page.locator('#container-modal').isHidden());
   assert.ok(await page.locator('#tree-unpack').isDisabled());assert.ok(await page.locator('#tree-unpack-all').isHidden());assert.deepEqual(await saved(),done);
   await hook(page,4).selectOption('bauble');assert.deepEqual(await perks(page),['+30%','+20%','+20%','30%']);
   await hook(page,3).selectOption('fir');assert.deepEqual(await perks(page),['+20%','+10%','+15%','30%']);
   await hook(page,4).selectOption('');assert.deepEqual(await perks(page),['+10%','+0%','+5%','20%']);
-  assert.equal(await page.locator('.tree-toy[data-toy=bauble] .tree-quantity').innerText(),'На ёлке: 0 · В запасе: 2');
+  assert.equal(await page.locator('#tree-manifest [data-toy=bauble] .tree-quantity').innerText(),'На ёлке: 0 · В запасе: 2');
   await page.reload();await click('Ёлка');assert.equal(await page.locator('#tree-total').innerText(),'Занято: 3 / 4');
+  await click('В ангар');await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
+  assert.equal(await shelf.locator('[data-toy=bauble] .tree-quantity').innerText(),'На ёлке: 0 · В запасе: 2');
   assert.deepEqual(await saved(),{...done,treeSlots2026:['gingerbread','gingerbread','fir',null]});
+});
+
+test('desktop inventory: an unopened case is not a toy; the first toy appears immediately after opening the last case', async t => {
+  const {page,click,saved}=await openGame(t,{seed:{inventory:{ornament:1}}});
+  await click('Контейнеры');await page.locator('#container-modal').getByRole('button',{name:'Инвентарь',exact:true}).click();
+  assert.ok(await page.locator('#inventory-toys-empty').isVisible());assert.equal(await page.locator('#inventory-toys article').count(),0);
+  const stock=page.locator('#inventory-grid');
+  assert.equal(await withRolls(stock.getByRole('button',{name:'ОТКРЫТЬ 1'}),[.94]),0);await click('ЗАБРАТЬ');
+  assert.ok(await page.locator('#inventory-empty').isVisible());assert.equal(await stock.locator('article').count(),0);
+  const toy=page.locator('#inventory-toys article');assert.equal(await toy.count(),1);assert.equal(await toy.locator('h4').innerText(),'Ёлка × 1');
+  assert.equal(await toy.locator('.tree-quantity').innerText(),'На ёлке: 0 · В запасе: 1');assert.ok(await page.locator('#inventory-toys-empty').isHidden());
+  assert.ok(await toy.locator('img').evaluate(async img=>{await img.decode();return img.naturalWidth>0;}));
+  assert.deepEqual((await saved()).treeSlots2026,bare);assert.deepEqual((await saved()).inventory,{});
 });
 
 test('actual 3D branches and completed sorties follow the chosen slots, not total copies; taking off the last ball resets the roll',async t=>{

@@ -201,7 +201,10 @@ test('the earned case and its decorations sync to their owner, not the guest; pa
   assert.equal(await page.locator('#tree-chance').innerText(),'20%');await page.getByLabel('Слот 4',{exact:true}).selectOption('bauble');await synced(page);
   assert.deepEqual(api.rows.get(uid).progress.treeSlots2026,[null,null,null,'bauble']);
   await page.reload();await active(page);await click('Ёлка');assert.equal(await page.getByLabel('Слот 4',{exact:true}).inputValue(),'bauble');assert.equal(await page.locator('#tree-chance').innerText(),'30%');await click('В ангар');
+  const inventory=page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/});
+  await inventory.click();assert.deepEqual(await page.locator('#inventory-toys h4').allInnerTexts(),['Шар × 1']);await click('В ангар');
   await logout(page);await page.locator('#account-back').click();await click('Ёлка');assert.equal(await page.locator('#tree-stock').innerText(),'2');
   assert.equal(await page.getByLabel('Слот 2',{exact:true}).inputValue(),'gingerbread');assert.equal(await page.getByLabel('Слот 4',{exact:true}).inputValue(),'');
-  assert.equal(await page.locator('#tree-chance').innerText(),'20%');assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
+  assert.equal(await page.locator('#tree-chance').innerText(),'20%');await click('В ангар');await inventory.click();
+  assert.deepEqual(await page.locator('#inventory-toys h4').allInnerTexts(),['Пряник × 3']);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
 });

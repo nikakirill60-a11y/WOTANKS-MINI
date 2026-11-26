@@ -14,7 +14,7 @@ function controls() {
     performance: { now: () => ms },
     Date: { now: () => 100000 + ms }
   });
-  for (const name of ['models/catalog', 'js/config', 'js/battle-space', 'js/battle-look'])
+  for (const name of ['models/catalog', 'js/tree-event', 'js/config', 'js/battle-space', 'js/battle-look'])
     vm.runInContext(fs.readFileSync(path.join(root, name + '.js'), 'utf8'), c);
   return {
     ...vm.runInContext('({ArcadeLook,BattleClock})', c),

@@ -7,7 +7,7 @@ function fixture() {
   let ms = 100;
   const ctx = vm.createContext({window:{addEventListener(){}},console:{log(){}}, performance:{now:()=>ms}, Date:{now:()=>ms},
     snd(){}, spawnParticles(){}, spawnShellCasing(){}});
-  for (const file of ['models/catalog','js/config','js/battle-space','js/armor-system','js/tank'])
+  for (const file of ['models/catalog','js/tree-event','js/config','js/battle-space','js/armor-system','js/tank'])
     vm.runInContext(readFileSync(path.join(root,file+'.js'),'utf8'),ctx,{filename:file});
   const api = vm.runInContext('Math.random=()=>.99; ({DB,Tank,GameState,BattleClock,resolveHit,traceBattleRay})',ctx);
   const tank = (id='KPZ-67',team='ally',bonuses) => {

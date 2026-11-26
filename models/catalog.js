@@ -218,6 +218,17 @@ const GERMAN_JGPZE100_BRANCH = defineLine('germany', [
   ['JAGDTIGER','Jagdtiger','td','jagdtiger',         1850, 560,10500,276,250,null,38,1.19,375,.16,{yawLimits:[-10,10],minPitch:-5,maxPitch:15}],
   ['JGPZE100','Jagdpanzer E 100','td','jagdpanzer-e-100',2200,1050,22000,299,250,null,30,1.30,390,.10,{yawLimits:[-10,10],minPitch:-5,maxPitch:15}]
 ], GERMAN_TD_BRANCH.slice(0,3));
+// German assault TDs: I–III are the existing TD records, not duplicate unlocks. The supplied
+// fixed casemates follow the hull in yaw; only the separate gun pitches (no SPG top-down mode).
+const GERMAN_STURMTIGER_BRANCH = defineLine('germany', [
+  ['STUG3B','StuG III Ausf. B','td','stug-iii-ausf-b',    320, 140, 4500, 95, 50,null,40,.81,310,.33,{yawLimits:[0,0],minPitch:-5,maxPitch:8}],
+  ['STUIG33','StuIG 33 B','td','stuig-33-b',             510, 380,11000,110, 80,null,28,.86,320,.30,{yawLimits:[0,0],minPitch:-5,maxPitch:8}],
+  ['BRUMMBAER','Brummbär','td','brummbaer',               780, 480,12500,135,100,null,40,.94,330,.27,{yawLimits:[0,0],minPitch:-5,maxPitch:8}],
+  ['STURMPANZER2','Sturmpanzer','td','sturmpanzer-ii',   1050, 580,14000,175,100,null,45,.97,345,.25,{yawLimits:[0,0],minPitch:-5,maxPitch:8}],
+  ['STURMTIGERP','Sturmtiger (P)','td','sturmtiger-p',   1450, 740,16800,205,220,null,35,1.14,355,.18,{yawLimits:[0,0],minPitch:-5,maxPitch:8}],
+  ['BAER','Bär','td','baer',                             1850, 950,20500,225,220,null,35,1.20,365,.15,{yawLimits:[0,0],minPitch:-5,maxPitch:8}],
+  ['STURMTIGER','Sturmtiger','td','sturmtiger',          2050,1300,27000,240,230,null,38,1.16,375,.14,{yawLimits:[0,0],minPitch:-5,maxPitch:8}]
+], GERMAN_TD_BRANCH.slice(0,3));
 // Both Swedish routes start with the SAME free fm/21. Clip alpha is per-shot × 3.
 const SWEDISH_BRANCH=defineLine('sweden',[
   ['STRVFM21','Strv fm/21','lt','strv-fm21',115,36,2200,38,14,14,25,.67,270,.33,{minPitch:-10,maxPitch:15}],
@@ -384,7 +395,7 @@ const BRANCHES = Object.freeze({
     USSR_BRANCH, USSR_277_BRANCH, USSR_705A_BRANCH, USSR_STII_BRANCH, USSR_IS4_BRANCH, USSR_TET_BRANCH,
     USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH, USSR_268V4_BRANCH, USSR_263X_BRANCH),
   germany: nationTree('02','Rhm. Panzerwagen, Leopard 1, Maus и другие ветки Германии',
-    GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH,
+    GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH, GERMAN_STURMTIGER_BRANCH,
     GERMAN_MAUS_BRANCH, GERMAN_PZVII_BRANCH, GERMAN_VK72_BRANCH, GERMAN_E50M_BRANCH, GERMAN_LEOPARD1_BRANCH, GERMAN_E100_BRANCH, GERMAN_KPZ67_BRANCH),
   usa: nationTree('03','M48 Patton, T110E3, T110E4, Ares 90 и другие ветки США',
     US_BRANCH, US_T57_BRANCH, US_ARES_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH,

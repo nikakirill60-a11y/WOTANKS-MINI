@@ -23,6 +23,7 @@ const obj430Ids = ['OBJ430','OBJ430U'];
 const k91Ids = ['A43','A44','OBJ416','OBJ430II','K91'];
 const e50Ids = ['VK3002M','PANTHER','PANTHERII','E50','E50M'];
 const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGPZE100'];
+const assault = require('./fixtures/sturmtiger.cjs');
 const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
 const sovger = require('./fixtures/soviet-german.cjs');
@@ -32,14 +33,14 @@ const americanRows = batch5.filter(r=>r.nation==='usa').flatMap(r=>r.end==='T57H
 const usTreeIds = usIds.concat([...americanRows,...e3,...e4].map(row=>row[0]));
 const sovietTreeIds = sovietIds.concat(newIds('OBJ-277'),newIds('OBJ-705A'),newIds('ST-II'),is4Ids,newIds('TET-100'),
   mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'));
-const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,newIds('PZKPFW-VII'),
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,assault.map(r=>r[0]),panzerIds,mausIds,newIds('PZKPFW-VII'),
   newIds('VK-7201-K'),e50Ids,newIds('LEOPARD-1'),e100Ids,newIds('KPZ-67'));
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
 const meshCounts = {'PZ-II-J':4155,T67:4437,
-  ...Object.fromEntries([...e3,...e4,...ares].map(row=>[row[0],row.at(-1)])),
+  ...Object.fromEntries([...e3,...e4,...ares,...assault].map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(require('./fixtures/france.cjs').unique.map(row=>[row[0],row.at(-1)])),
   GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
   ...Object.fromEntries(require('./fixtures/japan.cjs').unique.map(row=>[row[0],row.at(-1)])),

@@ -23,6 +23,7 @@ function game() {
   });
   for (const file of [
     'models/catalog',
+    'js/tree-event',
     'js/config',
     'js/battle-space',
     'js/battle-ground',

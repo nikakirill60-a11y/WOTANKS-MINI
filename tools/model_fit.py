@@ -76,6 +76,9 @@ def face_forward(data):
 
 
 def prepare(data, slug):
+    if slug in ('stug-iii-ausf-b','stuig-33-b','brummbaer','sturmpanzer-ii','sturmtiger-p','baer'):
+        from assault_running_gear import fit_export
+        fit_export(data, slug)
     if data['id'] in ('T18', 'T82', 'T70-GMC'):
         face_forward(data)
     if data['id'] == 'TURAN1':

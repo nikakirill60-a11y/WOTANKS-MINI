@@ -1,7 +1,7 @@
 """Import mesh DATA, not model cards or scripts. python3 tools/import_models.py <export directory>
 
 Extracts signed millimetre coordinates, indices, local pivots and credit.
-Writing applies the documented fit corrections in model_fit.py.
+Writing applies the per-model fit corrections in model_fit.py and assault_running_gear.py.
 The small fixed wrapper permits on-demand loading offline via a classic local script.
 """
 import base64
@@ -15,6 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def extract(src):
+    if src.name in ('sturmtiger-game.html', 'sturmtiger-game-fixed.html'):
+        from sturmtiger_glb import extract as extract_glb
+        return extract_glb(src)
     text = src.read_text(encoding='utf-8')
     # Some exports put author/paint metadata BEFORE id. Locate the data literal by
     # its actual mesh array, not by property order. Never run the embedded viewer.

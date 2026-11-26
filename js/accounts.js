@@ -139,6 +139,7 @@ const Accounts = (() => {
   }
   function changedProfile() {
     TankSales.close(); el('sale-status').hidden = true;
+    if (el('tree-modal').open) el('tree-modal').close();
     if (el('container-modal').open || CrateView.active) hideContainerShop();
     el('season-note').hidden = true;
     applySettings(); updateResources(); renderTree(); renderCarousel(); updateInvCount(); updateBoosterUI();

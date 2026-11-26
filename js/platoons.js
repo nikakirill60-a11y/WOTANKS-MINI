@@ -87,7 +87,7 @@ const Platoons = (() => {
       else if (r.phase==='done' && s.prepared && !s.settled) {
         s.settled=true;
         if (!s.net.live) s.net.start();
-        const [damage,kills,bonus]=r.result.scores[r.me]; GameState.battleDmg=damage; GameState.battleKills=kills; GameState.XP+=bonus;
+        const [damage,kills,bonus]=r.result.scores[r.me]; GameState.battleDmg=damage; GameState.battleKills=kills; GameState.battleKillXP=bonus;
         endBattle(r.result.won); detach(); GameState.platoon=null;
       }
     }).catch(()=>{

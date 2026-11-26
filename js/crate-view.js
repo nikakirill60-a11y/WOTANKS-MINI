@@ -140,10 +140,11 @@ const CrateView = (() => {
     el('unpack-title').textContent = CONTAINERS[id].name;
     el('unpack-demo').hidden = !!count; el('unpack-back').hidden = !!count;
     el('unpack-skip').hidden = !count; el('unpack-replay').hidden = el('reward-display').hidden = true;
-    el('reward-lines').replaceChildren(...rows.map(({title,detail,vehicle,tag}) => {
+    el('reward-lines').replaceChildren(...rows.map(({title,detail,vehicle,ornament,tag}) => {
       const row = document.createElement('div'); row.className = 'unpack-row';
-      const symbol = vehicle ? vehicleThumbnail(DB[vehicle]) : document.createElement('i');
-      if (!vehicle) symbol.textContent = tag;
+      const symbol = vehicle ? vehicleThumbnail(DB[vehicle]) : document.createElement(ornament ? 'img' : 'i');
+      if (ornament) { symbol.className='reward-ornament'; symbol.alt=''; symbol.src=`assets/ornaments/${ornament}.webp`; }
+      else if (!vehicle) symbol.textContent = tag;
       const copy = document.createElement('span'), strong = document.createElement('strong'), small = document.createElement('small');
       strong.textContent = title; small.textContent = detail; copy.append(strong,small); row.append(symbol,copy); return row;
     }));
@@ -160,6 +161,8 @@ const CrateView = (() => {
     clear(); if (dialog.open) dialog.close();
     if (el('container-modal').open && !el('container-modal').contains(document.activeElement))
       el('container-modal').querySelector('.modal-tab.active')?.focus({preventScroll:true});
+    else if (el('tree-modal').open && !el('tree-modal').contains(document.activeElement))
+      el('tree-case-inspect').focus({preventScroll:true});
   }
   el('unpack-back').onclick = el('unpack-collect').onclick = close;
   el('unpack-demo').onclick = () => { if (job && !job.count) play(job,!job.open); };

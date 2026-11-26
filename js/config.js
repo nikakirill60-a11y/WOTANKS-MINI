@@ -126,6 +126,7 @@ function initialProgress() {
     owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
     garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [], rentalBattles: {},
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
+    tree2026: TreeEvent.counts(), treeSlots2026: TreeEvent.emptySlots(),
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,
     loginCalendar: { claimedDays: [] }, advent2026: { dates: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
@@ -180,6 +181,7 @@ const GameState = {
   curShell: 0,
   battleDmg: 0,
   battleKills: 0,
+  battleKillXP: 0,
 
   // Расходники
   consumables: [false, false, false, false, false, false],

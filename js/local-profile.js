@@ -96,6 +96,8 @@ function decodeProgress(data) {
   }
   restored.settings.lookSensitivity = Math.max(.3, Math.min(2.5, restored.settings.lookSensitivity));
   restored.inventory = migrateSupplyBoxes(restored.inventory);
+  restored.tree2026 = TreeEvent.counts(restored.tree2026);
+  restored.treeSlots2026 = TreeEvent.restoreSlots(restored.treeSlots2026, restored.tree2026);
   // The module UI expects arrays, not arbitrary nested save data.
   for (const [id, slots] of Object.entries(restored.modules)) {
     if (!Array.isArray(slots)) { delete restored.modules[id]; continue; }

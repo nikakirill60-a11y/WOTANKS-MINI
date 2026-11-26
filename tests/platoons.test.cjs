@@ -67,6 +67,13 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   await a.locator('#map-select').selectOption(sector);
   // Preexisting garage with a fitted rental; check that only a real launch uses it.
   await b.evaluate(()=>{GameState.owned.push('T67');GameState.selected='T67';GameState.rentalBattles.T67=2; GameState.modules.T67=['spall'];saveProgress();renderCarousel();});
+  // Both receive the same server result, but their trees and local crate rolls are independent.
+  const balances=await Promise.all([a,b].map((p,i)=>p.evaluate(i=>{
+    GameState.tree2026.bauble=1; // Both own a ball, only the wingman hangs his.
+    if(i) TreeEvent.setSlot(GameState,3,'bauble');
+    const settle=TreeEvent.settle;TreeEvent.settle=(g,base)=>settle(g,base,()=>.25);saveProgress();
+    return [GameState.XP,GameState.GOLD];
+  },i)));
   await a.locator('#platoon-open').click();await a.locator('#platoon-create').click(); await a.locator('#platoon-code').waitFor();
   assert.ok(await a.locator('#platoon-deploy').isDisabled());
   await b.locator('#platoon-open').click();await b.locator('#platoon-key').fill(await a.locator('#platoon-code').inputValue());await b.locator('#platoon-join button').click();await b.locator('#platoon-deploy').waitFor();
@@ -118,6 +125,8 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   for(const p of [a,b])assert.equal(await p.locator('#result-title').innerText(),'ПОБЕДА!');
   assert.equal(await a.evaluate(()=>GameState.battleKills),0);assert.equal(await b.evaluate(()=>GameState.battleKills),1);assert.ok(await b.evaluate(()=>GameState.battleDmg>=123));
   assert.equal(await b.evaluate(()=>GameState.totalBattles),1);assert.equal(await a.evaluate(()=>GameState.totalBattles),1);
+  const income=await Promise.all([a,b].map((p,i)=>p.evaluate(([xp,gold])=>[GameState.XP-xp, GameState.GOLD-gold, GameState.inventory.ornament||0],balances[i])));
+  assert.deepEqual(income,[[300,50,0],[880,55,1]]);
   if (!fallback) assert.ok(relay.counts.get('drive')>2 && relay.counts.get('world')>2);
   assert.deepEqual(relay.errors,[]);
   await Promise.all([a,b].map(p=>p.locator('#result-screen button').click()));

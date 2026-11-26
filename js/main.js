@@ -47,7 +47,7 @@ function creditDamage(source, damage) {
 function creditKill(source, bonus = 0) {
   const g = GameState;
   if (g.platoon) g.platoon.credit(source,0,1,bonus);
-  else if (source === g.player) { g.battleKills++; g.XP += bonus; }
+  else if (source === g.player) { g.battleKills++; g.battleKillXP += bonus; }
 }
 function damageUnit(b, u, part, incidenceCos) {
   const { dmg, zone, ricochet } = resolveHit(b, u, part, incidenceCos);

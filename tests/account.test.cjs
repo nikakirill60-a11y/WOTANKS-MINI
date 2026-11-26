@@ -184,3 +184,24 @@ test('15_zar credits both resources once per profile, including after a reload',
   await page.reload(); await active(page); await click('Код'); assert.match(await enter('15_zar'),/Уже использован/);
   assert.deepEqual(api.rows.get(uid).progress, receipt(before)); assert.deepEqual(await saved(), receipt(local));
 });
+
+test('the earned case and its decorations sync to their owner, not the guest; partial saves start with a bare tree',async t=>{
+  const api=service();api.time='2026-11-22T14:00:00Z';
+  const uid=randomUUID(),email='treekeeper@players.citytanks.invalid',pass='fixture tree pass';
+  api.users.set(email,{id:uid,email,password:pass});api.rows.set(uid,{revision:1,progress:{GOLD:17}});
+  const {page,click,saved}=await openGame(t,{route:api.route,seed:{tree2026:{gingerbread:3},treeSlots2026:[null,'gingerbread',null,null],inventory:{ornament:2}}});
+  const guest=await saved();await form(page,'treekeeper',pass,'Войти');await active(page);await click('В ангар');await click('Ёлка');
+  assert.equal(await page.locator('#tree-total').innerText(),'Занято: 0 / 4');assert.ok(await page.locator('#tree-unpack').isDisabled());await click('В ангар');
+  await page.evaluate(()=>{TreeEvent.settle(GameState,{silver:0,xp:0,gold:0},()=>.01);saveProgress();});await synced(page);
+  assert.deepEqual(api.rows.get(uid).progress.inventory,{ornament:1});await page.reload();await active(page);await click('Ёлка');
+  await page.locator('#tree-unpack').evaluate(b=>{const rand=Math.random;try{Math.random=()=>.995;b.click();}finally{Math.random=rand;}});
+  await synced(page);const cloud=api.rows.get(uid).progress;
+  assert.deepEqual(cloud.tree2026,{gingerbread:0,deer:0,fir:0,bauble:1});assert.deepEqual(cloud.inventory,{});assert.equal(cloud.GOLD,17);
+  assert.deepEqual(cloud.treeSlots2026,[null,null,null,null]);await click('ЗАБРАТЬ');
+  assert.equal(await page.locator('#tree-chance').innerText(),'20%');await page.getByLabel('Слот 4',{exact:true}).selectOption('bauble');await synced(page);
+  assert.deepEqual(api.rows.get(uid).progress.treeSlots2026,[null,null,null,'bauble']);
+  await page.reload();await active(page);await click('Ёлка');assert.equal(await page.getByLabel('Слот 4',{exact:true}).inputValue(),'bauble');assert.equal(await page.locator('#tree-chance').innerText(),'30%');await click('В ангар');
+  await logout(page);await page.locator('#account-back').click();await click('Ёлка');assert.equal(await page.locator('#tree-stock').innerText(),'2');
+  assert.equal(await page.getByLabel('Слот 2',{exact:true}).inputValue(),'gingerbread');assert.equal(await page.getByLabel('Слот 4',{exact:true}).inputValue(),'');
+  assert.equal(await page.locator('#tree-chance').innerText(),'20%');assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
+});

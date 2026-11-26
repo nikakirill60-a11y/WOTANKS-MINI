@@ -26,6 +26,7 @@ const CrateModel = (() => {
   }
 
   function build(id) {
+    if (id === 'ornament') return OrnamentModels.caseRig();
     if (!Object.hasOwn(paints,id)) throw Error('Unknown crate');
     const festive=id==='collection', shell=paints[id], frame=festive?'#273d24':'#3c4630';
     const lining=festive?'#33201a':'#2a2620', metal=festive?'#d8b25a':'#6d7276';

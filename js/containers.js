@@ -1,5 +1,6 @@
 // Each vehicle-bearing crate has its own manifest. The ordinary resource ranges are unchanged.
 const CONTAINERS = {
+  [TreeEvent.boxId]: { name:'Ёлочный ларец', icon:'❆', color:'#d1af71', slotChance:0 }, // battle drop, never for sale
   collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 500}, color: '#91c7d4',
     // This box has its own published manifest; a promo collectible is not automatically a crate prize.
     vehicleChance: 0.02, slotChance: 0.05, vehicles: ['M4A3E2','T71DA','JPANTHERII','T62A','TL7'],
@@ -55,6 +56,7 @@ function rollPrimary(box, random) {
 
 function openContainerDirect(id, random = Math.random) {
   if (!Object.hasOwn(CONTAINERS,id)) return null;
+  if (id === TreeEvent.boxId) return TreeEvent.collect(GameState.tree2026, random); // no resources, tank or slot roll
   const box = CONTAINERS[id];
   const reward = rollPrimary(box, random);
   reward.slot = random() < slotChance(box) && GameState.garageSlots < Number.MAX_SAFE_INTEGER;
@@ -131,6 +133,7 @@ function buyContainer(cid) {
   if (CrateView.active) return;
   if (!Object.hasOwn(CONTAINERS,cid)) return;
   const c = CONTAINERS[cid];
+  if (!c.cost) return; // earned-only containers
 
   if (c.cost.charges) {
     const curCharges = GameState.charges || 0;
@@ -177,18 +180,24 @@ function unpack(cid, all) {
   if(n===stock)delete GameState.inventory[cid];else GameState.inventory[cid]=stock-n;
   saveProgress();
   updateResources();renderCarousel();updateInvCount();
+  if (cid === TreeEvent.boxId) TreeDesk.refresh();
   CrateView.show(cid,n,receipt(results));
 }
 function openFromInventory(cid) { unpack(cid,false); }
 function openAllFromInventory(cid) { unpack(cid,true); }
 
 function receipt(results){
-  const totals={},vehicles=new Set(),delivered=new Set();let slots=0;
+  const ornaments={},totals={},vehicles=new Set(),delivered=new Set();let slots=0;
   for(const r of results){
+    if(r.type==='ornament') { ornaments[r.ornament]=(ornaments[r.ornament]||0)+1; continue; }
     if(r.id)vehicles.add(r.id);else totals[r.type]=(totals[r.type]||0)+r.amount;
     if(r.slot)slots++;for(const id of r.delivered||[])delivered.add(id);
   }
   const rows=[];
+  for (const [id,n] of Object.entries(ornaments)) {
+    const toy=TreeEvent.items[id];
+    rows.push({ornament:id, title:`${toy.name} × ${n}`, detail:`${toy.rarity} · ${toy.effect} в слоте · в коллекции: ${GameState.tree2026[id]}`});
+  }
   for(const id of new Set([...vehicles,...delivered])) rows.push({title:DB[id].n,vehicle:id,
     detail:GameState.pendingVehicles.includes(id)?'Ожидает слота · сохранено в инвентаре':vehicles.has(id)?'Получено · в ангаре':'Доставлено из очереди в ангар'});
   for(const [type,amount] of Object.entries(totals)){
@@ -217,6 +226,7 @@ function vehicleOdds(box) {
 }
 
 function boxOdds(box) {
+  if (box === CONTAINERS[TreeEvent.boxId]) return `Только одно украшение. ${TreeEvent.oddsText()}.`;
   const primary = box.vehicles ? vehicleOdds(box) : 'Одна из трёх ресурсных наград с равным шансом.';
   return `${primary} Дополнительный слот ангара — ${slotChance(box) * 100}%.`;
 }
@@ -224,7 +234,7 @@ function boxOdds(box) {
 function renderSupplyStatus(){
   document.getElementById('supply-balance').textContent=`Баланс: ${GameState.GOLD.toLocaleString('ru-RU')} G · ${GameState.SILVER.toLocaleString('ru-RU')} ₽ · ${GameState.charges} ⚡`;
   document.getElementById('supply-capacity').textContent=`Слоты ангара: ${GameState.owned.length} / ${GameState.garageSlots}`;
-  document.getElementById('supply-notice').textContent='Дополнительный слот ангара разыгрывается отдельно от основной награды в каждом ящике, даже при открытии всей пачки.';
+  document.getElementById('supply-notice').textContent='Дополнительный слот ангара разыгрывается отдельно в каждом покупном ящике. Боевой ёлочный ларец даёт только украшение.';
 }
 function crateArt(id){
   return `<button type="button" class="crate-art" aria-label="Осмотреть модель: ${CONTAINERS[id].name}" onclick="CrateView.show('${id}')">
@@ -234,6 +244,7 @@ function renderContainerGrid() {
   renderSupplyStatus();
   const host=document.getElementById('container-grid');host.replaceChildren();
   for(const [id,box] of Object.entries(CONTAINERS)){
+    if (!box.cost) continue;
     const [currency,cost]=Object.entries(box.cost)[0],unit={silver:'₽',gold:'G',charges:'⚡'}[currency];
     const card=document.createElement('article');card.className='c-card';card.style.setProperty('--stripe',box.color);
     const list=(box.vehicles||[]).map(id=>`<li>${missingPrize(id)?'':'✓ '}${DB[id].n}${box===CONTAINERS.premium?' · навсегда':''}</li>`);

@@ -34,7 +34,7 @@ const GarageViewer = (() => {
   }
 
   async function showStand() {
-    if (!inspecting || GameState.gameActive || el('container-modal').open) {
+    if (!inspecting || GameState.gameActive || el('container-modal').open || el('tree-modal').open) {
       suspend();
       return;
     }
@@ -83,6 +83,7 @@ const GarageViewer = (() => {
   }
 
   function syncSelection(fromCarousel = false) {
+    DepotView.refreshTree();
     const id = GameState.selected;
     if (selectedId !== id) {
       selectedId = id;

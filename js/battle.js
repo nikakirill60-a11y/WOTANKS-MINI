@@ -116,7 +116,7 @@ async function launchBattle(teamSize, net = null) {
     }
     if (ticket.signal.aborted) return false;
     g.training = training;
-    g.battleDmg = g.battleKills = 0;
+    g.battleDmg = g.battleKills = g.battleKillXP = 0;
     g.bullets = [];
     g.tracks = [];
     g.particles = [];
@@ -237,8 +237,12 @@ function endBattle(won) {
   }
 
   silver = Math.floor(silver * silverMul);
-  xpReward = Math.floor(xpReward * xpMul);
-  const goldReward = Math.floor((won ? 50 : 10) * goldMul);
+  // The per-kill tier award isn't multiplied by the consumable XP booster. It is
+  // battle XP, though: settle it once, with the tree bonus, for solo and platoon alike.
+  xpReward = Math.floor(xpReward * xpMul) + GameState.battleKillXP;
+  let goldReward = Math.floor((won ? 50 : 10) * goldMul);
+  const tree = TreeEvent.settle(GameState, { silver, xp:xpReward, gold:goldReward });
+  silver += tree.extra.silver; xpReward += tree.extra.xp; goldReward += tree.extra.gold;
 
   GameState.SILVER += silver;
   GameState.XP += xpReward;
@@ -280,7 +284,12 @@ function endBattle(won) {
     ' G' +
     boostInfo;
 
-  updateBoosterUI();
+  const {silver:s, xp:x, gold:g} = tree.extra;
+  document.getElementById('result-tree').textContent = [
+    (s || x || g) ? `В награду вошёл бонус ёлки: +${s} ₽, +${x} XP, +${g} G.` : '',
+    tree.dropped ? 'Получен ёлочный ларец! Откройте его в ангаре → «Ёлка».' : `Ёлочный ларец не выпал (шанс ${tree.chance}%).`
+  ].filter(Boolean).join(' ');
+  updateInvCount(); updateBoosterUI();
 }
 
 function backToGarage() {

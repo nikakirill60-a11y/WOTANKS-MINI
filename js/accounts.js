@@ -354,6 +354,14 @@ const Accounts = (() => {
       }
     };
   }
-  return {init,open,logout,recover,downloadDraft,capture,now,platoonConnection,
+  // Show the latest acknowledged save, including a purchase or battle just finished.
+  // Viewing as a guest does not create an auth session or upload the local hangar.
+  async function standings() {
+    const p = player;
+    if (p) await flush(p);
+    if (p !== player) throw Error('account');
+    return rest(p,'rpc/city_tanks_standings_v1','POST',{});
+  }
+  return {init,open,logout,recover,downloadDraft,capture,now,platoonConnection,standings,
     get callsign(){return player?.registered ? (/^[a-z0-9_]{3,24}$/.test(player.email) ? player.email : 'Танкист-'+player.id.slice(0,6)) : '';},get active(){return !!player;},get switching(){return busy;}};
 })();

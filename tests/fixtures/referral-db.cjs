@@ -3,13 +3,14 @@
 const {PGlite}=require('@electric-sql/pglite'), {randomUUID,webcrypto}=require('node:crypto');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{stripTypeScriptTypes}=require('node:module');
 const source=file=>fs.readFileSync(path.join(__dirname,'../..',file),'utf8');
-async function database(t,{platoons=false}={}) {
+async function database(t,{platoons=false,standings=false}={}) {
   const db=await PGlite.create(); t.after(()=>db.close());
   await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth;
     create table auth.users(id uuid primary key,email text unique,is_anonymous boolean default false,deleted_at timestamptz,raw_app_meta_data jsonb,raw_user_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth to anon,authenticated,service_role;`);
   for(const file of ['winter_player_saves','player_signup_limits','player_referrals'])await db.exec(source(`db/${file}.sql`));
+  if(standings) await db.exec(source('db/player_standings.sql'));
   if(platoons) {
     await db.exec(`create schema realtime; create table realtime.messages(extension text); alter table realtime.messages enable row level security;
       create function realtime.topic() returns text language sql stable as $$select current_setting('realtime.topic',true)$$;
@@ -60,6 +61,8 @@ async function bridge(t,options) {
         const token=randomUUID();sessions.set(token,user.id);return reply(200,{access_token:token,refresh_token:randomUUID(),token_type:'bearer',expires_in:3600,user:{id:user.id,email:body.email}});
       }
       if(u.pathname==='/rest/v1/rpc/city_tanks_invite_preview_v1')return reply(200,await pg.rpc(null,'city_tanks_invite_preview_v1',[body.code]));
+      if(options?.standings && u.pathname==='/rest/v1/rpc/city_tanks_standings_v1' && method==='POST')
+        return reply(200,await pg.as(uid,'select * from public.city_tanks_standings_v1()'));
       if(!uid)return reply(401,{});
       if(u.pathname==='/auth/v1/logout')return reply(200,{});
       if(options?.platoons && u.pathname.endsWith('/rpc/city_tanks_platoon_frame_v1'))return reply(200,await pg.rpc(uid,'city_tanks_platoon_frame_v1',[body.ticket,body.packet]));

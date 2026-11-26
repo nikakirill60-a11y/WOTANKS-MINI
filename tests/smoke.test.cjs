@@ -110,7 +110,7 @@ const saved = page => page.evaluate(key => JSON.parse(localStorage.getItem(key))
 
 test('fresh garage, local rewards, selected tank and settings survive an immediate reload', async t => {
   const { page, click } = await offlineGame(t);
-  assert.equal(await page.locator('#login-screen, input[type=password]:visible, #tab-market, #tab-referral, #chat-panel, #leaderboard-modal').count(), 0);
+  assert.equal(await page.locator('#login-screen, input[type=password]:visible, #tab-market, #tab-referral, #chat-panel, #leaderboard-modal[open]').count(), 0);
   assert.equal(await page.locator('#tank-carousel .tank-slot').count(), 1);
   assert.equal(await page.locator('#xp-val').textContent(), '500');
   await click('ОБМЕН');
@@ -123,7 +123,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
     assert.equal(await page.locator('#container-modal .tab-content:visible').count(), 1);
   }
   assert.deepEqual(await page.locator('#container-modal .tab-content').evaluateAll(els=>els.map(e=>e.id)),['tab-shop','tab-inventory']);
-  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
+  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Топы','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
   assert.equal(await page.locator('#battlepass-track,#features-modals-root,#quest-widget,#sixth-sense-lamp').count(),0);
   await click('В ангар');
   await click('Адвент');

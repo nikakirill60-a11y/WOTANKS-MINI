@@ -36,6 +36,11 @@
 .entry-actions button:not(:disabled):hover { filter:brightness(1.16); border-color:var(--sand); }
 .entry-actions button:focus-visible { outline:2px solid #ffe6bb; outline-offset:3px; }
 .entry-actions button:disabled { opacity:.58; cursor:wait; }
+.entry-film { min-height:34px; color:var(--sand); text-decoration:none; text-transform:uppercase; }
+.entry-film::before { content:""; border-block:5px solid transparent; border-left:8px solid currentColor; }
+.bay-film { display:inline-block; padding:5px 2px; color:#f0c580; text-underline-offset:3px; }
+.entry-film:hover, .bay-film:hover { color:#ffe6bb; text-decoration:underline; }
+.entry-film:focus-visible, .bay-film:focus-visible { outline:2px solid #ffe6bb; outline-offset:3px; }
 #entry-status:not(:empty) { background:#10212de8; border-left:2px solid var(--sand); padding:8px 12px; margin-top:12px; color:#f4d8ac; font-size:13px; }
 .entry-foot { min-height:68px; border-top:1px solid var(--hair); font-size:10px; color:var(--mist); }
 .entry-update { display:flex; align-items:center; gap:9px; }

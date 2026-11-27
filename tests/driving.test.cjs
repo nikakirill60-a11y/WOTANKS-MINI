@@ -11,6 +11,7 @@ function field(id = 'M4SHERMAN', surface = 'normal') {
   const c = vm.createContext({ window: { addEventListener() {} }, console: { log() {} } });
   for (const file of [
     'models/catalog',
+    'js/tree-event',
     'js/config',
     'js/battle-space',
     'js/armor-system',

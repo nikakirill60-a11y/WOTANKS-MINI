@@ -223,6 +223,7 @@ function buildWinterBay(scene) {
   fir.cyl('#604a39',0,.34,0,.16,.7,.16);fir.cone('#21433b',0,height*.50,0,height*.25,height*.81,height*.25);
   const lampColours=['#ffda76','#ff9568','#a1ead9','#ffc579','#e99391'];
   function onTree(t,a,pad){const r=(.348*(1-t)+pad)*height;return [r*Math.sin(a),height*t,r*Math.cos(a)];}
+  const dress=OrnamentModels.dress(tree,onTree); dress(GameState.treeSlots2026);
   const garland=[]; let prev=null;
   for(let i=0;i<=120;i++) {
     const t=.16+i/120*.78,a=i/120*tau*5,pt=onTree(t,a,.011);
@@ -232,11 +233,6 @@ function buildWinterBay(scene) {
       garland.push([...pt,.36,colour]);
     }
     prev=pt;
-  }
-  for(let i=0;i<34;i++) {
-    const t=.17+(i%10)*.064,a=i*2.39996,pt=onTree(t,a,.001), r=.074+(i%3)*.01;
-    fir.sphere(['#be493e','#dca357','#478f94'][i%3],...pt,r,r*1.06,r);
-    fir.cyl('#ad9761',pt[0],pt[1]+r,pt[2],.029,.043,.029);
   }
   const star=WinterLandscape.facets(), crown=height+.14;
   for(let i=0;i<10;i++) {
@@ -274,5 +270,5 @@ function buildWinterBay(scene) {
     sides[0].visible=eye.x> -5.48; sides[1].visible=eye.x<5.48;
     portal.visible=eye.z> -2.64;rear.visible=eye.z<6.97;roof.visible=eye.y<4.01+eaves;
   }
-  return {room,time,cutaway};
+  return {room,time,cutaway,dress};
 }

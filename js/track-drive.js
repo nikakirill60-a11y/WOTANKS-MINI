@@ -80,7 +80,7 @@ const TrackDrive = (() => {
       surface = CONFIG.TERRAIN[type];
     const v = u.driveSpeed,
       engine = getCritMultiplier(u, 'speed'),
-      boost = u === GameState.player && GameState.fuelBoostActive ? 1.15 : 1;
+      boost = (u.fieldKit?.fuelBoostTimer > BattleClock.date() || (u === GameState.player && GameState.fuelBoostActive)) ? 1.15 : 1;
     const ratio = u.baseSpeed / ((DB[u.id].speed / 3.6) * m * dt),
       torque = engine * boost * ratio;
     const top = applyTerrainToSpeed(u, u.baseSpeed * boost, type) / (m * dt),

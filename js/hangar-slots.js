@@ -1,5 +1,5 @@
 // One capacity ledger per profile. A rental uses the same berth/delivery queue as a
-// permanent vehicle; only a promo grant attaches a remaining-battles counter.
+// permanent vehicle; a time-limited grant attaches a remaining-battles counter.
 const HangarSlots = (() => {
   const free = (g = GameState) => g.garageSlots - g.owned.length;
   const received = (id, g = GameState) => g.owned.includes(id) || g.pendingVehicles.includes(id);
@@ -22,6 +22,11 @@ const HangarSlots = (() => {
     if (received(id)) return;
     if (!park(id)) GameState.pendingVehicles.push(id);
     if (rentalBattles) GameState.rentalBattles[id] = rentalBattles;
+  }
+  // A permanent prize converts an active or queued rental in place, keeping its berth and equipment.
+  function awardPermanent(id) {
+    award(id);
+    delete GameState.rentalBattles[id];
   }
   function deliver(g = GameState) {
     const delivered = g.pendingVehicles.splice(0, Math.max(0, free(g)));
@@ -62,8 +67,13 @@ const HangarSlots = (() => {
       if (Number.isSafeInteger(n) && n > 0) g.rentalBattles[id] = Math.min(n, limit);
       else removeVehicle(id, g); // an exhausted/broken rental must not turn into permanent ownership
     }
+    // T67 can also be owned outright. Only an explicit rental counter means a loan.
+    if (received('T67', g) && Object.hasOwn(saved, 'T67')) {
+      if (Number.isSafeInteger(saved.T67) && saved.T67 > 0) g.rentalBattles.T67 = Math.min(5, saved.T67);
+      else removeVehicle('T67', g);
+    }
     deliver(g);
   }
   const fullMessage = () => `Ангар заполнен (${GameState.owned.length}/${GameState.garageSlots}). Освободите место или получите слот из контейнера.`;
-  return {free, received, park, award, deliver, release, rentalTerm, useRentalBattle, restore, fullMessage};
+  return {free, received, park, award, awardPermanent, deliver, release, rentalTerm, useRentalBattle, restore, fullMessage};
 })();

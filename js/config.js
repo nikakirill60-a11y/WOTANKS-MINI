@@ -22,6 +22,7 @@ const CONFIG = {
   SPG_ROUND: { name: 'ОФ', sMul: 1, dMul: 1, penMul: 1, color: '#ffd48b' },
   PROMOCODES: {
     "ARTA": { vehicle: "GPZ", rentalBattles: 4 },
+    "15_ZAR": { gold: 500, xp: 2500 },
     "BETA_TEST": { gold: 500 },
     "START2025": { gold: 100, silver: 5000 },
     "TANKS": { xp: 1000 },
@@ -76,6 +77,11 @@ const CONFIG = {
   // Rolling/steering resistance and the fraction of lateral slip removed per 60 Hz step.
   TERRAIN: {
     normal:  { name: 'Грунт',        speedMul: 1,    resistance: 1,    grip: .29 },
+    timber:  { name: 'Настил',       speedMul: .93, resistance: 1.12, grip: .31 },
+    paving:  { name: 'Мощение',      speedMul: .98, resistance: .91, grip: .43 },
+    cobble:  { name: 'Брусчатка',    speedMul: .98, resistance: .90, grip: .42 },
+    rail:    { name: 'Шпалы',        speedMul: .91, resistance: 1.25, grip: .24 },
+    runway:  { name: 'Взлётная полоса', speedMul: 1, resistance: .78, grip: .52 },
     trail:   { name: 'Просёлок',     speedMul: 1,    resistance: .92,  grip: .30 },
     sand:    { name: 'Рыхлый песок', speedMul: .85,  resistance: 1.5,  grip: .22 },
     gravel:  { name: 'Щебень',       speedMul: .96,  resistance: 1.1,  grip: .24 },
@@ -100,6 +106,18 @@ const CONFIG = {
   }
 };
 
+// KPz 67 has its own three ammo slots. The immutable mode profiles are shared by
+// the ammo selector and the simulation; a shell keeps the profile it was fired with.
+const KPZ_CALIBRATION = (() => {
+  const loadout = (alpha, ricochetDeg, normalizationDeg, lossPct) => Object.freeze([
+    Object.freeze({ name:'БП', alpha, ricochetDeg, normalizationDeg, sMul:CONFIG.SHELLS[2].sMul, penMul:1, color:CONFIG.SHELLS[2].color }),
+    Object.freeze({ name:'КС', alpha, lossPct, sMul:1, penMul:1, color:'#eead71' }),
+    CONFIG.SHELLS[1] // The ordinary HE round is identical in both modes.
+  ]);
+  return Object.freeze({ name:'Система калибровки снаряда', switchMs:1000,
+    standard:loadout(DB['KPZ-67'].alpha, 70, 2, 5), calibrated:loadout(380, 75, 7, 2) });
+})();
+
 // Только эти поля переживают перезапуск. Бой, снаряды и ввод остаются в памяти.
 const BASE_GARAGE_SLOTS = 10;
 function initialProgress() {
@@ -108,6 +126,7 @@ function initialProgress() {
     owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
     garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [], rentalBattles: {},
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
+    tree2026: TreeEvent.counts(), treeSlots2026: TreeEvent.emptySlots(),
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,
     loginCalendar: { claimedDays: [] }, advent2026: { dates: [] }, tutorialDone: false, settings: { volume: 1, lookSensitivity: 1, showTracks: true, lang: 'ru' }
@@ -162,6 +181,7 @@ const GameState = {
   curShell: 0,
   battleDmg: 0,
   battleKills: 0,
+  battleKillXP: 0,
 
   // Расходники
   consumables: [false, false, false, false, false, false],

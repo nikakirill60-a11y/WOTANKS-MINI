@@ -15,10 +15,16 @@ test('New Year checkpoint: the local ST-II and Leopard 1 artwork, entry controls
       const art=new Image();art.src=url;await art.decode();
       return [getComputedStyle(root,'::before').backgroundImage.includes(url),art.naturalWidth>=1280,
         root.scrollWidth===root.clientWidth,root.scrollHeight===root.clientHeight,
-        [...root.querySelectorAll('button, footer strong')].every(n=>{const r=n.getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight;}),
+        [...root.querySelectorAll('button, a, footer strong')].every(n=>{const r=n.getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight;}),
         document.querySelector('#ui').hidden,document.querySelector('#depot-canvas')===null];
     });
     assert.deepEqual(result,Array(7).fill(true),`${width}×${height}`);
+  }
+  // The offline ZIP deliberately omits the 33 MB film. Both links open the
+  // same published MP4 in another tab without starting a download at entry.
+  for(const link of [page.locator('.entry-film'),page.locator('.bay-film')]) {
+    assert.equal(await link.getAttribute('href'),'https://wotanks-mini.vercel.app/CITY-TANKS-1.4-TRAILER.mp4');
+    assert.equal(await link.getAttribute('target'),'_blank');assert.match(await link.getAttribute('rel'),/noopener/);
   }
   assert.match(await page.locator('.entry-foot').innerText(),/СТ-II · Leopard 1/);
   assert.equal(await saved(),null);await click('ГОСТЬ');assert.ok(await page.locator('#ui').isVisible());

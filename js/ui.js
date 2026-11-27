@@ -74,35 +74,36 @@ function setNat(nat) {
   if (focused) document.querySelector(`.n-btn[data-nation="${nat}"]`)?.focus({preventScroll:true});
 }
 
-// ========== Выбор снаряда ==========
-function setShell(i) {
-  if (GameState.player?.usesMagazine || GameState.player?.isSPG) i = 0;
-  GameState.curShell = i;
-  document.querySelectorAll('.shell-opt').forEach(function(e, j) { e.classList.toggle('active', j === i); });
-  document.querySelectorAll('.m-shell').forEach(function(e, j) { e.classList.toggle('active', j === i); });
-}
-
 // ========== Расходники ==========
 function useCons(i) {
   if (!GameState.gameActive || !GameState.player || GameState.player.dead || GameState.consumables[i]) return;
   var cons = CONFIG.CONSUMABLES[i];
   if (!cons) return;
   if (GameState.SILVER < cons.cost) { combatMessage("Нет серебра!", "#e74c3c"); return; }
-  GameState.SILVER -= cons.cost;
-  GameState.consumables[i] = true;
-  var el = document.getElementById('cons' + (i + 1));
-  if (el) { el.classList.add('used'); el.classList.remove('ready'); }
-  var mel = document.getElementById('mcons' + (i + 1));
-  if (mel) mel.classList.add('used');
+  if (GameState.platoon) { GameState.platoon.kit(i); return; }
+  applyConsumable(GameState.player,GameState,i);
+  payConsumable(i);
+}
+// Simulation effects belong to the actual driver. Only that driver's device pays,
+// once, after the host acknowledges use in its authoritative state.
+function applyConsumable(p, buffs, i) {
   switch (i) {
-    case 0: GameState.player.trackBroken = false; GameState.player.engineRestartAt = GameState.player.critTimers.engine = 0; combatMessage("🔧 Починено!", "#2ecc71"); snd('hit'); break;
-    case 1: GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.15); combatMessage("+15% HP", "#2ecc71"); snd('hit'); break;
-    case 2: GameState.adrenalineActive = true; GameState.adrenalineTimer = BattleClock.date() + 10000; combatMessage("💉 Адреналин!", "#f39c12"); snd('hit'); break;
-    case 3: GameState.player.onFire = false; GameState.player.hp = Math.min(GameState.player.maxHp, GameState.player.hp + GameState.player.maxHp * 0.05); combatMessage("🧯 Огонь потушен!", "#2ecc71"); snd('hit'); break;
-    case 4: GameState.paiokActive = true; combatMessage("⛽ Доп.бачок! +5% урон", "#f39c12"); snd('hit'); break;
-    case 5: GameState.fuelBoostActive = true; GameState.fuelBoostTimer = BattleClock.date() + 15000; combatMessage("⛽ Топливо 105!", "#f39c12"); snd('hit'); break;
+    case 0: p.trackBroken = false; p.engineRestartAt = p.critTimers.engine = 0; break;
+    case 1: p.hp = Math.min(p.maxHp,p.hp + p.maxHp * .15); break;
+    case 2: buffs.adrenalineActive = true; buffs.adrenalineTimer = BattleClock.date() + 10000; break;
+    case 3: p.onFire = false; p.hp = Math.min(p.maxHp,p.hp + p.maxHp * .05); break;
+    case 4: buffs.paiokActive = true; break;
+    case 5: buffs.fuelBoostActive = true; buffs.fuelBoostTimer = BattleClock.date() + 15000; break;
   }
-  saveProgress();
+}
+function payConsumable(i) {
+  if (GameState.consumables[i]) return;
+  GameState.SILVER -= CONFIG.CONSUMABLES[i].cost;
+  GameState.consumables[i] = true;
+  const el = document.getElementById('cons' + (i + 1)), mel = document.getElementById('mcons' + (i + 1));
+  el?.classList.add('used'); el?.classList.remove('ready'); mel?.classList.add('used');
+  combatMessage(['🔧 Починено!','+15% HP','💉 Адреналин!','🧯 Огонь потушен!','Доп.паёк · +5% урона','Топливо 105'][i], '#c6e7c5');
+  snd('hit'); saveProgress();
 }
 
 // ========== Бустеры ==========

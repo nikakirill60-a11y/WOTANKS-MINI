@@ -7,9 +7,9 @@ const WeatherEngine = {
   waterBodies: [],
 
   // 26. ДИНАМИЧЕСКИЙ ВЫБОР ПОГОДЫ
-  initWeatherForBattle(arena) {
+  initWeatherForBattle(arena, random = Math.random) {
     const list = arena.spec.weather;
-    this.currentWeather = list[Math.floor(Math.random() * list.length)];
+    this.currentWeather = list[Math.floor(random() * list.length)];
     this.waterBodies = arena.water;
     this.ground = arena.ground;
   },

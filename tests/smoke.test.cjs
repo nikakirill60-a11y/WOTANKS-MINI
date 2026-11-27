@@ -23,20 +23,26 @@ const obj430Ids = ['OBJ430','OBJ430U'];
 const k91Ids = ['A43','A44','OBJ416','OBJ430II','K91'];
 const e50Ids = ['VK3002M','PANTHER','PANTHERII','E50','E50M'];
 const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGPZE100'];
+const assault = require('./fixtures/sturmtiger.cjs');
 const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
 const sovger = require('./fixtures/soviet-german.cjs');
 const newIds = end => sovger.find(path=>path.end===end).rows.map(row=>row[0]);
-const usTreeIds = usIds.concat(additions('usa'));
+const {e3,e4,ares} = require('./fixtures/american.cjs');
+const americanRows = batch5.filter(r=>r.nation==='usa').flatMap(r=>r.end==='T57HEAVY' ? [...r.rows,...ares] : r.rows);
+const usTreeIds = usIds.concat([...americanRows,...e3,...e4].map(row=>row[0]));
 const sovietTreeIds = sovietIds.concat(newIds('OBJ-277'),newIds('OBJ-705A'),newIds('ST-II'),is4Ids,newIds('TET-100'),
   mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'));
-const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,panzerIds,mausIds,newIds('PZKPFW-VII'),
+const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,assault.map(r=>r[0]),panzerIds,mausIds,newIds('PZKPFW-VII'),
   newIds('VK-7201-K'),e50Ids,newIds('LEOPARD-1'),e100Ids,newIds('KPZ-67'));
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
+const meshCounts = {'PZ-II-J':4155,T67:4437,
+  ...Object.fromEntries([...e3,...e4,...ares,...assault].map(row=>[row[0],row.at(-1)])),
+  ...Object.fromEntries(require('./fixtures/france.cjs').unique.map(row=>[row[0],row.at(-1)])),
+  GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
   ...Object.fromEntries(require('./fixtures/japan.cjs').unique.map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(require('./fixtures/hungary.cjs').map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(batch5.flatMap(route=>route.rows.map(row=>[row[0],row.at(-1)]))),BT42:13432,IS6:3389,JPANTHERII:2781,LOWE:2890,M4A3E2:2540,STA2:4833,STRVS1:3531,T62A:3572,T34HEAVY:3846,T71DA:2862,TL7:4707,TL7OLEN:5175,MS1:2722,T26:2520,T46:2049,T28_USSR:2483,KV1:3139,KV1S:3166,IS:3032,IS3:3156,OBJ257:4099,IS7:2677,
@@ -105,7 +111,7 @@ const saved = page => page.evaluate(key => JSON.parse(localStorage.getItem(key))
 
 test('fresh garage, local rewards, selected tank and settings survive an immediate reload', async t => {
   const { page, click } = await offlineGame(t);
-  assert.equal(await page.locator('#login-screen, input[type=password]:visible, #tab-market, #tab-referral, #chat-panel, #leaderboard-modal').count(), 0);
+  assert.equal(await page.locator('#login-screen, input[type=password]:visible, #tab-market, #tab-referral, #chat-panel, #leaderboard-modal[open]').count(), 0);
   assert.equal(await page.locator('#tank-carousel .tank-slot').count(), 1);
   assert.equal(await page.locator('#xp-val').textContent(), '500');
   await click('ОБМЕН');
@@ -118,7 +124,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
     assert.equal(await page.locator('#container-modal .tab-content:visible').count(), 1);
   }
   assert.deepEqual(await page.locator('#container-modal .tab-content').evaluateAll(els=>els.map(e=>e.id)),['tab-shop','tab-inventory']);
-  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
+  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Ёлка','Топы','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
   assert.equal(await page.locator('#battlepass-track,#features-modals-root,#quest-widget,#sixth-sense-lamp').count(),0);
   await click('В ангар');
   await click('Адвент');
@@ -126,7 +132,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.equal(await page.locator('#advent-count').innerText(),'0 / 31');
   await click('В ангар');
   await click('Дерево развития');
-  assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ','ЯПОНИЯ']);
+  assert.deepEqual(await page.locator('.n-btn').allInnerTexts(),['СССР','ГЕРМАНИЯ','США','ШВЕЦИЯ','ВЕНГРИЯ','ЯПОНИЯ','ФРАНЦИЯ']);
   await click('Выбрать для боя: МС-1');
   await page.locator('button[onclick="showSettings()"]').click();
   await page.locator('#volume-slider').press('Home');await page.locator('#look-sensitivity').press('End');
@@ -580,16 +586,16 @@ test('the new VII and VIII use their own meshes as player and opponent in a 3D b
   assert.equal((await saved(page)).totalBattles,0,'leaving a training session does not claim an end-of-battle reward');
 });
 
-test('all six selected plans become playable WebGL arenas with exploration, contact and damage in 7×7, 10×10 and 15×15',async t=>{
+test('all ten selected plans become playable WebGL arenas with exploration, contact and damage in 7×7, 10×10 and 15×15',async t=>{
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LTR','IS3','RHMPZW','T1C','M3LEE','M48PATTON','OBJ140','WTE100','E100','MAUS','T100LT','MT25','E75','TIGERII'],selected:'MS1'})}});
   const ids=await page.locator('#map-select option').evaluateAll(options=>options.map(o=>o.value));
-  assert.deepEqual(ids,['city','field','desert','port','quarry','frost']);
+  assert.deepEqual(ids,['city','field','desert','port','quarry','frost','burgstadt','cape','sawmill','airfield']);
   const plans=new Set();
   for(const size of [7,10,15]) {
     for(const [i,id] of ids.entries()) {
       const playerName=size===7?['T1 Cunningham','Leichttraktor','МС-1'][i%3]:
-        size===10?['ИС-3','Объект 140','Rhm. Panzerwagen','M3 Lee','Waffenträger auf E 100','M48 Patton'][i]:
-        ['E 100','Т-100 ЛТ','Maus','E 75','МТ-25','Tiger II'][i];
+        size===10?['ИС-3','Объект 140','Rhm. Panzerwagen','M3 Lee','Waffenträger auf E 100','M48 Patton'][i%6]:
+        ['E 100','Т-100 ЛТ','Maus','E 75','МТ-25','Tiger II'][i%6];
       await click('Выбрать для боя: '+playerName);
       await page.locator('#map-select').selectOption(id);
       await click(size===15?'В БОЙ 15×15':size+'×'+size);
@@ -600,7 +606,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
           if(!await selectControl('mobile'))throw new Error(document.querySelector('#battle-notice-text').textContent);
         } finally {Math.random=random;}
         // Run the ordinary fixed ticks, but don't wait wall-clock minutes or need a fast GPU
-        // to exercise eighteen different sorties. Nothing sets aim, vision, damage or team orders.
+        // to exercise thirty different sorties. Nothing sets aim, vision, damage or team orders.
         stopBattleLoop();const g=GameState,a=g.arena,nav=g.navigation,r=nav.recon;
         const initialCounts=r.teams.map(t=>t.count), initialScore=['allies-list','enemies-list'].map(id=>Number(document.getElementById(id).textContent));
         const orders=new Set(g.units.filter(u=>u.bot).map(u=>u.bot.order)).size;
@@ -636,7 +642,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
         return info;
       },{id,size});
       const label=id+' '+size+'×'+size;
-      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['germany','hungary','japan','sweden','usa','ussr']);assert.ok(info.different && info.inBand && info.onBase,label+' different rosters, matched range and SPG base duty');
+      assert.equal(info.player,playerName);assert.deepEqual(info.nations.sort(),['france','germany','hungary','japan','sweden','usa','ussr']);assert.ok(info.different && info.inBand && info.onBase,label+' different rosters, matched range and SPG base duty');
       assert.equal(info.id,id);assert.ok(info.sizeOK && info.hudOK,label);plans.add(info.plan);
       assert.ok(info.mesh.triangles>1000 && info.mesh.units===size*2,label+' scene');
       assert.deepEqual(info.initialScore,[size,size],label+' initial HUD counts the actual line-ups');
@@ -646,7 +652,7 @@ test('all six selected plans become playable WebGL arenas with exploration, cont
       assert.ok(!info.invalid && info.spotted && info.both && info.damage>0 && info.reset,label+' fight');
     }
   }
-  assert.equal(plans.size,6,'each plan depicts different ground');
+  assert.equal(plans.size,ids.length,'each plan depicts different ground');
 });
 
 test('Germany is a separate connected mobile tree: stats before unlocking, free starter, no cross-nation shortcuts',async t=>{
@@ -720,7 +726,7 @@ test('US M3 Lee: real depot and mobile sortie, limited traverse, swipe to aim, t
   const {page,click}=await offlineGame(t,{webgl:true,mobile:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','M3LEE'],selected:'M3LEE'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.M3LEE);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('usa');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['T67','M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
   await page.locator('#enemy-select').selectOption('M4SHERMAN');await click('НАЧАТЬ');await chooseControls(page,'mobile');await ready(page);
   const models=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.hp,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));

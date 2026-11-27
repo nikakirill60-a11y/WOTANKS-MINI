@@ -49,10 +49,17 @@ const oldTankKeys = Object.freeze({
   STUG3:'STUG3G', JGPZ4:'JGPZIV', JPANTHER:'JAGDP', JAGTIGER:'JAGDTIGER', JGE100:'JGPZE100',
   T1HVY:'T1HEAVY', T57HVY:'T57HEAVY', M3YOH:'MIIIY', M5YOH:'MVY', M6YOH:'MVIY',
   M3STUART:'M3ST', M5STUART:'M5ST', CHAFFEE:'M24', XM551:'SHERIDAN',
+  // Original T28 was the US TD; HELLCAT already denotes the tier-VI M18, never the new V.
+  T28:'T28-US', T25AT:'T25-AT', T28PROT:'T28-PROTOTYPE',
   S85B:'SU85B', S85:'SU85', S100:'SU100', S152:'SU152', OB704:'OBJ704', OB268:'OBJ268',
   RENOTSU:'R-OTSU', CHIHA_JP:'CHI-HA', CHIHE:'CHI-HE', CHINU:'CHI-NU', CHITO:'CHI-TO', CHIRI:'CHI-RI',
   STA1:'STA-1', TYPE61:'TYPE-61', STB1:'STB-1', MITSU108:'MITSU-108', OI:'O-I', ONI:'O-NI', OHO:'O-HO',
   TYPE4:'TYPE-4-H', TYPE5:'TYPE-5-H',
+  // R35 and AMX 13 90 from the old French tree are not Renault FT or B-C 12 t.
+  AMX38:'AMX-38', SAU40:'SAU-40', S35CA:'S35-CA', ARLV39:'ARL-V39', AC46:'AMX-AC-46', AC48:'AMX-AC-48', FOCH155:'FOCH-155',
+  BDRG1B:'BDR-G1-B', ARL44:'ARL-44', AMXM445:'AMX-M4-45', AMX50100:'AMX-50-100', AMX50120:'AMX-50-120', AMX50B:'AMX-50-B',
+  AMX65T:'AMX-65-T', AMXM451:'AMX-M4-51', AMXM454:'AMX-M4-54', AMXELC:'AMX-ELC-BIS', AMX12T:'AMX-12-T', AMX1375:'AMX-13-75',
+  BC25TAP:'B-C-25-T-AP', BC25T:'B-C-25-T',
   // OB263 in the original saves was X after S12254, never the new IX after SU-101.
   S100M1:'SU-100M1', S101:'SU-101', S12254:'SU-122-54', OB263:'OBJ-263-X',
   VK30D:'VK-3001-D', VK30D2:'VK-3002-D', INDIEN:'INDIEN-PZ', LEOPA:'LEOPARD-PT-A', LEO1:'LEOPARD-1',
@@ -89,6 +96,8 @@ function decodeProgress(data) {
   }
   restored.settings.lookSensitivity = Math.max(.3, Math.min(2.5, restored.settings.lookSensitivity));
   restored.inventory = migrateSupplyBoxes(restored.inventory);
+  restored.tree2026 = TreeEvent.counts(restored.tree2026);
+  restored.treeSlots2026 = TreeEvent.restoreSlots(restored.treeSlots2026, restored.tree2026);
   // The module UI expects arrays, not arbitrary nested save data.
   for (const [id, slots] of Object.entries(restored.modules)) {
     if (!Array.isArray(slots)) { delete restored.modules[id]; continue; }

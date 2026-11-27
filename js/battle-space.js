@@ -63,8 +63,8 @@ function surfaceHeight(x, y) {
 }
 // Slab intersection with a finite ray. Reused for cursor picking, camera clearance and
 // swept projectile hits so that zoom, frame rate and shell speed cannot change cover.
-function rayBox(x, y, h, dx, dy, dh, x0, y0, h0, x1, y1, h1, limit) {
-  let enter = 0,
+function rayBox(x, y, h, dx, dy, dh, x0, y0, h0, x1, y1, h1, limit, face) {
+  let enter = 0, cosine = 1,
     exit = limit;
   for (const [o, d, lo, hi] of [
     [x, dx, x0, x1],
@@ -77,14 +77,18 @@ function rayBox(x, y, h, dx, dy, dh, x0, y0, h0, x1, y1, h1, limit) {
     }
     const a = (lo - o) / d,
       b = (hi - o) / d;
-    enter = Math.max(enter, Math.min(a, b));
+    const near = Math.min(a, b);
+    if (near >= enter) { enter = near; cosine = Math.abs(d); }
     exit = Math.min(exit, Math.max(a, b));
     if (exit < enter) return Infinity;
   }
+  // For a unit ray, the entering slab gives |direction · face normal| in this
+  // box's LOCAL frame (also valid on tilted hulls and independently rotated turrets).
+  if (face && enter < face.distance) { face.distance = enter; face.cosine = cosine; }
   return enter;
 }
 
-function localBox(box, scale, x, h, z, dx, dh, dz, limit) {
+function localBox(box, scale, x, h, z, dx, dh, dz, limit, face) {
   const lo = box.min,
     hi = box.max;
   // An export with the casemate in its hull has an empty turret group (e.g. 44M Tas).
@@ -103,7 +107,7 @@ function localBox(box, scale, x, h, z, dx, dh, dz, limit) {
     hi.x * scale,
     hi.z * scale,
     hi.y * scale,
-    limit
+    limit, face
   );
 }
 
@@ -164,12 +168,14 @@ function traceBattleRay(
   shooter,
   wallsOnly = false,
   includeAllies = false,
-  visibleOnly = false
+  visibleOnly = false,
+  measureFace = false
 ) {
   const ground = GameState.arena?.ground?.ray(x, y, h, dx, dy, dh, limit) ?? (dh < 0 ? -h / dh : Infinity),
     land = ground >= 0 && ground <= limit;
   let { distance, hit } = nearestBattleWall(x, y, h, dx, dy, dh, land ? ground : limit),
-    part = null;
+    part = null, incidenceCos = 1;
+  const face = measureFace ? { distance:Infinity, cosine:1 } : null;
   if (!hit && land) hit = 'ground';
   if (!wallsOnly)
     for (const u of GameState.units) {
@@ -186,12 +192,13 @@ function traceBattleRay(
       const o = bodyLocal(axes, x - u.x, y - u.y, h - (u.rideHeight || 0)),
         d = bodyLocal(axes, dx, dy, dh);
       o.h -= asset.groundY * s;
+      if (face) face.distance = Infinity;
       let body;
       if (asset.suspension) {
         const [, hy, hz] = asset.suspension,
           ct = Math.cos(u.suspensionPitch),
           st = Math.sin(u.suspensionPitch);
-        const tracks = localBox(asset.treads.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance);
+        const tracks = localBox(asset.treads.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance, face);
         const y = o.h - hy * s,
           z = o.z - hz * s,
           dy = d.h,
@@ -200,8 +207,8 @@ function traceBattleRay(
         o.z = hz * s + st * y + ct * z;
         d.h = ct * dy - st * dz;
         d.z = st * dy + ct * dz;
-        body = Math.min(tracks, localBox(asset.body.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance));
-      } else body = localBox(asset.hitHull || asset.hull.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance);
+        body = Math.min(tracks, localBox(asset.body.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance, face));
+      } else body = localBox(asset.hitHull || asset.hull.boundingBox, s, o.x, o.h, o.z, d.x, d.h, d.z, distance, face);
       const [tx, th, tz] = asset.pivot,
         side = o.x - tx * s,
         f = o.z - tz * s;
@@ -213,7 +220,7 @@ function traceBattleRay(
         z = c * f - sn * side,
         dl = c * d.x + sn * d.z,
         dz = c * d.z - sn * d.x;
-      let turret = localBox(asset.hitTurret || asset.turret.boundingBox, s, l, upLocal, z, dl, d.h, dz, distance);
+      let turret = localBox(asset.hitTurret || asset.turret.boundingBox, s, l, upLocal, z, dl, d.h, dz, distance, face);
       if (asset.upperBox) {
         const [gx, gy, gz] = asset.gunPivot,
           up = upLocal - gy * s,
@@ -231,7 +238,7 @@ function traceBattleRay(
             dl,
             cp * d.h - sp * dz,
             sp * d.h + cp * dz,
-            distance
+            distance, face
           )
         );
       }
@@ -239,9 +246,10 @@ function traceBattleRay(
       if (t <= distance) {
         distance = t;
         hit = u;
+        if (face) incidenceCos = face.cosine;
         // On casemate models the upper mesh can be hit, but is part of the hull.
         part = turret < body && u.turretArmor != null ? 'turret' : 'hull';
       }
     }
-  return { x: x + dx * distance, y: y + dy * distance, h: h + dh * distance, distance, hit, part };
+  return { x: x + dx * distance, y: y + dy * distance, h: h + dh * distance, distance, hit, part, incidenceCos };
 }

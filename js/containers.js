@@ -1,5 +1,6 @@
-// Ordinary supply boxes keep their original resource tables. The collection has its own vehicle pool.
+// Each vehicle-bearing crate has its own manifest. The ordinary resource ranges are unchanged.
 const CONTAINERS = {
+  [TreeEvent.boxId]: { name:'Ёлочный ларец', icon:'❆', color:'#d1af71', slotChance:0 }, // battle drop, never for sale
   collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 500}, color: '#91c7d4',
     // This box has its own published manifest; a promo collectible is not automatically a crate prize.
     vehicleChance: 0.02, slotChance: 0.05, vehicles: ['M4A3E2','T71DA','JPANTHERII','T62A','TL7'],
@@ -7,6 +8,7 @@ const CONTAINERS = {
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
     drops: [['silver', 5000, 15000], ['xp', 2000, 8000], ['gold', 50, 200]] },
   premium: { name: 'Офицерский резерв', icon: '🎁', cost: {gold: 500}, color: '#d0a76b',
+    vehicleChance: 0.02, vehicles: ['PZ-II-J','T67'],
     drops: [['silver', 15000, 40000], ['xp', 5000, 20000], ['gold', 200, 600]] },
   supply: { name: 'Склад снабжения', icon: '⚡', cost: {charges: 1}, color: '#76b8ba',
     drops: [['silver', 30000, 80000], ['xp', 15000, 40000], ['gold', 200, 1000]] }
@@ -31,14 +33,15 @@ function migrateSupplyBoxes(inventory) {
 }
 
 // Each box rolls independently at opening (also in bulk). The vehicle chance applies to the pool, not to each vehicle.
+const missingPrize = id => !HangarSlots.received(id) || !!GameState.rentalBattles[id];
 function rollPrimary(box, random) {
   let roll = random();
   if (box.vehicles) {
-    const missing = box.vehicles.filter(id => !HangarSlots.received(id));
+    const missing = box.vehicles.filter(missingPrize);
     const chance = missing.length ? box.vehicleChance : 0;
     if (roll < chance) {
       const tankId = missing[Math.floor(random() * missing.length)];
-      HangarSlots.award(tankId);
+      HangarSlots.awardPermanent(tankId);
       return {type:'vehicle', id:tankId, amount:1};
     }
     roll = (roll - chance) / (1 - chance);
@@ -53,6 +56,7 @@ function rollPrimary(box, random) {
 
 function openContainerDirect(id, random = Math.random) {
   if (!Object.hasOwn(CONTAINERS,id)) return null;
+  if (id === TreeEvent.boxId) return TreeEvent.collect(GameState.tree2026, random); // no resources, tank or slot roll
   const box = CONTAINERS[id];
   const reward = rollPrimary(box, random);
   reward.slot = random() < slotChance(box) && GameState.garageSlots < Number.MAX_SAFE_INTEGER;
@@ -78,6 +82,7 @@ function hideContainerShop() {
 document.getElementById('container-modal').addEventListener('close',()=>GarageViewer.syncSelection());
 function switchTab(tab, btn) {
   const dialog=document.getElementById('container-modal');
+  document.getElementById('supply-title').textContent=tab==='inventory'?'Инвентарь':'Контейнеры';
   document.getElementById('supply-feedback').textContent='';
   for(const t of dialog.querySelectorAll('.modal-tab')){
     t.classList.toggle('active',t===btn);t.setAttribute('aria-pressed',String(t===btn));
@@ -129,6 +134,7 @@ function buyContainer(cid) {
   if (CrateView.active) return;
   if (!Object.hasOwn(CONTAINERS,cid)) return;
   const c = CONTAINERS[cid];
+  if (!c.cost) return; // earned-only containers
 
   if (c.cost.charges) {
     const curCharges = GameState.charges || 0;
@@ -175,18 +181,24 @@ function unpack(cid, all) {
   if(n===stock)delete GameState.inventory[cid];else GameState.inventory[cid]=stock-n;
   saveProgress();
   updateResources();renderCarousel();updateInvCount();
+  if (cid === TreeEvent.boxId) TreeDesk.refresh();
   CrateView.show(cid,n,receipt(results));
 }
 function openFromInventory(cid) { unpack(cid,false); }
 function openAllFromInventory(cid) { unpack(cid,true); }
 
 function receipt(results){
-  const totals={},vehicles=new Set(),delivered=new Set();let slots=0;
+  const ornaments={},totals={},vehicles=new Set(),delivered=new Set();let slots=0;
   for(const r of results){
+    if(r.type==='ornament') { ornaments[r.ornament]=(ornaments[r.ornament]||0)+1; continue; }
     if(r.id)vehicles.add(r.id);else totals[r.type]=(totals[r.type]||0)+r.amount;
     if(r.slot)slots++;for(const id of r.delivered||[])delivered.add(id);
   }
   const rows=[];
+  for (const [id,n] of Object.entries(ornaments)) {
+    const toy=TreeEvent.items[id];
+    rows.push({ornament:id, title:`${toy.name} × ${n}`, detail:`${toy.rarity} · ${toy.effect} в слоте · в коллекции: ${GameState.tree2026[id]}`});
+  }
   for(const id of new Set([...vehicles,...delivered])) rows.push({title:DB[id].n,vehicle:id,
     detail:GameState.pendingVehicles.includes(id)?'Ожидает слота · сохранено в инвентаре':vehicles.has(id)?'Получено · в ангаре':'Доставлено из очереди в ангар'});
   for(const [type,amount] of Object.entries(totals)){
@@ -205,23 +217,25 @@ function showInvNotification(name, icon) {
   setTimeout(() => notif.remove(), 1500);
 }
 
-function collectionOdds(box) {
-  const available = box.vehicles.some(id => !HangarSlots.received(id));
+function vehicleOdds(box) {
+  const available = box.vehicles.some(missingPrize);
   const chance = available ? box.vehicleChance * 100 : 0;
-  const each = ((100 - chance) / box.drops.length).toLocaleString('ru-RU');
-  return (available ? `${chance}% на танк — общий шанс для всех недостающих машин.` : 'Все пять машин уже получены.') +
-    ` Серебро — ${each}%, золото — ${each}%.`;
+  const each = ((100 - chance) / box.drops.length).toLocaleString('ru-RU', {maximumFractionDigits:2});
+  const resources = box.drops.map(([key], i) => `${i ? SUPPLIES[key][1].toLowerCase() : SUPPLIES[key][1]} — ${each}%`).join(', ');
+  const full = box === CONTAINERS.collection ? 'Все пять машин уже получены.' : 'Обе машины уже получены навсегда.';
+  return (available ? `${chance}% на танк — общий шанс для всех недостающих машин.` : full) + ` ${resources}.`;
 }
 
 function boxOdds(box) {
-  const primary = box.vehicles ? collectionOdds(box) : 'Одна из трёх ресурсных наград с равным шансом.';
+  if (box === CONTAINERS[TreeEvent.boxId]) return `Только одно украшение. ${TreeEvent.oddsText()}.`;
+  const primary = box.vehicles ? vehicleOdds(box) : 'Одна из трёх ресурсных наград с равным шансом.';
   return `${primary} Дополнительный слот ангара — ${slotChance(box) * 100}%.`;
 }
 
 function renderSupplyStatus(){
   document.getElementById('supply-balance').textContent=`Баланс: ${GameState.GOLD.toLocaleString('ru-RU')} G · ${GameState.SILVER.toLocaleString('ru-RU')} ₽ · ${GameState.charges} ⚡`;
   document.getElementById('supply-capacity').textContent=`Слоты ангара: ${GameState.owned.length} / ${GameState.garageSlots}`;
-  document.getElementById('supply-notice').textContent='Дополнительный слот ангара разыгрывается отдельно от основной награды в каждом ящике, даже при открытии всей пачки.';
+  document.getElementById('supply-notice').textContent='Дополнительный слот ангара разыгрывается отдельно в каждом покупном ящике. Боевой ёлочный ларец даёт только украшение.';
 }
 function crateArt(id){
   return `<button type="button" class="crate-art" aria-label="Осмотреть модель: ${CONTAINERS[id].name}" onclick="CrateView.show('${id}')">
@@ -231,11 +245,12 @@ function renderContainerGrid() {
   renderSupplyStatus();
   const host=document.getElementById('container-grid');host.replaceChildren();
   for(const [id,box] of Object.entries(CONTAINERS)){
+    if (!box.cost) continue;
     const [currency,cost]=Object.entries(box.cost)[0],unit={silver:'₽',gold:'G',charges:'⚡'}[currency];
     const card=document.createElement('article');card.className='c-card';card.style.setProperty('--stripe',box.color);
-    const list=(box.vehicles||[]).map(id=>`<li>${HangarSlots.received(id)?'✓ ':''}${DB[id].n}</li>`);
+    const list=(box.vehicles||[]).map(id=>`<li>${missingPrize(id)?'':'✓ '}${DB[id].n}${box===CONTAINERS.premium?' · навсегда':''}</li>`);
     list.push(...box.drops.map(([t,a,b])=>`<li>${SUPPLIES[t][1]}: ${a.toLocaleString('ru-RU')}–${b.toLocaleString('ru-RU')}</li>`));
-    card.innerHTML=`${crateArt(id)}<div class="crate-copy"><small class="season-kicker">${box.vehicles?'ЗИМНЯЯ СЕРИЯ':'СНАБЖЕНИЕ'}</small>
+    card.innerHTML=`${crateArt(id)}<div class="crate-copy"><small class="season-kicker">${id==='collection'?'ЗИМНЯЯ СЕРИЯ':'СНАБЖЕНИЕ'}</small>
       <h4 class="c-name">${box.name}</h4><p class="c-desc">${boxOdds(box)}</p><details class="crate-manifest"><summary>Состав контейнера</summary><ul>${list.join('')}</ul></details></div>
       <button class="winter-action c-buy" onclick="buyContainer('${id}')">КУПИТЬ · ${cost} ${unit}</button>`;
     host.append(card);
@@ -243,6 +258,7 @@ function renderContainerGrid() {
 }
 function renderInventoryGrid() {
   renderSupplyStatus();
+  TreeDesk.renderInventory();
   const grid=document.getElementById('inventory-grid');grid.replaceChildren();
   document.getElementById('inventory-empty').hidden=!!getInvTotal();
   const waiting=document.getElementById('vehicle-deliveries');waiting.hidden=!GameState.pendingVehicles.length;

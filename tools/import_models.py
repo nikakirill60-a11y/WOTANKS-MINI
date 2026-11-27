@@ -1,6 +1,7 @@
 """Import mesh DATA, not model cards or scripts. python3 tools/import_models.py <export directory>
 
-Retains the original signed millimetre coordinates, indices, local pivots and credit.
+Extracts signed millimetre coordinates, indices, local pivots and credit.
+Writing applies the per-model fit corrections in model_fit.py and assault_running_gear.py.
 The small fixed wrapper permits on-demand loading offline via a classic local script.
 """
 import base64
@@ -14,6 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def extract(src):
+    if src.name in ('sturmtiger-game.html', 'sturmtiger-game-fixed.html'):
+        from sturmtiger_glb import extract as extract_glb
+        return extract_glb(src)
     text = src.read_text(encoding='utf-8')
     # Some exports put author/paint metadata BEFORE id. Locate the data literal by
     # its actual mesh array, not by property order. Never run the embedded viewer.
@@ -64,11 +68,13 @@ def extract(src):
 
 
 if __name__ == '__main__':
+    from model_fit import prepare
     directory = Path(sys.argv[1])
     sources = {p.name:p for p in directory.glob('*-game.html')}
     sources.update({p.name.replace('-game-fixed.html','-game.html'):p for p in directory.glob('*-game-fixed.html')})
     for name, src in sorted(sources.items()):
         data = extract(src)
-        out = ROOT/'models'/name.replace('-game.html','.mesh.js')
+        slug = prepare(data, name.removesuffix('-game.html'))
+        out = ROOT/'models'/(slug + '.mesh.js')
         out.write_text('BattleModels.receive('+json.dumps(data, separators=(',',':'), allow_nan=False)+');\n',encoding='utf-8')
         print(out.name, data['id'], data['triangles'])

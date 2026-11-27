@@ -6,6 +6,7 @@ const CombatMechanics = {
   // 23. ДЫМОВАЯ ЗАВЕСА (Smoke Screen)
   deploySmokeScreen(caster) {
     if (!GameState.gameActive || !caster || caster.dead) return;
+    if (GameState.platoon && !GameState.platoon.host) { GameState.platoon.action('smoke'); return; }
     this.smokeClouds.push({
       x: caster.x,
       y: caster.y,
@@ -17,10 +18,11 @@ const CombatMechanics = {
   },
 
   // 24. АРТИЛЛЕРИЙСКИЙ УДАР (Artillery Strike)
-  callArtilleryStrike(targetX, targetY) {
-    if (!GameState.gameActive) return;
+  callArtilleryStrike(targetX, targetY, caster = GameState.player) {
+    if (!GameState.gameActive || caster?.dead) return;
+    if (GameState.platoon && !GameState.platoon.host) { GameState.platoon.action('strike',[targetX,targetY]); return; }
     this.artilleryStrikes.push({
-      x: targetX,
+      caster, x: targetX,
       y: targetY,
       timer: 2.5, // задержка перед прилетом
       radius: 140,
@@ -47,11 +49,11 @@ const CombatMechanics = {
             const dist = Math.hypot(u.x - a.x, u.y - a.y);
             if (!u.dead && dist < a.radius) {
               const dmg = Math.round(650 * (1 - dist / a.radius));
-              if (u.team==='enemy') GameState.battleDmg+=Math.min(u.hp,dmg);
+              if (u.team==='enemy') creditDamage(a.caster,Math.min(u.hp,dmg));
               u.hp = Math.max(0, u.hp - dmg);
               if (u.hp === 0) {
                 u.dead = true; boom(u.x,u.y);
-                if (u.team==='enemy') GameState.battleKills++;
+                if (u.team==='enemy') creditKill(a.caster);
                 updateScoreboard();
               }
             }

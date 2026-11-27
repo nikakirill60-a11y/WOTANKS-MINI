@@ -280,5 +280,6 @@ const DepotView = (() => {
       calls: renderer.info.render.calls
     };
   }
-  return { mount, view, close, stats };
+  function refreshTree() { if (weather?.dress(GameState.treeSlots2026)) draw(); }
+  return { mount, view, close, stats, refreshTree };
 })();

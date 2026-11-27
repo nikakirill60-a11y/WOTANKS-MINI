@@ -48,6 +48,7 @@ class BattleGround {
     const pads = [
       ...arena.walls.map((r) => pad(r, false)),
       ...arena.water.map((r) => pad(r, true)),
+      ...(arena.zones || []).filter(r=>r.type==='runway').map(r=>pad(r,true)), // level end to end, not painted over a hill
       pad({ x: -32 * m, y: -11 * m, w: 64 * m, h: 22 * m }, true)
     ];
     // Edge, shoreline and practice are hard zero-height anchors. A shortest-path

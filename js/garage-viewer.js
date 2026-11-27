@@ -34,7 +34,7 @@ const GarageViewer = (() => {
   }
 
   async function showStand() {
-    if (!inspecting || GameState.gameActive || el('container-modal').open) {
+    if (!inspecting || GameState.gameActive || el('container-modal').open || el('tree-modal').open) {
       suspend();
       return;
     }
@@ -83,10 +83,12 @@ const GarageViewer = (() => {
   }
 
   function syncSelection(fromCarousel = false) {
+    DepotView.refreshTree();
     const id = GameState.selected;
     if (selectedId !== id) {
       selectedId = id;
       const empty = !id;
+      ShellUI.garage(DB[id]);
       el('empty-depot').hidden = !empty;
       for (const key of ['vehicle-spec-heading','vehicle-spec','battle-controls']) el(key).hidden = empty;
       for (const btn of document.querySelectorAll('[data-needs-tank],#battle-controls button')) btn.disabled = empty;

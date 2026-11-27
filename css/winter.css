@@ -70,3 +70,23 @@ body[data-hangar=winter] #ui {
   [data-hangar=winter] .hangar-heading h1 { font-size:clamp(18px,5.1vw,26px); white-space:nowrap; }
   [data-hangar=winter] .bay-tabs button { white-space:nowrap; }
 }
+
+/* The invitation is a profile service, not a second reward picker at registration. */
+#referral-desk,#invite-registration { margin:14px 0; padding:12px 14px; border:1px solid #4e6774; border-radius:6px; background:#132733; }
+#referral-desk summary,#invite-manual summary { color:#f5d49c; cursor:pointer; font-weight:700; }
+#referral-desk .season-kicker { margin:14px 0 5px; }
+#referral-desk > p:not(.season-kicker) { font-size:13px; color:#c5d8df; }
+#referral-desk fieldset { min-width:0; padding:0; margin:14px 0; border:none; }
+#referral-desk legend { color:#c9d5dc; font-size:12px; font-weight:650; margin-bottom:5px; }
+.invite-payouts { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+#referral-desk fieldset label { display:flex; align-items:center; gap:9px; padding:9px 10px; margin-bottom:4px; background:#1e3543; border:1px solid #425f70; border-radius:4px; color:#edf2f5; cursor:pointer; }
+#referral-desk fieldset label:has(:checked) { border-color:#ddbc80; background:#3b3933; }
+#referral-desk input[type=radio] { flex:none; accent-color:#ecc782; }
+#referral-desk small { color:#c2d1d8; } #referral-desk label b { color:#e8c588; }
+#invite-share { margin:12px 0; } #invite-share label { font-size:12px; color:#baccd6; }
+#invite-share > div,.invite-account { display:flex; align-items:center; gap:8px; margin-top:4px; }
+#invite-url { flex:1; min-width:0; height:38px; padding:5px 8px; border:1px solid #637c88; border-radius:4px; background:#101e29; color:#ebf4f8; user-select:text; font-size:16px; }
+.invite-account { margin-top:14px; justify-content:space-between; flex-wrap:wrap; font-size:12px; }
+.invite-text-btn { background:none; color:#edcd94; border:none; text-decoration:underline; font:inherit; cursor:pointer; padding:6px 0; }
+#invite-preview { margin-top:7px; } #invite-offer:not([hidden]) { margin-top:7px; color:#f4daac; }
+#referral-notice { margin:8px 0; padding:8px 12px; border-left:2px solid #e9c580; background:#203947; color:#f2dfbd; font:600 13px/1.45 'Segoe UI',sans-serif; }

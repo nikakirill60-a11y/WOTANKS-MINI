@@ -68,7 +68,7 @@ const TrackDrive = (() => {
     u.rollVel += (64 * (roll - u.swayRoll) - 4.8 * u.rollVel) * dt;
     u.swayRoll += u.rollVel * dt;
   }
-  function step(u, throttle = 0, steer = 0, brake = false, nav = null) {
+  function step(u, throttle = 0, steer = 0, brake = false, nav = null, preview = false) {
     if (!u._placed) place(u);
     if (u.trackBroken && u.trackRepairAt && BattleClock.date() >= u.trackRepairAt) u.trackBroken = false;
     const disabled = u.trackBroken || BattleClock.date() < u.engineRestartAt;
@@ -141,7 +141,7 @@ const TrackDrive = (() => {
     const f = Math.sign(speed) * Math.sqrt(Math.max(0, speed * speed - side * side)),
       x = u.x,
       y = u.y;
-    u.driveBlocked = TrackContact.move(u, c * f - s * side, s * f + c * side, nav);
+    u.driveBlocked = TrackContact.move(u, c * f - s * side, s * f + c * side, nav, preview);
     u.vx = u.x - x;
     u.vy = u.y - y;
     if (u.driveBlocked) {

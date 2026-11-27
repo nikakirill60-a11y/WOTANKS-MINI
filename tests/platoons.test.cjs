@@ -95,7 +95,25 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   // Hide the host's local input menu over the running world; the ally still drives.
   await a.evaluate(()=>BattleInput.pause());assert.match(await a.locator('#input-title').innerText(),/бой взвода продолжается/);
   const pos=await a.evaluate(()=>GameState.units.map(u=>[u.x,u.y]));
+  // Withhold the authoritative reply after a fresh sample. The actual vehicle
+  // used by the wingman's renderer must start moving without another host frame.
+  await b.evaluate(()=>new Promise(resolve=>{
+    const net=GameState.platoon,receive=net.receiveWorld.bind(net); let armed=false,hold=true,queued;
+    net.receiveWorld=w=>{
+      if (!armed) {
+        const old=net.lastWorld; receive(w); if (net.lastWorld===old) return;
+        armed=true; const p=GameState.player; window.driveProbe={world:net.lastWorld,x:p.x,y:p.y,hp:p.hp}; resolve();
+      } else if (hold) queued=w;
+      else setTimeout(()=>{ if (!net.closed) receive(w); },[45,185,65,115][w.n%4]);
+    };
+    window.releaseWorld=()=>{ hold=false; if (queued) receive(queued); };
+  }));
   await b.keyboard.down('KeyW');
+  await b.waitForFunction(()=>{
+    const p=GameState.player,q=window.driveProbe;
+    return GameState.platoon.lastWorld===q.world && Math.hypot(p.x-q.x,p.y-q.y)>.03 && p.hp===q.hp;
+  },null,{timeout:3000});
+  await b.evaluate(()=>window.releaseWorld());
   const moved=points=>Math.hypot(GameState.units[1].x-points[1][0],GameState.units[1].y-points[1][1])>3;
   try { await a.waitForFunction(moved,pos,{timeout:12000});await b.waitForFunction(moved,pos,{timeout:12000}); }
   catch(e) {

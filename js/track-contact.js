@@ -97,7 +97,7 @@ const TrackContact = (() => {
     }
     return { nx: dx * a.c - dy * a.s, ny: dx * a.s + dy * a.c, depth };
   }
-  function move(u, dx, dy, nav) {
+  function move(u, dx, dy, nav, preview = false) {
     const { bounds } = GameState.arena,
       box = pose(u),
       f = shape(u),
@@ -151,7 +151,8 @@ const TrackContact = (() => {
           if (tree.fallen) continue;
           const hit = trunk(box, tree);
           if (!hit) continue;
-          if (Math.abs(u.driveSpeed) > 0.8 || TrackDrive.profile(u).mass > 40) {
+          // Only the authority can fell a tree; prediction respects standing cover.
+          if (!preview && (Math.abs(u.driveSpeed) > 0.8 || TrackDrive.profile(u).mass > 40)) {
             tree.fallen = true;
             tree.angle = Math.atan2(-hit.ny, -hit.nx);
             arena.treeRevision++;

@@ -1,8 +1,8 @@
 // One authoritative browser (the commander), one private, write-isolated topic per seat.
 // Peers send driving/aim intent only. No peer simulates bots, reports hits or sets HP.
 class PlatoonMatch {
-  static interval = 120;
-  static pose = ['x','y','rideHeight','angle','tAngle','aimPitch','groundPitch','groundRoll','swayPitch','swayRoll'];
+  static interval = 100;
+  static pose = PlatoonMotion.pose;
   static signals = {KeyZ:'Атакую!', KeyX:'Нужна помощь!', KeyC:'Защищаем базу!', KeyV:'Так точно', KeyB:'Никак нет'};
   constructor(room, service) {
     this.room = room; this.me = room.me; this.host = room.me === 0;
@@ -50,6 +50,10 @@ class PlatoonMatch {
     this.live = true; const now = performance.now();
     for (const i of this.drivers.keys()) if (i!==this.me) this.seen.set(i,now);
     this.walls = [...GameState.walls]; this.lastStep = now; this.carry = 0;
+    if (!this.host) {
+      this.prediction=new PlatoonPrediction(GameState.player); this.playback=new PlatoonPlayback();
+      this.ackAt=this.worldAt=now;
+    }
     beginSortie();
     if (this.host) this.clock = setInterval(()=>{
       const n = performance.now(); this.carry += Math.min(150,n-this.lastStep); this.lastStep = n;
@@ -69,7 +73,7 @@ class PlatoonMatch {
   }
   useHttp() {
     if (this.http || this.closed) return;
-    this.http=true; this.closeSocket();
+    this.http=true; this.closeSocket(); this.lastSent=null;
     for (const i of this.seen.keys()) this.seen.set(i,performance.now());
   }
   closeSocket() {
@@ -103,17 +107,30 @@ class PlatoonMatch {
   }
   stop() {
     this.closed = true; this.live = false; clearInterval(this.clock); clearInterval(this.pulse);
-    this.closeSocket();
+    this.closeSocket(); this.prediction=null; this.playback=null;
   }
-  sendInput(action, value) {
-    const g = GameState, p = g.player;
-    if (!this.live || !p || this.host) return false;
-    const on = BattleInput.running && !p.dead && !document.hidden;
-    const {forward,turn,brake} = on ? driveIntent() : {forward:0,turn:0,brake:true};
-    const board = on && BattleView.artillery;
-    return this.send('drive',{n:++this.sequence,forward,turn,brake,hold:!on||g.holdTurret, yaw:p.lookYaw,pitch:p.lookPitch,
-      shell:g.curShell,trigger:on && (g.mouseDown || g.mobileFireActive), board:board ? [board.x,board.y] : null,
-      ...(action && on && {action,value})});
+  intent() {
+    const g=GameState,p=g.player,on=BattleInput.running && !p.dead && !document.hidden;
+    const drive=on ? driveIntent() : {forward:0,turn:0,brake:true};
+    const board=on && BattleView.artillery;
+    return {...drive,hold:!on || g.holdTurret,yaw:p.lookYaw,pitch:p.lookPitch,
+      shell:g.curShell,trigger:on && (g.mouseDown || g.mobileFireActive),board:board ? [board.x,board.y] : null};
+  }
+  sendInput(action,value,c) {
+    if (!this.live || this.closed || this.host || !GameState.player) return false;
+    c ??= this.intent();
+    const now=performance.now(),prev=this.lastSent;
+    if (!this.http && !action && prev) {
+      const edge=c.forward!==prev.forward || c.turn!==prev.turn || c.brake!==prev.brake || c.hold!==prev.hold || c.trigger!==prev.trigger || c.shell!==prev.shell;
+      const aim=Math.abs(wrapAngle(c.yaw-prev.yaw))>.003 || Math.abs(c.pitch-prev.pitch)>.003 ||
+        c.board?.[0]!==prev.board?.[0] || c.board?.[1]!==prev.board?.[1];
+      if (now-this.sentAt<(edge ? 32 : aim ? 85 : 180)) return false;
+    }
+    const on=BattleInput.running && !GameState.player.dead && !document.hidden;
+    const n=++this.sequence;
+    const sent=this.send('drive',{...c,n,...(action && on && {action,value})});
+    if (sent) { this.lastSent=c; this.sentAt=now; this.prediction?.markSent(n); }
+    return sent;
   }
   action(type,value) {
     return this.sendInput(type,value);
@@ -142,12 +159,9 @@ class PlatoonMatch {
   stepDriver(p) {
     const c = this.inputs.get(p.driverSeat);
     if (!c || performance.now()-c.at>(this.http?1250:600)) { TrackDrive.step(p,0,0,true); if (c) c.tap=false; return; }
-    const rel = wrapAngle(p.tAngle - p.angle);
-    const assist = c.board && !c.hold && !c.forward && !c.turn && !p.isMoving ? c.board.steer(p) : 0;
-    TrackDrive.step(p,c.forward,c.turn || assist,c.brake);
-    p.tAngle=wrapAngle(p.angle+rel); p.constrainTraverse();
-    if (c.board) c.board.step(p,1/60,c.hold);
-    else if (!c.hold) { p.setLook(c.yaw,c.pitch); p.slewDriver(1/60); }
+    PlatoonMotion.drive(p,c);
+    // Acknowledge only a command that actually advanced on the authority.
+    p.driveAck=c.n; p.driveHeld=c.held=(c.held || 0)+1;
     if ((c.tap || c.trigger) && !(c.board && c.hold)) p.fire(c.shell,c.board);
     c.tap=false;
   }
@@ -188,6 +202,11 @@ class PlatoonMatch {
       ...PlatoonMatch.pose.map((k,i)=>q(u[k],i<3?100:10000)), q(u.hp),
       +u.dead | (+u.visible<<1) | (+!!u.spotted<<2) | (+u.airborne<<3) | (+u.trackBroken<<4) | (+u.isMoving<<5),
       q(u.speedKmh), u.currentTerrain, u.shotsFired||0, q(u.vx), q(u.vy)]),
+      // Additive: old clients can still read their 17-field unit tuples. No position,
+      // clock or velocity is ever accepted in a driver's input packet.
+      motion:Object.fromEntries([...this.drivers.keys()].map(i=>{const p=g.units[i],date=BattleClock.date();
+        return [i,[p.driveAck||0,p.driveHeld||0,q(p.yawRate,10000),q(p.riseSpeed),q(p.pitchVel,10000),q(p.rollVel,10000),
+          +(p.engineRestartAt>date) | (+(p.critTimers.engine>date)<<1) | (+(p.fieldKit?.fuelBoostTimer>date)<<2)]];})),
       guns:[...this.drivers.keys()].map(i=>{const p=g.units[i],c=p.calibration;return [i,p.curMag,+p.isReloading,
         Math.max(0,Math.round(p.nextShot-now)),!!c?.active,c?.until!=null ? Math.max(0,Math.round(c.until-now)) : null,
         p.drownTimer??null,p.kitMask||0,this.inputs.get(i)?.board?.focus||0];}),
@@ -200,21 +219,21 @@ class PlatoonMatch {
   }
   receiveWorld(w) {
     const g=GameState;
-    if (!this.live || !w || !Number.isSafeInteger(w.n) || w.n<=this.lastWorld || w.units?.length!==g.units.length ||
-        !w.units.every(r=>Array.isArray(r) && r.length===17 && r.slice(0,13).every(Number.isFinite) && Object.hasOwn(CONFIG.TERRAIN,r[13]))) return;
-    const now = performance.now(), gunTime = BattleClock.now(); this.seen.set(0,now);
+    if (!this.live || this.host || !this.playback || !w || !Number.isSafeInteger(w.tick) || w.tick<0 || !Number.isSafeInteger(w.n) || w.n<=this.lastWorld || w.units?.length!==g.units.length ||
+        !w.units.every(r=>Array.isArray(r) && r.length===17 && r.slice(0,13).every(Number.isFinite) && Object.hasOwn(CONFIG.TERRAIN,r[13]) && r.slice(14).every(Number.isFinite))) return;
+    const now = performance.now(), gunTime = BattleClock.now();
+    if (!this.playback.push(w,now,this.http)) return;
+    const gap=now-this.worldAt; this.worldAt=now; this.seen.set(0,now);
     const first = this.lastWorld<0; this.lastWorld=w.n; ticks=w.tick;
     for (const [i,r] of w.units.entries()) {
       const p=g.units[i], hp=r[10], flags=r[11];
-      if (first) PlatoonMatch.pose.forEach((k,j)=>p[k]=r[j]);
-      p.fromPose=PlatoonMatch.pose.map(k=>p[k]); p.toPose=r;
+      if (first && p!==g.player) PlatoonMatch.pose.forEach((k,j)=>p[k]=r[j]);
       if (!p.dead && (flags&1)) boom(p.x,p.y);
       else if (hp<p.hp) { sparks(p.x,p.y,p.aimHeight); if (p===g.player) dmgLog('−'+Math.ceil(p.hp-hp),'#ffa78b'); }
       if (r[14]>(p.shotsFired||0)) { const tip=p.muzzle(); p.lastShot=BattleClock.date(); spawnParticles(tip.x,tip.y,'#ffb24c',5,1.2,8,tip.h); if (p===g.player) snd('shot'); }
       p.hp=hp; p.dead=!!(flags&1); p.visible=!!(flags&2); p.spotted=!!(flags&4); p.airborne=!!(flags&8);
       p.trackBroken=!!(flags&16); p.isMoving=!!(flags&32); p.speedKmh=r[12]; p.currentTerrain=r[13]; p.shotsFired=r[14]; p.vx=r[15]; p.vy=r[16];
     }
-    this.poseDuration=bounded(now-(this.poseAt??now),65,this.http?450:200); this.poseAt=now;
     for (const [i,mag,loading,until,cal,switchIn,water,mask,focus] of w.guns) {
       const p=g.units[i]; p.curMag=mag; p.isReloading=!!loading; p.nextShot=gunTime+until; p.drownTimer=water; p.kitMask=mask;
       if (p.calibration) { p.calibration.active=cal; p.calibration.until=switchIn===null?null:gunTime+switchIn; }
@@ -232,15 +251,27 @@ class PlatoonMatch {
     CombatMechanics.smokeClouds=w.smoke.map(([x,y,duration])=>({x,y,duration,radius:38,maxDuration:12}));
     CombatMechanics.artilleryStrikes=w.strikes.map(([x,y,timer,exploded])=>({x,y,timer,exploded,radius:140}));
     [g.battleDmg,g.battleKills]=w.scores[this.me]; updateScoreboard();
+    const m=w.motion?.[this.me];
+    this.legacy=!(Array.isArray(m) && m.length===7 && m.every(Number.isFinite));
+    if (!this.legacy) {
+      if (m[0]!==this.ack) { this.ack=m[0]; this.ackAt=now; }
+      this.prediction.reconcile(w.units[this.me],m,gap>(this.http?1700:900));
+    }
   }
   stepView(dt) {
-    const g=GameState, f=bounded((performance.now()-this.poseAt)/this.poseDuration,0,1);
-    for (const p of g.units) if (p.toPose) PlatoonMatch.pose.forEach((k,j)=>{
-      const a=p.fromPose[j], b=p.toPose[j]; p[k]=a+(j===3||j===4?wrapAngle(b-a):b-a)*f;
-    });
-    if (BattleInput.running) {
-      BattleInput.consumeLook();
-      if (!g.player.dead) BattleView.stepPlayer(dt/1000,0,true);
+    if (!this.live || this.closed || this.result) return;
+    const g=GameState,now=performance.now();
+    this.playback.draw(g.units,this.legacy?null:g.player,now,dt,this.http);
+    if (BattleInput.running && !g.player.dead) {
+      BattleInput.consumeLook(); BattleView.stepPlayer(dt/1000,0,true);
+    }
+    const c=this.intent();
+    // Check for a press/release every display frame, not just the heartbeat.
+    // In fallback, exchange() still coalesces input into one bounded REST call.
+    if (!this.http) this.sendInput(null,null,c);
+    if (!this.legacy) {
+      const fresh=now-this.worldAt<(this.http?1250:650) && now-this.ackAt<(this.http?1700:950);
+      this.prediction.advance(dt,c,fresh); this.prediction.present(dt);
     }
     updateVisualEffects(); // visual particles only; never run AI, collisions, damage or endBattle here
   }

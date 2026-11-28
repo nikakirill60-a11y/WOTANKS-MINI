@@ -17,14 +17,12 @@
 #res-panel small { display: block; margin-bottom: 3px; text-transform: uppercase; font: 9px var(--bay-mono); letter-spacing: .09em; color: var(--bay-muted); }
 #res-panel b { font: 600 14px var(--bay-mono); white-space: nowrap; }
 #res-panel .gold-txt { color: var(--bay-gold); }
-#ui #exchange-panel { border: 0; border-left: 1px solid var(--bay-line); padding: 0 0 0 15px; background: none; gap: 5px; }
-#ui #exchange-panel .btn, .garage-settings { background: #252d27; border: 1px solid var(--bay-line); border-radius: 4px; color: #d3d9cd; padding: 7px 9px; font: 600 10px var(--bay-mono); cursor: pointer; white-space: nowrap; }
+.garage-settings { background: #252d27; border: 1px solid var(--bay-line); border-radius: 4px; color: #d3d9cd; padding: 7px 9px; font: 600 10px var(--bay-mono); cursor: pointer; white-space: nowrap; }
 .garage-settings { font-size: 18px; padding: 2px 7px; }
-#exchange-msg:empty { display: none; }
 #ui .top-btns { display: flex; justify-content: flex-start; flex-wrap: nowrap; touch-action: pan-x; gap: 4px; padding: 5px clamp(12px, 3vw, 48px); overflow-x: auto; border-top: 1px solid #2a322c; scrollbar-width: thin; scrollbar-color: #46513f transparent; }
 .depot-tool { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 0 0 auto; padding: 6px 8px; background: none; border: 1px solid transparent; border-radius: 3px; font: 500 12px/1.2 'Segoe UI', Arial, sans-serif; color: #cbd3c8; cursor: pointer; }
 .depot-tool svg { width: 14px; height: 14px; fill: none; stroke: #b5bea9; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
-.depot-tool:hover, #ui #exchange-panel .btn:hover, .garage-settings:hover { background: #333d33; color: #fff; }
+.depot-tool:hover, .garage-settings:hover { background: #333d33; color: #fff; }
 #ui #main-garage-area { touch-action: pan-y; display: block; min-height: 0; padding: 0; overflow-y: auto; scrollbar-color: #495447 #1a201c; }
 .hangar-workspace { --stage-height: clamp(280px, calc(100svh - 390px), 580px); padding: 17px clamp(14px, 3vw, 48px) 12px; }
 .hangar-workspace [hidden] { display: none !important; }
@@ -93,13 +91,13 @@
 #ui .slot-name { color: #e3e9de; }
 @media (max-width: 820px) {
   .hangar-topline { gap: 8px; }.garage-brand svg { width: 26px; } #ui .garage-brand strong { font-size: 16px; }
-  #ui #res-panel { gap: 10px; } #res-panel b { font-size: 12px; } #ui #exchange-panel { padding-left: 6px; }
+  #ui #res-panel { gap: 10px; } #res-panel b { font-size: 12px; }
   .bay-grid { grid-template-columns: minmax(0,1fr) 218px; gap: 8px; } .bay-plate { display: none; }
 }
 @media (max-width: 650px) {
-  .hangar-topline { display: grid; grid-template-columns: 1fr auto auto; padding: 6px 12px; gap: 5px 8px; }
+  .hangar-topline { display: grid; grid-template-columns: 1fr auto; padding: 6px 12px; gap: 5px 8px; }
   #ui .garage-brand { grid-column: 1; } .garage-brand svg { width: 24px; height: 29px; }
-  #ui #exchange-panel { grid-row: 1; grid-column: 2; border: 0; } .garage-settings { grid-row: 1; grid-column: 3; }
+  .garage-settings { grid-row: 1; grid-column: 2; }
   #ui #res-panel { grid-column: 1/-1; justify-content: space-between; } #res-panel small { display: inline; margin-right: 4px; font-size: 8px; }
   #ui .top-btns { padding-block: 3px; } .hangar-workspace { --stage-height: clamp(235px, 36svh, 320px); padding: 11px 10px; }
   .hangar-heading { margin-bottom: 8px; } .bay-tabs button { padding: 7px 8px; font-size: 10px; } .bay-kicker { font-size: 8px; }

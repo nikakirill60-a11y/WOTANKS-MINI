@@ -3,6 +3,7 @@
 
 const CONFIG = {
   TIER_ROMAN: ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"],
+  ARTILLERY_SUPPORT: false, // auxiliary map strike only; playable SPGs use Tank.fire
   SHELL_FLIGHT_RATE: 1.5, // arcade travel only, not damage, range or reload
   SHELLS: [
     { name: 'ББ', sMul: 1, dMul: 1, penMul: 1, color: '#f1c40f', rico: true },
@@ -23,6 +24,7 @@ const CONFIG = {
   SPG_ROUND: { name: 'ОФ', sMul: 1, dMul: 1, penMul: 1, color: '#ffd48b' },
   PROMOCODES: {
     "ARTA": { vehicle: "GPZ", rentalBattles: 4 },
+    "25_ZAR": { vehicle: "GPZ", rentalBattles: 6 },
     "15_ZAR": { gold: 500, xp: 2500 },
     "BETA_TEST": { gold: 500 },
     "START2025": { gold: 100, silver: 5000 },

@@ -114,9 +114,11 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.equal(await page.locator('#login-screen, input[type=password]:visible, #tab-market, #tab-referral, #chat-panel, #leaderboard-modal[open]').count(), 0);
   assert.equal(await page.locator('#tank-carousel .tank-slot').count(), 1);
   assert.equal(await page.locator('#xp-val').textContent(), '500');
-  await click('ОБМЕН');
-  assert.equal(await page.locator('#xp-val').textContent(), '400');
-  assert.equal(await page.locator('#gold-val').textContent(), '10');
+  assert.equal(await page.getByRole('button',{name:'ОБМЕН',exact:true}).count(),0);
+  assert.equal(await page.evaluate(()=>typeof window.exchangeXP),'undefined');
+  await click('Код');await page.getByLabel('Промокод',{exact:true}).fill('BETA_TEST');await click('АКТИВИРОВАТЬ');await click('ЗАКРЫТЬ');
+  assert.equal(await page.locator('#xp-val').textContent(), '500');
+  assert.equal(await page.locator('#gold-val').textContent(), '500');
 
   await click('Контейнеры');
   for (const tab of await page.locator('.modal-tab').all()) {
@@ -142,7 +144,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.ok(await page.locator('#ui').isVisible());
   assert.equal(await page.locator('.tank-slot.selected .slot-name').innerText(), 'МС-1');
   assert.equal(await page.locator('.n-btn.active-n').innerText(), 'СССР');
-  assert.equal(await page.locator('#gold-val').innerText(), '10');
+  assert.equal(await page.locator('#gold-val').innerText(), '500');
   assert.equal(await page.locator('#charges-val').count(), 0);
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   await page.locator('button[onclick="showSettings()"]').click();
@@ -185,7 +187,8 @@ test('multiple legacy accounts stay untouched; no account is silently selected',
 test('an unreadable save is not overwritten', async t => {
   const { page, click } = await offlineGame(t, { seed: { [saveKey]: '{broken' } });
   assert.ok(await page.locator('#save-status.warning').isVisible());
-  await click('ОБМЕН');
+  await click('Код');await page.getByLabel('Промокод',{exact:true}).fill('25_zar');await click('АКТИВИРОВАТЬ');
+  assert.match(await page.locator('#promo-result').innerText(),/Аренда на 6 боёв/);
   await page.reload();
   assert.equal(await page.evaluate(key => localStorage.getItem(key), saveKey), '{broken');
 });
@@ -429,14 +432,15 @@ test('offline team modes use the shared 3D asset; touch driving/firing, replay a
   for(const [name,type,count,map] of [['7×7','pc',14,'city'],['В БОЙ 15×15','mobile',30,'desert']]){
     await page.locator('#map-select').selectOption(map);await click(name);await chooseControls(page,type);await ready(page);
     const units=await page.evaluate(()=>{
-      const pool=Object.values(DB).filter(t=>Math.abs(t.tier-GameState.player.tier)<=1).map(t=>t.id);
+      const tiers=new Set(GameState.units.map(u=>u.tier)), own=GameState.player.tier;
+      const pool=Object.values(DB).filter(t=>tiers.has(t.tier) && (!t.source || ['collection','premium'].includes(t.source))).map(t=>t.id);
       const mover=GameState.units.findIndex(u=>u.bot && !u.isSPG);
-      return {n:BattleView.stats().units,poolSize:pool.length,
+      return {n:BattleView.stats().units,poolSize:pool.length,inBand:Math.max(...tiers)-Math.min(...tiers)<=1 && tiers.has(own),
         shared:GameState.units.every(u=>pool.includes(u.id)&&u.modelAsset===GameState.units.find(t=>t.id===u.id).modelAsset),
         types:new Set(GameState.units.map(u=>u.id)).size,
         allFinite:GameState.units.every(u=>Number.isFinite(u.angle)&&Number.isFinite(u.y)),start:[mover,GameState.units[mover].x,GameState.units[mover].y]};
     });
-    assert.equal(units.n,count);assert.ok(units.types>count/2 && units.types<=Math.min(units.poolSize,count));assert.ok(units.shared&&units.allFinite);
+    assert.equal(units.n,count);assert.ok(units.types>=Math.min(units.poolSize,count/2) && units.types<=Math.min(units.poolSize,count));assert.ok(units.shared&&units.allFinite&&units.inBand);
     await page.waitForFunction(([i,x,y])=>Math.hypot(GameState.units[i].x-x,GameState.units[i].y-y)>4,units.start);
     if(type==='pc'){
       // Real RAF motion was checked above. On the full-size map walk the remaining
@@ -631,8 +635,10 @@ test('all ten selected plans become playable WebGL arenas with exploration, cont
           BattleView.syncCamera();BattleView.aim();BattleView.draw();updateHUD();
         } finally {delete performance.now;Date.now=clock;Math.random=rng;}
         const allies=g.units.filter(u=>u.team!=='enemy'),enemies=g.units.filter(u=>u.team==='enemy');
-        const different=enemies.some(e=>!allies.some(u=>u.id===e.id));
-        const inBand=g.units.every(u=>Math.abs(u.tier-g.player.tier)<=1);
+        const tiers=new Set(g.units.map(u=>u.tier));
+        const reserves=Object.values(DB).some(t=>tiers.has(t.tier) && (!t.source || ['premium','collection'].includes(t.source)) && !allies.some(u=>u.id===t.id));
+        const different=!reserves || enemies.some(e=>!allies.some(u=>u.id===e.id));
+        const inBand=Math.max(...tiers)-Math.min(...tiers)<=1;
         const onBase=g.units.filter(u=>u.bot && u.isSPG).every(u=>!u.bot.scout && u.bot.sector<0 && Math.hypot(u.x-u.bot.post.x,u.y-u.bot.post.y)<65);
         const info={player:g.player.name,nations:[...new Set(allies.map(u=>DB[u.id].nat))],different,inBand,onBase,mobileBots,id:a.id,sizeOK:document.querySelector('#map-size').textContent===spec.size.join(' × ')+' м',
           hudOK:document.querySelector('#combat-map').textContent===spec.name && document.querySelector('#combat-sector').textContent.endsWith(size+' × '+size),
@@ -774,7 +780,9 @@ test('capture-denied preview: relative mouse, actual barrel on quick click, moun
   await page.keyboard.press('q');await page.keyboard.press('f');
   assert.ok(await page.evaluate(()=>GameState.consumables[0] && GameState.consumables[3]));
   await page.keyboard.press('x');assert.match(await page.locator('#combat-message').innerText(),/Нужна помощь/);
-  await page.keyboard.press('8');await page.waitForFunction(()=>!!CombatMechanics.artilleryStrikes.length);
+  assert.ok(await page.locator('#strike-btn').isHidden() && await page.locator('#strike-btn').isDisabled());
+  await page.keyboard.press('8');assert.equal(await page.evaluate(()=>CombatMechanics.artilleryStrikes.length),0);
+  await page.keyboard.press('7');assert.ok(await page.evaluate(()=>CombatMechanics.smokeClouds.length>0));
   await page.keyboard.press('Escape');assert.ok(await page.locator('#input-menu').isVisible());await page.locator('#input-menu .battle-cancel').first().click();
   assert.equal(await page.evaluate(()=>BattleInput.state),'paused','declining the leave confirmation keeps the match paused');await page.evaluate(()=>backToGarage());
   assert.ok(await page.locator('#game').isHidden());assert.ok(await page.locator('#input-menu').isHidden());assert.equal(await page.evaluate(()=>BattleInput.state),'off');

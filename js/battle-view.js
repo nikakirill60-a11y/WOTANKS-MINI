@@ -340,12 +340,10 @@ const BattleView = (() => {
   }
   // Advance the mount only on simulation ticks. A click or a slow/fast display
   // must never add an extra slew step or snap a shot to the camera ray.
-  function stepPlayer(dt, mountYaw, aimOnly = false) {
+  function stepPlayer(dt, aimOnly = false) {
     if (!look || !camera) return; // non-rendered battle simulation
     const g = GameState,
       p = g.player;
-    if (!aimOnly) p.tAngle = wrapAngle(p.angle + mountYaw);
-    p.constrainTraverse();
     syncCamera(dt);
     if (artillery) {
       if (!aimOnly) artillery.step(p, dt, g.holdTurret);

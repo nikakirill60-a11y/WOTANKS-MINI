@@ -35,7 +35,7 @@ class ArtillerySight {
   step(p, dt, holding) {
     if (!holding) {
       p.setLook(this.bearing(p), ArtillerySight.raisedPitch);
-      p.slewSight(.75 * dt, .85 * dt);
+      p.slewDriver(dt);
     }
     const steady = !holding && !p.isMoving && !p.airborne && Math.abs(p.yawRate) < .025 && this.aligned(p);
     this.focus = bounded(this.focus + (steady ? dt / 2.4 : -dt * 1.8), 0, 1);

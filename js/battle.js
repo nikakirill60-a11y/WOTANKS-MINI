@@ -48,49 +48,64 @@ function startBattle(mode) {
 function startTraining() {
   return launchBattle(1);
 }
-// Deal each side its own shuffled nation decks. The player's garage (including
-// rentals) is not the bot pool; fielding a bot never grants or spends a vehicle.
-const MATCH_TOP_TIER = Math.max(...Object.values(DB).map(t=>t.tier));
+// Eligibility (also used by the platoon lobby) is not the match-level band roll.
+const MATCH_TOP_TIER = Math.max(...Object.values(DB).map(t => t.tier));
 function matchBand(ids) {
-  const tiers=ids.map(id=>DB[id]?.tier);
-  const low=Math.min(...tiers), high=Math.max(...tiers);
-  return tiers.length && high-low<=1 ? [Math.max(1,high-1),Math.min(MATCH_TOP_TIER,low+1)] : null;
+  const tiers = ids.map(id => DB[id]?.tier);
+  const low = Math.min(...tiers), high = Math.max(...tiers);
+  return tiers.length && high-low <= 1 ? [Math.max(1,high-1), Math.min(MATCH_TOP_TIER,low+1)] : null;
 }
 function makeRosters(playerId, size, random = Math.random, seats = [playerId]) {
-  const band=matchBand(seats);
-  if (!band) throw Error('Во взводе нужны машины одного или соседних уровней.');
-  const byNation = new Map();
-  for (const tank of Object.values(DB)) {
-    if (tank.tier < band[0] || tank.tier > band[1]) continue;
-    if (tank.source && tank.source !== 'premium' && tank.source !== 'collection') continue;
-    if (!byNation.has(tank.nat)) byNation.set(tank.nat, []);
-    byNation.get(tank.nat).push(tank.id);
+  const humans = seats.filter(Boolean), legal = matchBand(humans);
+  if (!legal) throw Error('Во взводе нужны машины одного или соседних уровней.');
+  const tier = DB[playerId].tier;
+  let [low, high] = legal;
+  // A mixed platoon already fixed BOTH tiers. Otherwise draw exactly once for
+  // the whole match. At I/X the unavailable neighbour folds into same-tier.
+  if (humans.every(id => DB[id].tier === tier)) {
+    const roll = random();
+    if (roll < .5) low = high = tier;
+    else if (roll < .75) high = tier;
+    else low = tier;
   }
-  const nations = [...byNation.keys()];
-  function deal(first) {
-    const deck = first ? [first] : [];
-    const groups = nations.map(nat => byNation.get(nat).filter(id => id !== first));
-    const start = Math.floor(random() * groups.length);
-    // One draw per nation per round. The player already filled their nation's
-    // first seat: even a 7×7 can now field all seven research nations.
-    let seatedNation = first ? nations.indexOf(DB[first].nat) : -1;
-    while (groups.some(g => g.length)) {
-      for (let i = 0; i < groups.length; i++) {
-        const index = (start + i) % groups.length, g = groups[index];
-        if (index !== seatedNation && g.length) deck.push(g.splice(Math.floor(random() * g.length), 1)[0]);
-      }
-      seatedNation = -1;
+  const pool = Object.values(DB).filter(t => t.tier >= low && t.tier <= high &&
+    (!t.source || t.source === 'premium' || t.source === 'collection'));
+  const count = (m, key) => m.get(key) || 0;
+  function deal(fixed) {
+    const team = Array.from({length:size}, (_, i) => fixed[i] || null);
+    const models = new Map(), nations = new Map();
+    let left = size, lowLeft = low === high ? size : Math.floor(size/2);
+    function seat(id) {
+      const t = DB[id];
+      models.set(id, count(models,id)+1); nations.set(t.nat, count(nations,t.nat)+1);
+      if (t.tier === low) lowLeft--;
+      left--;
     }
-    return deck;
+    // Reserve actual human seats first, even when the middle platoon seat is vacant.
+    team.filter(Boolean).forEach(seat);
+    for (let i=0; i<size; i++) if (!team[i]) {
+      const want = lowLeft === left || (lowLeft > 0 && random()*left < lowLeft) ? low : high;
+      // Independent sides, equal tier counts. Use each distinct model before
+      // repeats (only seven tier-Is exist); among them prefer unrepresented nations.
+      let best = Infinity, choices = [];
+      for (const t of pool) if (t.tier === want) {
+        const score = (size+1)*count(models,t.id) + count(nations,t.nat);
+        if (score < best) { best = score; choices = []; }
+        if (score === best) choices.push(t.id);
+      }
+      seat(team[i] = choices[Math.floor(random()*choices.length)]);
+    }
+    return team;
   }
-  const take = deck => Array.from({length:size}, (_, i) => deck[i % deck.length]);
-  const allies = take(deal(playerId)), awayDeck = deal(null), enemies = take(awayDeck);
-  // At tier I almost the whole pool fits in a 15×15. If the same set happened to
-  // be drawn, use a reserve from the enemy deck, not just a different display order.
-  const reserve = awayDeck[size];
-  if (reserve && enemies.every(id => allies.includes(id))) {
-    const slot = enemies.findIndex(id => DB[id].nat === DB[reserve].nat);
-    enemies[slot < 0 ? size - 1 : slot] = reserve;
+  const allies = deal(seats), enemies = deal([]);
+  if (enemies.every(id => allies.includes(id))) {
+    // Avoid mirrored lists when a reserve exists, without widening the match,
+    // changing the tier split or losing a represented nation.
+    for (const t of pool) if (!allies.includes(t.id)) {
+      const i = enemies.findIndex(id => DB[id].tier === t.tier && (DB[id].nat === t.nat ||
+        enemies.filter(other => DB[other].nat === DB[id].nat).length > 1));
+      if (i >= 0) { enemies[i] = t.id; break; }
+    }
   }
   return [allies, enemies];
 }

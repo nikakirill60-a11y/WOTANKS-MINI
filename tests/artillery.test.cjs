@@ -33,24 +33,37 @@ test('ARTA grants four battles once, without research, payment or a new slot; th
   assert.deepEqual(await saved(),parked);
 });
 
-test('full garage: the promo saves one reservation, survives reload and delivers once when a berth opens',async t=>{
+test('25_zar grants six sorties once; an unused ARTA extends the same parked vehicle in the reverse order',async t=>{
+  const {page,click,saved}=await openGame(t,{mobile:true});
+  const before=await saved();await click('Код');assert.match(await redeem(page,' 25_zAr ',true),/Аренда на 6 боёв/);
+  const six={...before,owned:[...before.owned,'GPZ'],usedPromos:['25_ZAR'],rentalBattles:{GPZ:6}};
+  assert.deepEqual(await saved(),six);await page.reload();await click('Код');
+  assert.match(await redeem(page,'25_ZAR'),/Уже использован/);assert.deepEqual(await saved(),six);
+  assert.match(await redeem(page,'ARTA'),/Осталось: 10 боёв/);
+  await page.reload();assert.deepEqual(await saved(),{...six,usedPromos:['25_ZAR','ARTA'],rentalBattles:{GPZ:10}});
+  assert.equal(await page.locator('[data-tank-id="GPZ"] .rental-tag').innerText(),'Аренда: 10 боёв');
+});
+
+test('full garage: both promos extend one reservation, survive reload and deliver once when a berth opens',async t=>{
   const fleet=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','IS7'];
   const {page,click,saved}=await openGame(t,{seed:{owned:fleet,selected:'IS7'}}); const before=await saved();
   await click('Код'); const message=await redeem(page);assert.ok(message.includes(name+' ожидает слота'));assert.match(message,/Аренда на 4 боя/);
   const waiting={...before,pendingVehicles:['GPZ'],usedPromos:['ARTA'],rentalBattles:{GPZ:4}}; assert.deepEqual(await saved(),waiting);
   await page.reload(); await click('Ожидают слота: 1');assert.ok((await page.locator('#vehicle-deliveries').innerText()).includes(name+' (аренда на 4 боя)'));
   await click('В ангар'); await click('Код');assert.match(await redeem(page,'arta',true),/Уже использован/);assert.deepEqual(await saved(),waiting);
+  assert.match(await redeem(page,'25_zar'),/Осталось: 10 боёв/);
+  assert.deepEqual(await saved(),{...waiting,usedPromos:['ARTA','25_ZAR'],rentalBattles:{GPZ:10}});
   await click('ЗАКРЫТЬ'); await page.getByRole('button',{name:'Выбрать для боя: Т-26',exact:true}).focus();
   await click('Продать: Т-26');await click('Подтвердить продажу');await page.reload();
   const delivered=await saved();assert.deepEqual(delivered.owned,fleet.filter(id=>id!=='T26').concat('GPZ'));
-  assert.equal(delivered.selected,'IS7');assert.deepEqual(delivered.pendingVehicles,[]);assert.deepEqual(delivered.usedPromos,['ARTA']);
-  assert.deepEqual(delivered.rentalBattles,{GPZ:4}); assert.equal(await page.locator('[data-tank-id="GPZ"] .rental-tag').innerText(),'Аренда: 4 боя');
+  assert.equal(delivered.selected,'IS7');assert.deepEqual(delivered.pendingVehicles,[]);assert.deepEqual(delivered.usedPromos,['ARTA','25_ZAR']);
+  assert.deepEqual(delivered.rentalBattles,{GPZ:10}); assert.equal(await page.locator('[data-tank-id="GPZ"] .rental-tag').innerText(),'Аренда: 10 боёв');
 });
 
-test('already researched GPZ retains selection and equipment; entering ARTA neither clones nor compensates it',async t=>{
+test('permanent GPZ keeps its equipment and refuses both rental promos without consuming either',async t=>{
   const {page,click,saved}=await openGame(t,{seed:{...seed,XP:350,modules:{GPZ:['optics']},upgrades:{GPZ:{gun:1}}}});
   const old=await saved();assert.deepEqual([old.owned,old.selected,old.XP,old.modules.GPZ,old.upgrades.GPZ],[seed.owned,'GPZ',350,['optics'],{gun:1}]);
-  await click('Код'); assert.ok((await redeem(page)).includes(name+' уже в ангаре. Код не потрачен.'));
+  await click('Код'); for (const code of ['ARTA','25_zar']) assert.ok((await redeem(page,code)).includes(name+' уже в ангаре. Код не потрачен.'));
   await page.reload();assert.deepEqual(await saved(),old);assert.deepEqual(old.rentalBattles,{});
   assert.equal(await page.locator('.rental-tag').count(),0);
   await click('Продать: '+name);assert.equal(await page.locator('#sale-price').innerText(),'200 G');await click('Отмена');
@@ -67,7 +80,10 @@ test('rental migration uses the ARTA receipt plus actual possession; sold, corru
       {owned:['GPZ'],rentalBattles:{GPZ:0}},     // last vehicle expired
       {owned:['GPZ'],rentalBattles:{GPZ:'2'}},   // non-integer must not make it permanent
       {owned:['GPZ'],rentalBattles:{GPZ:40,MS1:4}},
-      {owned:['GPZ'],usedPromos:[],rentalBattles:{GPZ:3}} // researched copy, no receipt
+      {owned:['GPZ'],usedPromos:[],rentalBattles:{GPZ:3}}, // researched copy, no receipt
+      {owned:['GPZ'],usedPromos:['25_ZAR'],rentalBattles:{GPZ:40}},
+      {owned:['GPZ'],usedPromos:['ARTA','25_ZAR','25_ZAR'],rentalBattles:{GPZ:40}},
+      {owned:['GPZ'],usedPromos:['25_ZAR']} // not an old counterless ARTA save
     ].map(fields=>{
       const g=decodeProgress({selected:'GPZ',usedPromos:['ARTA'],...fields});
       return [g.rentalBattles,g.owned.includes('GPZ'),g.pendingVehicles,g.selected,g.usedPromos];
@@ -75,7 +91,8 @@ test('rental migration uses the ARTA receipt plus actual possession; sold, corru
   });
   assert.deepEqual(cases,[
     [{GPZ:4},false,['BT42','GPZ'],'MS1',['ARTA']], [{},false,[],'MS1',['ARTA']], [{},false,[],'MS1',['ARTA']],
-    [{},false,[],null,['ARTA']], [{},false,[],null,['ARTA']], [{GPZ:4},true,[],'GPZ',['ARTA']], [{},true,[],'GPZ',[]]
+    [{},false,[],null,['ARTA']], [{},false,[],null,['ARTA']], [{GPZ:4},true,[],'GPZ',['ARTA']], [{},true,[],'GPZ',[]],
+    [{GPZ:6},true,[],'GPZ',['25_ZAR']], [{GPZ:10},true,[],'GPZ',['ARTA','25_ZAR','25_ZAR']], [{},false,[],null,['25_ZAR']]
   ]);
 });
 
@@ -125,6 +142,9 @@ test('four playable sorties only: no charge for a target or cancelled load, no r
   assert.equal(await page.locator('.tank-slot[data-tank-id="GPZ"]').count(),0);assert.equal(await page.locator('#dispatch-name').innerText(),'МС-1');
   assert.equal(await page.evaluate(async()=>{const id=GameState.selected;try{GameState.selected='GPZ';return await startTraining();}finally{GameState.selected=id;}}),false);
   await click('Код');assert.match(await redeem(page),/Уже использован/);assert.deepEqual(await saved(),final);
+  // Expired ARTA: the unused code grants just its own six, not the old four too.
+  assert.match(await redeem(page,'25_zar'),/Аренда на 6 боёв/);await page.reload();const renewed=await saved();
+  assert.deepEqual(renewed,{...final,pendingVehicles:['T62A','GPZ'],rentalBattles:{GPZ:6},usedPromos:['ARTA','25_ZAR']});
 });
 
 async function practice(page,click,type) {

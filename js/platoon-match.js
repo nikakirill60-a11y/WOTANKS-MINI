@@ -10,8 +10,9 @@ class PlatoonMatch {
     // The immutable room ID picks ONE deal and weather, independent of page RNG.
     let seed = parseInt(room.id.slice(0,8),16);
     this.random = () => ((seed = (Math.imul(seed,1664525) + 1013904223) >>> 0) / 4294967296);
-    this.teams = makeRosters(this.drivers.get(0).tank,7,this.random,room.members.map(m=>m.tank));
-    for (const m of room.members) this.teams[0][m.seat] = m.tank;
+    const seats = [];
+    for (const m of room.members) seats[m.seat] = m.tank;
+    this.teams = makeRosters(seats[0],7,this.random,seats);
     this.channels = new Map(); this.inputs = new Map(); this.seen = new Map(); this.sequence = 0; this.lastWorld = -1;
     this.scores = Array.from({length:3},()=>[0,0,0]); this.service = service; this.edges=[]; this.pendingKits=new Set(); this.radioLog=[]; this.lastRadio=0;
   }
@@ -132,6 +133,7 @@ class PlatoonMatch {
     return sent;
   }
   action(type,value) {
+    if (type === 'strike' && !CONFIG.ARTILLERY_SUPPORT) return false;
     return this.sendInput(type,value);
   }
   receiveInput(seat,cmd) {
@@ -152,7 +154,7 @@ class PlatoonMatch {
     if (cmd.action==='kit') this.applyKit(p,cmd.value);
     if (cmd.action==='calibrate') p.toggleCalibration();
     if (cmd.action==='smoke' && (p.nextSmoke ?? 0)<=now) { p.nextSmoke = now+500; CombatMechanics.deploySmokeScreen(p); }
-    if (cmd.action==='strike' && (p.nextStrike ?? 0)<=now) { const q = point(cmd.value); if (q) { p.nextStrike=now+500; CombatMechanics.callArtilleryStrike(...q,p); } }
+    if (cmd.action==='strike' && CONFIG.ARTILLERY_SUPPORT && (p.nextStrike ?? 0)<=now) { const q = point(cmd.value); if (q) { p.nextStrike=now+500; CombatMechanics.callArtilleryStrike(...q,p); } }
     if (cmd.action==='signal' && (p.nextRadio ?? 0)<=now) { p.nextRadio=now+1800; this.relay(seat,cmd.value); }
   }
   stepDriver(p) {
@@ -213,7 +215,7 @@ class PlatoonMatch {
       walls:this.walls.flatMap((w,i)=>w.destroyed?[i]:[]), trees:g.arena.trees.flatMap((t,i)=>t.fallen?[[i,q(t.angle,1000)]]:[]),
       visited:Array.from(g.navigation.recon.teams[0].visited,n=>n>=0?1:0),
       smoke:CombatMechanics.smokeClouds.slice(-32).map(s=>[q(s.x),q(s.y),q(s.duration)]),
-      strikes:CombatMechanics.artilleryStrikes.slice(-32).map(a=>[q(a.x),q(a.y),q(a.timer),+a.exploded]),
+      strikes:CONFIG.ARTILLERY_SUPPORT ? CombatMechanics.artilleryStrikes.slice(-32).map(a=>[q(a.x),q(a.y),q(a.timer),+a.exploded]) : [],
       scores:this.scores.map(s=>s.map(Math.floor))};
   }
   receiveWorld(w) {
@@ -248,7 +250,7 @@ class PlatoonMatch {
     const team=g.navigation.recon.teams[0]; team.count=0; w.visited.forEach((v,i)=>{team.visited[i]=v?1:-1; if(v) team.count++;});
     g.bullets=w.shells.map(([x,y,h,a,dh,color])=>({x,y,h,a,dh,color}));
     CombatMechanics.smokeClouds=w.smoke.map(([x,y,duration])=>({x,y,duration,radius:38,maxDuration:12}));
-    CombatMechanics.artilleryStrikes=w.strikes.map(([x,y,timer,exploded])=>({x,y,timer,exploded,radius:140}));
+    CombatMechanics.artilleryStrikes=CONFIG.ARTILLERY_SUPPORT ? w.strikes.map(([x,y,timer,exploded])=>({x,y,timer,exploded,radius:140})) : [];
     [g.battleDmg,g.battleKills]=w.scores[this.me]; updateScoreboard();
     const m=w.motion?.[this.me];
     this.legacy=!(Array.isArray(m) && m.length===7 && m.every(Number.isFinite));
@@ -262,7 +264,7 @@ class PlatoonMatch {
     const g=GameState,now=performance.now();
     this.playback.draw(g.units,this.legacy?null:g.player,now,dt,this.http);
     if (BattleInput.running && !g.player.dead) {
-      BattleInput.consumeLook(); BattleView.stepPlayer(dt/1000,0,true);
+      BattleInput.consumeLook(); BattleView.stepPlayer(dt/1000,true);
     }
     const c=this.intent();
     // Check for a press/release every display frame, not just the heartbeat.

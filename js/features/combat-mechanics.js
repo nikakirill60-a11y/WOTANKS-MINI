@@ -19,7 +19,7 @@ const CombatMechanics = {
 
   // 24. АРТИЛЛЕРИЙСКИЙ УДАР (Artillery Strike)
   callArtilleryStrike(targetX, targetY, caster = GameState.player) {
-    if (!GameState.gameActive || caster?.dead) return;
+    if (!CONFIG.ARTILLERY_SUPPORT || !GameState.gameActive || !caster || caster.dead) return;
     if (GameState.platoon && !GameState.platoon.host) { GameState.platoon.action('strike',[targetX,targetY]); return; }
     this.artilleryStrikes.push({
       caster, x: targetX,
@@ -35,6 +35,8 @@ const CombatMechanics = {
     this.smokeClouds.forEach(s => s.duration -= dt);
     this.smokeClouds = this.smokeClouds.filter(s => s.duration > 0);
 
+    // Discard queued/legacy strikes too, without interrupting smoke.
+    if (!CONFIG.ARTILLERY_SUPPORT) { this.artilleryStrikes.length = 0; return; }
     // Обновление арт-ударов
     this.artilleryStrikes.forEach(a => {
       a.timer -= dt;

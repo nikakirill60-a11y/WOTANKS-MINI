@@ -215,6 +215,17 @@ def belt(model):
     return mesh.pack('tracks')
 
 
+def finish_obj_surface(data):
+    # These six OBJ viewers mirrored the source frame but kept the old index order.
+    # Fix winding before normals/shadows are built. Do NOT flip our fitted belts,
+    # wheels, or the separately imported tier-X GLB (they are already outward).
+    for part in data['meshes']:
+        if part[0] in ('body', 'gun'):
+            part[2] = encode(((a,c,b) for a,b,c in triples(part[2], '<HHH')), '<HHH')
+    # Standard German paint (StuG III G / Jagdpanther); no per-view tint.
+    data['color'], data['tracks'] = '#707070', '#303030'
+
+
 def fit_export(data, slug):
     if slug=='stug-iii-ausf-b': data['id']='STUG3B'  # STUG3 is a legacy save alias for the Ausf. G.
     model = data['id']
@@ -233,5 +244,6 @@ def fit_export(data, slug):
     gun[1] = encode(((x-dx,y-dy,z-dz) for x,y,z in vs),'<hhh')
     data['gunPivot'] = [v+s/1000 for v,s in zip(data['gunPivot'],(dx,dy,dz))]
     data['meshes'] = [hull.pack('body'),gun,belt(model),*road_wheels(model)]
+    finish_obj_surface(data)
     data['source'] = 'german-tanks-seven-previous-style.zip / '+slug+'-game.html · WoT Inspector OBJ'
     data['triangles'] = sum(len(triples(p[2],'<HHH')) for p in data['meshes'])

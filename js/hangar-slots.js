@@ -19,9 +19,14 @@ const HangarSlots = (() => {
     GameState.owned.push(id); selectAvailable(GameState); return true;
   }
   function award(id, rentalBattles = 0) {
-    if (received(id)) return;
-    if (!park(id)) GameState.pendingVehicles.push(id);
-    if (rentalBattles) GameState.rentalBattles[id] = rentalBattles;
+    if (received(id)) {
+      if (!rentalBattles || !GameState.rentalBattles[id]) return false; // never downgrade a permanent vehicle
+      GameState.rentalBattles[id] += rentalBattles; // keep the same berth or queue position
+    } else {
+      if (!park(id)) GameState.pendingVehicles.push(id);
+      if (rentalBattles) GameState.rentalBattles[id] = rentalBattles;
+    }
+    return true;
   }
   // A permanent prize converts an active or queued rental in place, keeping its berth and equipment.
   function awardPermanent(id) {
@@ -59,11 +64,17 @@ const HangarSlots = (() => {
       id && ['collection','advent'].includes(DB[id].source) && !g.owned.includes(id));
     const saved = g.rentalBattles;
     g.rentalBattles = {};
-    for (const [code, {vehicle:id, rentalBattles:limit}] of Object.entries(CONFIG.PROMOCODES)) {
-      if (!limit || !g.usedPromos.includes(code) || !received(id, g)) continue;
-      // The previous ARTA build saved a receipt ONLY for a successful grant. Never
-      // convert a researched GPZ, re-award a sold one, or reset a recorded countdown.
-      const n = beforeRentalCounters ? limit : saved[id];
+    // Receipts cap the saved remainder; they are not a reason to refill it on load.
+    const limits = new Map();
+    for (const [code, {vehicle:id, rentalBattles}] of Object.entries(CONFIG.PROMOCODES)) {
+      if (rentalBattles && g.usedPromos.includes(code)) limits.set(id, (limits.get(id) || 0) + rentalBattles);
+    }
+    for (const [id, limit] of limits) {
+      if (!received(id, g)) continue;
+      // Only the original ARTA grant existed before counters were saved.
+      const arta = CONFIG.PROMOCODES.ARTA;
+      const legacyArta = beforeRentalCounters && id === arta.vehicle && g.usedPromos.includes('ARTA') && limit === arta.rentalBattles;
+      const n = legacyArta ? limit : saved[id];
       if (Number.isSafeInteger(n) && n > 0) g.rentalBattles[id] = Math.min(n, limit);
       else removeVehicle(id, g); // an exhausted/broken rental must not turn into permanent ownership
     }

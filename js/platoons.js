@@ -8,6 +8,8 @@ const Platoons = (() => {
     tank:'Этой машины нет в облачном ангаре. Проверьте сохранение.', not_ready:'Для выезда нужен хотя бы один готовый союзник.',
     state:'Состав или состояние взвода изменилось.', invalid:'Не удалось подтвердить данные взвода.'};
   const status=text=>{ if (el('status').textContent!==text) el('status').textContent=text; };
+  const compatible=r=>matchBand(r.members.map(m=>m.tank));
+  const tierWarning='Разница больше одного уровня. Участнику нужно выйти, выбрать машину того же или соседнего уровня и вернуться по коду.';
   function paint(s) {
     const r=s?.room;
     el('guest').hidden=!!s; el('setup').hidden=!s||!!r; el('room').hidden=!r;
@@ -19,13 +21,13 @@ const Platoons = (() => {
     if (s.list!==list) {
       s.list=list; el('members').replaceChildren(...r.members.map(m=>{
         const row=document.createElement('li'), name=document.createElement('b'), vehicle=document.createElement('small'), state=document.createElement('em');
-        name.textContent=m.nick+(m.seat===r.me?' · вы':''); vehicle.textContent=DB[m.tank]?.n || m.tank;
+        name.textContent=m.nick+(m.seat===r.me?' · вы':''); vehicle.textContent=(CONFIG.TIER_ROMAN[DB[m.tank]?.tier] || '')+' · '+(DB[m.tank]?.n || m.tank);
         state.textContent=m.seat===0?'Командир':m.ready?'Готов':'Не готов'; row.append(name,vehicle,state); return row;
       }));
     }
     const own=r.members.find(m=>m.seat===r.me), host=r.me===0, ready=r.members.length>=2 && r.members.every(m=>m.ready);
     el('deploy').textContent=host?'В бой взводом':own?.ready?'Снять готовность':'Готов к бою';
-    el('deploy').disabled=!!s.working || r.phase!=='lobby' || (host && !ready);
+    el('deploy').disabled=!!s.working || r.phase!=='lobby' || !compatible(r) || (host && !ready);
     el('device').disabled=r.phase!=='lobby' || (!host && !!own?.ready);
   }
   function lease() {
@@ -81,7 +83,7 @@ const Platoons = (() => {
       s.lastOK=performance.now(); s.room=r;
       if (r.relay && s.net) s.net.useHttp();
       if (r.phase==='lobby') {
-        paint(s); status(r.me===0 ? r.members.length===1?'Передайте код другу, который вошёл в аккаунт.':r.members.every(m=>m.ready)?'Все готовы к выезду.':'Дождитесь готовности союзников.' : r.members.find(m=>m.seat===r.me)?.ready?'Ждём команды на выезд.':'Проверьте управление и подтвердите готовность.');
+        paint(s); status(!compatible(r) ? tierWarning : r.me===0 ? r.members.length===1?'Передайте код другу, который вошёл в аккаунт.':r.members.every(m=>m.ready)?'Все готовы к выезду.':'Дождитесь готовности союзников.' : r.members.find(m=>m.seat===r.me)?.ready?'Ждём команды на выезд.':'Проверьте управление и подтвердите готовность.');
       } else if (r.phase==='loading' && !s.net) prepare(s);
       else if (r.phase==='live' && s.prepared && !s.net.live) s.net.start();
       else if (r.phase==='done' && s.prepared && !s.settled) {
@@ -99,6 +101,7 @@ const Platoons = (() => {
   }
   async function prepare(s) {
     try {
+      if (!compatible(s.room)) { fail(s,tierWarning); return; }
       s.prepAt=performance.now();
       s.net=new PlatoonMatch(s.room,{
         finish:result=>request(s,'finish',{result}), lost:()=>fail(s,'Потеряна связь между участниками.'),
@@ -121,6 +124,7 @@ const Platoons = (() => {
   }
   async function button(op) {
     const s=session; if (!s || s.working || !Accounts.active) return;
+    if ((op==='ready'||op==='start') && !compatible(s.room)) { status(tierWarning); return; }
     s.working=true; paint(s);
     try {
       const args={};

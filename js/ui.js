@@ -28,11 +28,9 @@ function updateResources() {
   var xp = document.getElementById('xp-val');
   var gold = document.getElementById('gold-val');
   var silver = document.getElementById('silver-val');
-  var charges = document.getElementById('charges-val');
   if (xp) xp.innerText = GameState.XP;
   if (gold) gold.innerText = GameState.GOLD;
   if (silver) silver.innerText = GameState.SILVER;
-  if (charges) charges.innerText = GameState.charges || 0;
   refreshSupplyTab();
   if (!document.getElementById('bay-research').hidden) renderTree();
 }
@@ -324,7 +322,6 @@ function activatePromo() {
   if (reward.gold) { GameState.GOLD += reward.gold; items.push(reward.gold + 'G'); }
   if (reward.silver) { GameState.SILVER += reward.silver; items.push(reward.silver + '💰'); }
   if (reward.xp) { GameState.XP += reward.xp; items.push(reward.xp + 'XP'); }
-  if (reward.charges) { GameState.charges += reward.charges; items.push(reward.charges + ' ⚡'); }
   if (reward.boosterXP) GameState.boosterStock.xp += reward.boosterXP;
   if (reward.boosterSilver) GameState.boosterStock.silver += reward.boosterSilver;
   GameState.usedPromos.push(code);

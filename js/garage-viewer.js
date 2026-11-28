@@ -115,7 +115,7 @@ const GarageViewer = (() => {
     el('dispatch-drum').hidden = !tank.mag && !tank.salvo && tank.cls !== 'spg';
     if (tank.cls === 'spg') el('dispatch-drum').textContent = 'Арт-прицел · Shift на ПК или кнопка «Арт-прицел» на телефоне. Остановитесь для сведения.';
     if (tank.salvo) el('dispatch-drum').textContent = 'Два ствола · одно нажатие выпускает оба снаряда одновременно';
-    if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · удерживайте огонь для очереди`;
+    if (tank.mag) el('dispatch-drum').textContent = `${magazineName(tank)} · между выстрелами ${clipLabel(tank)} · удерживайте огонь для очереди`;
     el('dispatch-reload-label').textContent = reloadLabel(tank);
     el('dispatch-reload').textContent = (tank.reload / 1000).toLocaleString('ru-RU') + ' с';
     el('dispatch-pen').textContent = tank.pen + ' мм';

@@ -86,7 +86,7 @@ test('officer reserve: exact 2% pool, permanent conversion of a rental without c
     Object.assign(GameState,{owned:Object.values(DB).filter(t=>!t.source).slice(0,10).map(t=>t.id),garageSlots:10,pendingVehicles:['BT42']});
     for(const seq of [[0,0,.1],[0,0,.099999]])openContainerDirect('premium',()=>seq.shift());
     return [h,one,full,GameState.pendingVehicles,GameState.owned.at(-1),CONTAINERS.collection.vehicles];
-  });assert.deepEqual(hist,[{'PZ-II-J':30,T67:30,silver:980,xp:980,gold:980},{'PZ-II-J':60,silver:980,xp:980,gold:980},{silver:1000,xp:1000,gold:1000},['PZ-II-J','T67'],'BT42',['M4A3E2','T71DA','JPANTHERII','T62A','TL7']]);
+  });assert.deepEqual(hist,[{'PZ-II-J':30,T67:30,silver:1764,xp:735,gold:441},{'PZ-II-J':60,silver:1764,xp:735,gold:441},{silver:1800,xp:750,gold:450},['PZ-II-J','T67'],'BT42',['M4A3E2','T71DA','JPANTHERII','T62A','TL7']]);
 });
 
 test('the two supplied models deploy offline; only five actual T67 sorties consume its loan, not a cancelled launch or a target',async t=>{

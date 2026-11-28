@@ -143,7 +143,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
   assert.equal(await page.locator('.tank-slot.selected .slot-name').innerText(), 'МС-1');
   assert.equal(await page.locator('.n-btn.active-n').innerText(), 'СССР');
   assert.equal(await page.locator('#gold-val').innerText(), '10');
-  assert.equal(await page.locator('#charges-val').innerText(), '0');
+  assert.equal(await page.locator('#charges-val').count(), 0);
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   await page.locator('button[onclick="showSettings()"]').click();
   assert.equal(await page.locator('#volume-slider').inputValue(), '0');assert.equal(await page.locator('#look-sensitivity').inputValue(),'2.5');
@@ -166,11 +166,11 @@ test('one legacy local profile: keep earned progress, exclude credentials and re
   const data = await saved(page);
   assert.equal(data.XP, 0);
   assert.equal(data.SILVER, 0);
-  assert.equal(data.charges, 4);
+  assert.equal(data.charges, undefined);
   assert.equal(data.selected, 'PZII');assert.equal(data.curNat,'germany');
   assert.deepEqual(data.owned, ['T26','PZII','T1C','STRVFM21','STI','OBJ140','RHMBWT','T34HEAVY','T54L','PZIVD','VK3601H','TIGERI','TIGERII','VK3001P','VK10001P','MAUSCHEN','VK-4502-A']); // no grants for similarly named tanks or a retired event boss
   assert.deepEqual(data.modules,{T1C:['optics'],RHMBWT:['turbo'],STI:['optics'],T54L:['rammer']});assert.deepEqual(data.upgrades,{T1C:{engine:1},TIGERI:{gun:2}});
-  checkClean(data);assert.equal(data.GOLD,2500);
+  checkClean(data);assert.equal(data.GOLD,2900);
   assert.doesNotMatch(JSON.stringify(data), /obsolete-test-marker|Former|old-code|mail_event/);
   assert.equal(await page.evaluate(() => localStorage.getItem('ct_users')), oldUsers);
 });
@@ -196,7 +196,7 @@ test('the new MS-1 and both heavy tanks occupy the winter depot; camera, rapid s
     await click('Выбрать для боя: '+name);
     await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
     const info = await page.evaluate(()=>DepotView.stats());
-    assert.equal(info.triangles,meshCounts[id]);assert.equal(info.room,'Северное депо · Полярная ночь');assert.ok(info.calls>5);
+    assert.equal(info.sourceTriangles,meshCounts[id]);assert.equal(info.room,'Северное депо · Полярная ночь');assert.ok(info.calls>5);
     assert.equal(await page.locator('#bay-open,#tree-inspect,#bay-picker').count(),0);
     await click('Сбоку');assert.notDeepEqual(await page.evaluate(()=>DepotView.stats().camera),info.camera);
     assert.equal(await page.locator('#bay-angles [data-view=side]').getAttribute('aria-pressed'),'true');
@@ -290,17 +290,17 @@ test('migration keeps earned late tiers, supplies, modules, settings and currenc
   })}});
   const old=await saved(page);
   assert.deepEqual(old.owned,['PZII','T26','OBJ257','IS7']);assert.equal(old.selected,'IS7');assert.equal(old.curNat,'germany','remember the browsed nation without changing the equipped tank');
-  assert.equal(old.GOLD,187);assert.equal(old.XP,6412);assert.equal(old.SILVER,0);assert.equal(old.totalBattles,45);
+  assert.equal(old.GOLD,387);assert.equal(old.XP,6412);assert.equal(old.SILVER,0);assert.equal(old.totalBattles,45);
   assert.equal(old.settings.showTracks,false);assert.equal(old.boosterStock.xp,2);assert.deepEqual(old.loginCalendar.claimedDays,[7]);
   assert.deepEqual(old.modules,{T26:['optics'],PZII:['rammer']});assert.deepEqual(old.upgrades,{T26:{gun:1},PZII:{gun:2}});
-  checkClean(old);assert.ok(!('rentalTanks' in old));assert.deepEqual(old.inventory,{supply:2,premium:5});
+  checkClean(old);assert.ok(!('rentalTanks' in old));assert.deepEqual(old.inventory,{premium:5});
   assert.equal(await page.locator('#bay-name').innerText(),'ИС-7');
   await click('Дерево развития');assert.equal(await page.locator('.n-btn.active-n').innerText(),'ГЕРМАНИЯ');
   await click('СССР');assert.equal(await page.locator('#nodes .node.owned').count(),3);
   await click('Выбрать: Объект 257');assert.equal(await page.locator('#dispatch-name').innerText(),'Объект 257');
   assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietTreeIds.concat(['T62A','IS6']));
   const rewards=await page.evaluate(()=>{
-    for(const id of ['basic','supply','premium'])openContainerDirect(id);
+    for(const id of ['basic','premium'])openContainerDirect(id);
     for(const code of ['BETA_TEST','WT220','START2025']){document.getElementById('promo-input').value=code;activatePromo();}
     saveProgress();
     return [typeof FeaturesHub,typeof EconomyEngine,typeof BattlePassSystem,typeof getCrewPerkValue,
@@ -724,7 +724,7 @@ test('US research from a free T1 Cunningham to M48 Patton, locked stats and loca
 
 test('US M3 Lee: real depot and mobile sortie, limited traverse, swipe to aim, touch optics and an actual shot',async t=>{
   const {page,click}=await offlineGame(t,{webgl:true,mobile:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','M3LEE'],selected:'M3LEE'})}});
-  assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.M3LEE);
+  assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),meshCounts.M3LEE);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('usa');
   assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['T67','M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
   await page.locator('#enemy-select').selectOption('M4SHERMAN');await click('НАЧАТЬ');await chooseControls(page,'mobile');await ready(page);
@@ -810,7 +810,7 @@ test('shared-root research on a phone: both added routes unlock in order, includ
 
 test('added vehicles in a real 3D sortie: Object 140 hits Borsig, casemate stops hold, and WT fires four 520-point rounds',async t=>{
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','OBJ140','PZSFL4C','WTE100'],selected:'OBJ140'})}});
-  assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.OBJ140);
+  assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),meshCounts.OBJ140);
   assert.equal(await page.locator('#dispatch-name').innerText(),'Объект 140');
   for(const [name,id,nation,opponent,rounds,alpha,left,reload] of [
     ['Объект 140','OBJ140','germany','RHMBWT',1,320,830,5800],
@@ -910,7 +910,7 @@ test('Sweden on mobile: locked nodes load only icons and stats; both research pa
 
 test('supplied Swedish rigs in combat: Kranvagn fires 3 × 400; hydraulic mounts tilt the body, not the tracks',async t=>{
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','KRANVAGN','STRV103B','UDES03'],selected:'KRANVAGN'})}});
-  assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts.KRANVAGN);
+  assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),meshCounts.KRANVAGN);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('sweden');
   assert.equal(await page.locator('#enemy-select option').count(),20);await page.locator('#enemy-select').selectOption('STRV103B');
   await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);await centerPractice(page);
@@ -970,7 +970,7 @@ async function checkSingleShotSorties(t, cases) {
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned,selected:cases[0][0]})}});
   for(const [id,name,enemy,dmg,remaining] of cases){
     await click('Выбрать для боя: '+name);await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-    assert.equal(await page.evaluate(()=>DepotView.stats().triangles),meshCounts[id]);
+    assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),meshCounts[id]);
     if(!await page.locator('#enemy-select').isVisible())await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption(await page.evaluate(id=>DB[id].nat,enemy));await page.locator('#enemy-select').selectOption(enemy);
     await click('НАЧАТЬ');const result=await page.evaluate(async()=>{

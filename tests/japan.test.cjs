@@ -58,7 +58,7 @@ test('all nineteen Japanese meshes deploy offline: garage, actual practice hits 
   for(const [id,other] of pairs){
     const [,name,,,damage,sec]=rows.get(id),enemy=rows.get(other);
     await click('Выбрать для боя: '+name);await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-    assert.equal(await page.evaluate(()=>DepotView.stats().triangles),rows.get(id).at(-1));
+    assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),rows.get(id).at(-1));
     if(!await page.locator('#enemy-select').isVisible())await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption('japan');await page.locator('#enemy-select').selectOption(other);await click('НАЧАТЬ');
     const result=await page.evaluate(async()=>{

@@ -61,7 +61,7 @@ test('offline French sorties: 3D models, Foch and Bat.-Châtillon clip hits, ful
   for (const [id,other] of [['FOCH-155','AMX-M4-54'],['B-C-25-T','AMX-50-B']]) {
     const [,name,,,dmg,mag,sec] = byId.get(id), target = byId.get(other);
     await click('Выбрать для боя: '+name); await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-    assert.equal(await page.evaluate(()=>DepotView.stats().triangles),byId.get(id).at(-1));
+    assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),byId.get(id).at(-1));
     if (!await page.locator('#enemy-select').isVisible()) await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption('france'); await page.locator('#enemy-select').selectOption(other); await click('НАЧАТЬ');
     const result = await page.evaluate(async () => {
@@ -75,6 +75,8 @@ test('offline French sorties: 3D models, Foch and Bat.-Châtillon clip hits, ful
         const hits=[]; let reload;
         for (let i=0;i<p.magSize;i++) {
           firePlayer(); firePlayer();
+          updateHUD();const hud=document.querySelector('#ammo-val').textContent;
+          if(!hud.includes(i+1===p.magSize?'ПЕРЕЗАРЯДКА':'ДО ВЫСТРЕЛА')) throw Error('Clip clock: '+hud);
           if (g.bullets.length!==1) throw Error('Expected one projectile: '+p.id);
           const shell=g.bullets[0]; for(let step=0;step<60 && g.bullets.length;step++) updateBullets();
           hits.push([shell.dmg,p.curMag,p.isReloading,e.hp,g.battleDmg]); reload=Math.round(p.nextShot-ms); ms=p.nextShot;

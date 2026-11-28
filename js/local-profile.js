@@ -80,6 +80,15 @@ function decodeProgress(data) {
   if (!restored.owned.length && !savedEmpty) restored.owned = defaults.owned;
   restored.selected = savedTankId(data.selected);
   HangarSlots.restore(restored, !Object.hasOwn(data, 'rentalBattles'));
+  // Pre-1.4.2 tracked possession, not sales. A surviving research vehicle proves
+  // its prerequisite path, never a sibling, special vehicle or unrecorded sold leaf.
+  const known = new Set((Array.isArray(data.researched) ? data.researched : []).map(savedTankId)
+    .filter(id => id && !DB[id].source));
+  for (let id of restored.owned) if (!DB[id].source && !restored.rentalBattles[id]) {
+    known.add(id);
+    if (!Array.isArray(data.researched)) while ((id=researchParent(id))) known.add(id);
+  }
+  restored.researched = [...known];
   if (!PLAYABLE_NATIONS.includes(data.curNat)) {
     const nat = DB[restored.selected]?.nat;
     restored.curNat = PLAYABLE_NATIONS.includes(nat) ? nat : defaults.curNat;
@@ -95,6 +104,10 @@ function decodeProgress(data) {
     }));
   }
   restored.settings.lookSensitivity = Math.max(.3, Math.min(2.5, restored.settings.lookSensitivity));
+  // Retired currency + unopened stock (including its older alias), atomically
+  // folded into the balance. None of these keys is in the migrated snapshot.
+  for (const count of [data.charges,restored.inventory.supply,restored.inventory.waffentrager])
+    if (Number.isSafeInteger(count) && count>0) restored.GOLD=Math.min(Number.MAX_SAFE_INTEGER,restored.GOLD+100*count);
   restored.inventory = migrateSupplyBoxes(restored.inventory);
   restored.tree2026 = TreeEvent.counts(restored.tree2026);
   restored.treeSlots2026 = TreeEvent.restoreSlots(restored.treeSlots2026, restored.tree2026);

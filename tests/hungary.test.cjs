@@ -30,7 +30,7 @@ test('all ten Hungarian exports deploy offline: sheet damage, four distinct Told
   for(const [i,j] of [[1,2],[3,0],[6,5],[7,4],[9,8]]){
     const [id,name,,dmg,mag,reload]=rows[i], [enemy,,hp]=rows[j];
     await click('Выбрать для боя: '+name);await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-    assert.equal(await page.evaluate(()=>DepotView.stats().triangles),rows[i].at(-1));
+    assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),rows[i].at(-1));
     if(!await page.locator('#enemy-select').isVisible())await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption('hungary');await page.locator('#enemy-select').selectOption(enemy);
     await click('НАЧАТЬ');
@@ -48,11 +48,11 @@ test('all ten Hungarian exports deploy offline: sheet damage, four distinct Told
         if(p.sightHit().hit!==e)throw Error('Unaligned model: '+p.id);
         const shots=[];for(let n=0;n<mag;n++){
           firePlayer();firePlayer();shots.push([g.bullets.length,g.bullets[0]?.dmg,p.curMag,p.isReloading,Math.round(p.nextShot-BattleClock.now())]);
-          for(let k=0;k<50 && g.bullets.length;k++)updateBullets();elapsed+=120;
+          for(let k=0;k<50 && g.bullets.length;k++)updateBullets();elapsed+=p.shotDelay;
         }
         return {mounts,shots,hp:e.hp,dealt:g.battleDmg};
       }finally{BattleClock.now=clock;backToGarage();}
     },mag);
-    assert.deepEqual(result,{mounts:[[id,rows[i].at(-1)],[enemy,rows[j].at(-1)]],shots:Array.from({length:mag},(_,n)=>[1,dmg,mag-1-n,n===mag-1,n===mag-1?reload:120]),hp:hp-dmg*mag,dealt:dmg*mag});
+    assert.deepEqual(result,{mounts:[[id,rows[i].at(-1)],[enemy,rows[j].at(-1)]],shots:Array.from({length:mag},(_,n)=>[1,dmg,mag-1-n,n===mag-1,n===mag-1?reload:500]),hp:hp-dmg*mag,dealt:dmg*mag});
   }
 });

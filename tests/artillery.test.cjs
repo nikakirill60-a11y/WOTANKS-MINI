@@ -170,7 +170,9 @@ test('PC artillery: Shift, relative cursor, real convergence, one arcing 220/35 
     const mouse=(type)=>document.querySelector('#game').dispatchEvent(new MouseEvent(type,{bubbles:true,button:0}));
     try {
       BattleClock.now=()=>2000; mouse('mousedown');mouse('mouseup');mouse('mousedown');mouse('mouseup');
-      const b=g.bullets[0];return [g.bullets.length,b.dmg,b.pen,p.nextShot,b.arc.tick,b.arc.x0===muzzle.x && b.arc.h0===muzzle.h,
+      const b=g.bullets[0],d=Math.hypot(b.arc.x-b.arc.x0,b.arc.y-b.arc.y0);
+      if(b.arc.frames!==Math.round((48+Math.min(90,d/40))/(1.5*p.shellSpeedMul)))throw Error('Arcade arc flight duration');
+      return [g.bullets.length,b.dmg,b.pen,p.nextShot,b.arc.tick,b.arc.x0===muzzle.x && b.arc.h0===muzzle.h,
         BattleView.artillery.focus,g.units[1].hp,g.battleDmg,CombatMechanics.artilleryStrikes.length];
     } finally {BattleClock.now=now;}
   });

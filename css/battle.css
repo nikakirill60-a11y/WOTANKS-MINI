@@ -38,7 +38,6 @@
 #control-modal .control-option { color:#e4ebdf; border:1px solid #596857; background:#27322b; height:auto; min-height:145px; padding:13px; }
 #control-modal .control-option:hover { border-color:#d5b481; }#control-modal .control-icon { font-size:32px; }#control-modal p { margin-top:6px; color:#b8c5b6; font-size:12px; line-height:1.45; }
 #control-modal h2,#result-title { font:650 clamp(23px,3vw,38px) 'Segoe UI',Arial,sans-serif; letter-spacing:-.035em; }#result-stats { font-size:16px; }
-.supply-charges { grid-column:1/-1; padding:10px; color:#b5ddda; } .supply-charges button { margin-left:8px; }
 .mobile-mode #hud #bottom-bar { width:min(45vw,245px); left:12px; bottom:150px; padding:6px 9px; }
 .mobile-mode #hud #field-actions button { font-size:9px; padding:3px; }
 .mobile-mode #mobile-controls>* { touch-action:none; user-select:none; }

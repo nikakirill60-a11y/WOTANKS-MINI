@@ -22,7 +22,8 @@
 .entry-content { margin:auto 0; padding:clamp(28px,6vh,72px) 0; width:min(100%,460px); }
 .entry-eyebrow { display:flex; align-items:center; gap:10px; color:var(--sand); }
 .entry-eyebrow i { background:var(--sand); width:32px; height:2px; }
-.entry-eyebrow span { color:#a7b7c0; }
+.entry-log { color:#c0cfd7; text-underline-offset:3px; }
+.entry-log:hover,.entry-log:focus-visible { color:#fff0d4; }
 #entry-title { margin:20px 0; text-transform:uppercase; font:900 clamp(58px,6.8vw,112px)/.89 'Segoe UI',Arial,sans-serif; letter-spacing:-.052em; text-shadow:0 3px 18px #08151d52; }
 .entry-intro { font-size:clamp(15px,1.3vw,19px); color:#d4dfe5; }
 .entry-actions { width:min(100%,390px); margin-top:clamp(18px,3.8vh,36px); }

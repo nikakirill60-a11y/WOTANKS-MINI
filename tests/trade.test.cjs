@@ -45,6 +45,24 @@ test('selling the last tank leaves a persistent empty garage, blocks sorties, an
   assert.equal(await page.locator('#dispatch-name').innerText(),'Ангар пуст');assert.equal(await page.locator('#fleet-count').innerText(),'0 / 10');
   assert.equal(await page.locator('#depot-canvas,#tank-carousel .tank-slot').count(),0);assert.ok(await page.locator('#battle-controls').isHidden());assert.ok(await page.getByRole('button',{name:'Обучение'}).isDisabled());
   assert.equal(await page.evaluate(()=>startTraining()),false);assert.equal(await page.evaluate(()=>startBattle(15)),false);
-  await click('Открыть дерево развития');await click('Исследовать: МС-1');assert.deepEqual((await saved()).owned,['MS1']);assert.equal((await saved()).SILVER,fresh.SILVER);assert.ok(await page.locator('#battle-controls').isVisible());
+  await click('Открыть дерево развития');await click('Выкупить: МС-1');assert.deepEqual((await saved()).owned,['MS1']);assert.equal((await saved()).SILVER,fresh.SILVER);assert.ok(await page.locator('#battle-controls').isVisible());
   await click('Продать: МС-1');await click('Подтвердить продажу');assert.deepEqual(await page.evaluate(()=>{const r=[0,.999,.5];openContainerDirect('collection',()=>r.shift());return [GameState.owned,GameState.selected];}),[['TL7'],'TL7']);
+});
+
+test('research ledger: a sold parent still opens the next tier; a sold leaf costs silver, never XP, including after reload',async t=>{
+  const {page,click,saved}=await openGame(t,{mobile:true,seed:{owned:['MS1','T26'],XP:350,SILVER:10000}});
+  await click('Продать: Т-26');assert.match(await page.locator('#sale-terms').innerText(),/Выкуп: 20\s000 ₽/);
+  await click('Подтвердить продажу');await page.reload();await click('Дерево развития');
+  await click('Исследовать: Т-46');assert.equal((await saved()).XP,0);
+  await click('Выкупить: Т-26');let s=await saved();assert.deepEqual([s.owned,s.XP,s.SILVER],[['MS1','T46','T26'],0,0]);
+  await click('Продать: Т-46');await click('Подтвердить продажу');await page.reload();
+  await click('Дерево развития');await click('Характеристики: Т-46');assert.match(await page.locator('#tree-status').innerText(),/Исследован.*Не хватает 15\s000 ₽/);
+  assert.deepEqual((await saved()).researched,['MS1','T26','T46']);
+  const result=await page.evaluate(()=>{
+    const g=GameState;g.SILVER=30000;g.owned=Object.keys(DB).filter(id=>id!=='T46').slice(0,g.garageSlots);
+    const state=researchState('T46');researchTank('T46');const full=g.SILVER;
+    g.owned.pop();researchTank('T46');researchTank('T46');return [state.full,full,g.SILVER,g.XP,g.owned.filter(id=>id==='T46').length];
+  });assert.deepEqual(result,[true,30000,0,0,1]);
+  const old=await page.evaluate(()=>decodeProgress({owned:['IS3','T67','BT42'],rentalBattles:{T67:3}}).researched);
+  for(const id of ['IS3','IS','KV1','MS1'])assert.ok(old.includes(id));for(const id of ['T67','BT42','IS7','T150'])assert.ok(!old.includes(id));
 });

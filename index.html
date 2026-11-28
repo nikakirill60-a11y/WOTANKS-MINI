@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CITY TANKS 1.4.1 — Зимний выезд</title>
+  <title>CITY TANKS 1.4.2 — Зимний выезд</title>
   
   <!-- СТИЛИ -->
   <link rel="stylesheet" href="css/styles.css">
@@ -27,7 +27,7 @@
     <a class="entry-season entry-film" href="https://wotanks-mini.vercel.app/CITY-TANKS-1.4-TRAILER.mp4" target="_blank" rel="noopener noreferrer" aria-label="Трейлер 1.4 «Зимний выезд» — 4 минуты 5 секунд, в новой вкладке">Трейлер 1.4 <b>4:05</b></a>
   </header>
   <section class="entry-content">
-    <p class="entry-eyebrow"><i aria-hidden="true"></i> ЗИМНИЙ ВЫЕЗД <span>/ 1.4.1</span></p>
+    <p class="entry-eyebrow"><i aria-hidden="true"></i> ЗИМНИЙ ВЫЕЗД <a class="entry-log" href="UPDATE-1.4.2.txt" target="_blank" rel="noopener" aria-label="Изменения 1.4.2, текстовый файл">/ 1.4.2</a></p>
     <h1 id="entry-title">Северное<br> депо</h1>
     <p class="entry-intro" id="entry-intro">Выберите способ входа в ангар.</p>
     <div class="entry-actions" role="group" aria-label="Вход в игру">
@@ -64,7 +64,7 @@
 
 <dialog id="platoon-desk" aria-labelledby="platoon-title">
   <header><p class="platoon-kicker">СЕВЕРНОЕ ДЕПО &nbsp;/&nbsp; СОВМЕСТНЫЙ ВЫЕЗД</p>
-    <h2 id="platoon-title">Взводы</h2><p>2–3 игрока в одной команде. Остальные машины в бою 7×7 — боты.</p></header>
+    <h2 id="platoon-title">Взводы</h2><p>2–3 игрока в одной команде. Берите танки одного или соседних уровней. Боты подбираются в пределах ±1 для каждого игрока.</p></header>
   <div id="platoon-guest" hidden><p>Взводы доступны только зарегистрированным игрокам. Войдите в аккаунт или создайте его.</p>
     <button type="button" class="btn" id="platoon-login">Войти в аккаунт</button></div>
   <div id="platoon-setup" hidden>
@@ -94,8 +94,8 @@
   </div><span id="supply-feedback" role="status"></span><b id="supply-capacity"></b></div>
   <p class="supply-notice" id="supply-notice" role="status"></p>
   <section id="tab-shop" class="tab-content active-tab" aria-label="Магазин контейнеров">
-    <div class="supply-inner"><div class="supply-subhead"><div><p class="season-kicker">КАТАЛОГ / 04 ПОСТАВКИ</p><h3>Выберите контейнер</h3><p id="supply-balance"></p></div>
-      <button class="winter-back" onclick="buyCharges(1)">+1 заряд · 100 G</button></div><div id="container-grid"></div></div>
+    <div class="supply-inner"><div class="supply-subhead"><div><p class="season-kicker">КАТАЛОГ / 03 ПОСТАВКИ</p><h3>Выберите контейнер</h3><p id="supply-balance"></p></div>
+    </div><div id="container-grid"></div></div>
   </section>
   <section id="tab-inventory" class="tab-content" aria-label="Инвентарь игрока"><div class="supply-inner">
     <div id="vehicle-deliveries" hidden></div>
@@ -258,11 +258,9 @@
         <div><small>Опыт</small><b><span id="xp-val">0</span> XP</b></div>
         <div class="gold-txt"><small>Золото</small><b><span id="gold-val">0</span> G</b></div>
         <div><small>Серебро</small><b><span id="silver-val">0</span> ₽</b></div>
-        <div><small>Заряды</small><b><span id="charges-val">0</span> ⚡</b></div>
       </div>
       <div id="exchange-panel">
         <button class="btn btn-sm" onclick="exchangeXP()" title="Обменять 100 XP на 10 золота">ОБМЕН</button>
-        <button class="btn btn-sm" onclick="buyCharges(1)" title="Купить 1 заряд за 100 золота">+1 ⚡ · 100 G</button>
         <span id="exchange-msg" role="status"></span>
       </div>
       <button type="button" class="garage-settings" onclick="showSettings()" aria-label="Настройки" title="Настройки">⚙</button>
@@ -317,7 +315,7 @@
           <div id="tree-container" class="tree-view" tabindex="0" role="region" aria-labelledby="branch-title">
             <div id="tree-map"><canvas id="tree-canvas" aria-hidden="true"></canvas><div id="nodes"></div></div>
           </div>
-          <div class="tree-nav"><span>Нажмите узел, чтобы исследовать или выбрать танк.</span><div>
+          <div class="tree-nav"><span>Нажмите узел для исследования, выкупа или выбора танка.</span><div>
             <button type="button" id="tree-prev" aria-label="Предыдущие уровни">←</button>
             <button type="button" id="tree-next" aria-label="Следующие уровни">→</button></div></div>
           <section class="tree-dossier" aria-label="Характеристики узла">
@@ -582,6 +580,8 @@
     <script src="js/ornament-models.js"></script>
     <script src="js/crate-model.js"></script>
     <script src="js/crate-view.js"></script>
+    <script src="models/running-gear.js"></script>
+    <script src="js/road-wheels.js"></script>
     <script src="js/battle-models.js"></script>
     <script src="js/depot-room.js"></script>
     <script src="js/winter-landscape.js"></script>

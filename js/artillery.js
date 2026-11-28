@@ -48,7 +48,7 @@ class ArtillerySight {
     const d = Math.hypot(x - shell.x, y - shell.y);
     this.focus = 0;
     return { x0:shell.x, y0:shell.y, h0:shell.h, x, y, h:surfaceHeight(x,y) - .1,
-      lift:Math.min(380, 65 + d * .19), frames:Math.max(1, Math.round((48 + Math.min(90, d / 40)) / shell.shooter.shellSpeedMul)), tick:0 };
+      lift:Math.min(380, 65 + d * .19), frames:Math.max(1, Math.round((48 + Math.min(90, d / 40)) / (CONFIG.SHELL_FLIGHT_RATE * shell.shooter.shellSpeedMul))), tick:0 };
   }
 }
 

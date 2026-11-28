@@ -15,7 +15,7 @@ function damageWall(wall, dmg, wallIndex) {
 
   if (wall.hp <= 0) {
     boom(wall.x + wall.w / 2, wall.y + wall.h / 2);
-    snd('boom');
+    snd('collapse',1,{x:wall.x+wall.w/2,y:wall.y+wall.h/2});
     spawnParticles(wall.x + wall.w / 2, wall.y + wall.h / 2, '#5a5a5a', 20, 4, 40);
     wall.destroyed = true;
     GameState.walls.splice(wallIndex, 1);

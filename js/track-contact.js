@@ -4,7 +4,7 @@ const TrackContact = (() => {
   function shape(u) {
     if (u._foot && u._foot.asset === u.modelAsset) return u._foot;
     const s = u.modelScale,
-      b = u.modelAsset?.hitHull || u.modelAsset?.hull?.boundingBox;
+      b = u.modelAsset?.contactHull || u.modelAsset?.hitHull || u.modelAsset?.hull?.boundingBox;
     const L = b ? ((b.max.z - b.min.z) * s) / 2 : 22 * u.s,
       W = b ? ((b.max.x - b.min.x) * s) / 2 : 13 * u.s;
     return (u._foot = {
@@ -156,6 +156,7 @@ const TrackContact = (() => {
             tree.fallen = true;
             tree.angle = Math.atan2(-hit.ny, -hit.nx);
             arena.treeRevision++;
+            if (typeof snd === 'function') snd('timber', .72, tree);
             u.treeDrag = (u.treeDrag || 1) * 0.88;
             continue;
           }

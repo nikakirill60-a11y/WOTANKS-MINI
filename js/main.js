@@ -34,7 +34,6 @@ function updatePlayer() {
   if (g.mouseDown || g.mobileFireActive) firePlayer();
   if (p.isMoving && ++p.engineTick % 8 === 0) {
     smoke(p.x - 14 * Math.cos(p.angle), p.y - 14 * Math.sin(p.angle));
-    snd('eng');
   }
 }
 // In a shared sortie, attribute each hit to its driver; never put a wingman's
@@ -54,7 +53,7 @@ function damageUnit(b, u, part, incidenceCos) {
   if (!dmg) {
     BotAI.onBlockedHit(b.shooter, u);
     sparks(b.x, b.y, b.h);
-    snd('rico');
+    snd('rico',1,u);
     if (b.shooter === GameState.player) {
       combatMessage((ricochet ? 'Рикошет: ' : 'Не пробито: ') + (part === 'turret' ? 'башня' : 'корпус'), '#eabb70');
     }
@@ -63,7 +62,7 @@ function damageUnit(b, u, part, incidenceCos) {
   const dealt = Math.min(u.hp, dmg);
   u.hp = Math.max(0, u.hp - dmg);
   sparksAdvanced(b.x, b.y, b.a, b.h);
-  snd('hit');
+  snd('hit',1,u);
   if (!u.trackBroken && Math.random() < 0.1) {
     u.trackBroken = true;
     u.trackRepairAt = BattleClock.date() + 7000;
@@ -86,7 +85,7 @@ function finishUnit(u, source) {
   if (u.hp > 0 || u.dead) return;
   u.dead = true;
   boom(u.x, u.y);
-  snd('boom');
+  snd('boom',1,u);
   if (u.team === 'enemy') creditKill(source,u.tier * 500);
   if (source === GameState.player && u.team === 'enemy') {
     combatMessage('Цель уничтожена', '#ffe3ae');
@@ -121,6 +120,7 @@ function updateBullets() {
     if (step.hit instanceof Tank) damageUnit(b, step.hit, step.part, step.incidenceCos);
     else if (step.hit) {
       spawnParticles(b.x, b.y, '#e2bc7b', 8, 2, 11, b.h);
+      snd('impact',b.arc ? .8 : .58,b);
       if (step.hit.type === 'building') damageWall(step.hit, b.dmg, GameState.walls.indexOf(step.hit));
       if (b.arc && step.hit === 'ground') artilleryBurst(b);
     }
@@ -216,7 +216,7 @@ function updateHUD() {
   if (p.calibration) ShellUI.status(p, gunTime);
   ammo.textContent =
     (p.usesMagazine
-      ? `${magazineName(DB[p.id]).toUpperCase()} ${p.curMag}/${p.magSize}`
+      ? `${magazineName(DB[p.id]).toUpperCase()} ${p.curMag}/${p.magSize}${p.isSPG ? ' · '+CONFIG.SPG_ROUND.name : ''}`
       : p.isSPG ? CONFIG.SPG_ROUND.name : (p.salvoSize > 1 ? `ЗАЛП ×${p.salvoSize} · ` : '') + p.roundFor(g.curShell).name) +
     '  /  ' +
     (p.isReloading
@@ -255,6 +255,7 @@ function startBattleLoop() {
       BattleView.syncCamera();
       BattleView.aim();
       BattleView.draw();
+      AudioSystem.motion();
       updateHUD();
       BattleInput.refreshRoster();
       countPerfFrame();

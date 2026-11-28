@@ -14,19 +14,19 @@ const CrateView = (() => {
     if (job !== j || !j.renderer) return;
     const w = host.clientWidth || 1, h = host.clientHeight || 1;
     if (w === j.w && h === j.h) return;
-    j.w = w; j.h = h; M.frame(j.camera,w,h);
+    j.w = w; j.h = h; M.frame(j.camera,w,h,w,j.rig);
     j.renderer.setPixelRatio(Math.min(devicePixelRatio || 1,1.5)); j.renderer.setSize(w,h,false);
-    j.views = [M.view(false,w),M.view(true,w)];
+    j.views = [M.view(false,w,j.rig),M.view(true,w,j.rig)];
     if (!j.run) cameraTo(j,j.views[+j.open]);
     draw(j);
   }
   function stage(j) {
     const canvas = j.canvas = document.createElement('canvas'); canvas.id = 'crate-canvas';
-    canvas.setAttribute('role','img'); canvas.setAttribute('aria-label','3D-модель: '+CONTAINERS[j.id].name); host.prepend(canvas);
+    canvas.setAttribute('role','img'); canvas.setAttribute('aria-label','3D-модель: '+j.name); host.prepend(canvas);
     j.renderer = new T.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
     j.renderer.outputColorSpace = T.SRGBColorSpace; j.renderer.toneMapping = T.ACESFilmicToneMapping; j.renderer.toneMappingExposure = 1.02;
-    j.scene = new T.Scene(); CrateModel.studio(j.scene);
-    j.rig = CrateModel.build(j.id); j.rig.group.position.y = .02; j.scene.add(j.rig.group);
+    j.scene = new T.Scene(); j.rig = CrateModel.build(j.id);
+    CrateModel.studio(j.scene,j.rig); j.rig.group.position.y = .02; j.scene.add(j.rig.group);
     j.camera = new T.PerspectiveCamera(32,1,.05,60); j.controls = new T.OrbitControls(j.camera,canvas);
     j.controls.minDistance = 2.4; j.controls.maxDistance = 14; j.controls.maxPolarAngle = Math.PI*.48; j.controls.enablePan = false;
     j.controls.addEventListener('change',() => { if (!j.run && j === job) draw(j); });
@@ -46,7 +46,7 @@ const CrateView = (() => {
   }
   function fallback(j) {
     releaseGL(j);
-    j.image = new Image(); j.image.className = 'crate-poster'; j.image.alt = 'Модель: '+CONTAINERS[j.id].name;
+    j.image = new Image(); j.image.className = 'crate-poster'; j.image.alt = 'Модель: '+j.name;
     j.image.src = poster(j.id,false); host.prepend(j.image);
   }
 
@@ -64,7 +64,7 @@ const CrateView = (() => {
     if (!j.film) {
       j.film = document.createElement('canvas'); j.film.className = 'crate-film';
       j.film.width = f.w; j.film.height = f.h; j.film.setAttribute('role','img');
-      j.film.setAttribute('aria-label','Запись анимации: '+CONTAINERS[j.id].name); host.prepend(j.film);
+      j.film.setAttribute('aria-label','Запись анимации: '+j.name); host.prepend(j.film);
     }
     j.image.hidden = true; j.film.hidden = false;
     const tile = index + (j.open ? 0 : f.frames);
@@ -134,10 +134,14 @@ const CrateView = (() => {
     el('unpack-skip').focus({preventScroll:true});
   }
   function show(id,count=0,rows=[]) {
-    if (job || !Object.hasOwn(CONTAINERS,id)) return;
-    const j = job = {id,count,frame:0,seconds:0,open:false};
+    // Only the game has stock/receipts. The standalone inspection gallery
+    // shares the inspector but can only preview a model, never present a reward.
+    const box = typeof CONTAINERS !== 'undefined' && Object.hasOwn(CONTAINERS,id) && CONTAINERS[id];
+    const model = box || (Object.hasOwn(NationalCrates.catalog,id) && NationalCrates.catalog[id]);
+    if (job || !model || (!box && (count || rows.length))) return;
+    const j = job = {id,name:model.name,count,frame:0,seconds:0,open:false};
     el('unpack-mode').textContent = count ? `ПРИЁМКА / КОНТЕЙНЕРОВ: ${count}` : 'КАТАЛОГ / БЕСПЛАТНЫЙ ОСМОТР';
-    el('unpack-title').textContent = CONTAINERS[id].name;
+    el('unpack-title').textContent = j.name;
     el('unpack-demo').hidden = !!count; el('unpack-back').hidden = !!count;
     el('unpack-skip').hidden = !count; el('unpack-replay').hidden = el('reward-display').hidden = true;
     el('reward-lines').replaceChildren(...rows.map(({title,detail,vehicle,ornament,tag}) => {
@@ -159,9 +163,9 @@ const CrateView = (() => {
   }
   function close() {
     clear(); if (dialog.open) dialog.close();
-    if (el('container-modal').open && !el('container-modal').contains(document.activeElement))
+    if (el('container-modal')?.open && !el('container-modal').contains(document.activeElement))
       el('container-modal').querySelector('.modal-tab.active')?.focus({preventScroll:true});
-    else if (el('tree-modal').open && !el('tree-modal').contains(document.activeElement))
+    else if (el('tree-modal')?.open && !el('tree-modal').contains(document.activeElement))
       el('tree-case-inspect').focus({preventScroll:true});
   }
   el('unpack-back').onclick = el('unpack-collect').onclick = close;

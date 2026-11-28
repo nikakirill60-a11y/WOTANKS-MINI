@@ -3,16 +3,25 @@
 // The live rig and the offline film renderer both call this code (no second Three.js engine).
 const CrateMotion = (() => {
   const T = THREE, angle = -2.55, cameraMs = 1050;
-  function view(open, width) {
+  function view(open, width, rig) {
+    const dir = (open ? new T.Vector3(.92,1.72,1.22) : new T.Vector3(1.28,.78,1.62)).normalize();
+    // Short exhibition crates have no cargo rising above the rim. Aim at their own
+    // hinge height instead of leaving the winter parcel's headroom above the lid.
+    if (rig?.exhibit) {
+      const h=rig.hinge.position.y, target=new T.Vector3(0,open ? h*.94 : h*.76,open ? -.40 : 0);
+      return {target,position:target.clone().addScaledVector(dir,open ? 6.45 : 5.75)};
+    }
     const target = open ? new T.Vector3(0,.82,-.18) : new T.Vector3(0,1.02,0);
-    const dir = open ? new T.Vector3(.92,1.72,1.22) : new T.Vector3(1.28,.78,1.62);
     const narrow = width < 700;
     if (narrow) target.y += .15;
-    return {target, position:target.clone().addScaledVector(dir.normalize(), narrow ? 6.6 : open ? 5.05 : 5.45)};
+    return {target, position:target.clone().addScaledVector(dir, narrow ? 6.6 : open ? 5.05 : 5.45)};
   }
   // The game uses a short dialog instead of the full showcase viewport. Widen the crop,
   // not the camera path, so the apex of the swinging lid stays inside that panel.
-  function frame(camera,w,h,viewWidth=w) {
+  function frame(camera,w,h,viewWidth=w,rig) {
+    if (rig?.exhibit) {
+      camera.aspect=w/h; camera.zoom=Math.min(.82, camera.aspect/1.38); camera.clearViewOffset(); return;
+    }
     const narrow = viewWidth < 700;
     camera.zoom = Math.min(narrow ? .78 : .58, .92*(w/h)/(narrow ? 1.18 : 1.63));
     camera.setViewOffset(w,h,0,-.5*h*camera.zoom*(narrow ? .25 : .43),w,h);

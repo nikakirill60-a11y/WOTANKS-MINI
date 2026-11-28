@@ -124,6 +124,20 @@ function visibleRoute(branch) {
   return route;
 }
 
+// A shared node is drawn at the centre of its descendant lanes. Group by actual
+// ancestry first: menu order is editorial, and a nested fork can occur after an
+// unrelated sibling (AMX 12 t → M24 vs ELC → AMD). Never move or clone the nodes.
+function treeLanes(routes, depth=0) {
+  if (routes.length<2) return routes;
+  const children=new Map();
+  for (const route of routes) {
+    const child=route[depth];
+    if (!children.has(child)) children.set(child,[]);
+    children.get(child).push(route);
+  }
+  return [...children].flatMap(([child,lanes])=>child ? treeLanes(lanes,depth+1) : lanes);
+}
+
 function renderTree() {
   renderNatButtons();
   const container = treeEl('tree-container'),
@@ -131,7 +145,7 @@ function renderTree() {
     canvas = treeEl('tree-canvas');
   const branch = BRANCHES[GameState.curNat],
     route = visibleRoute(branch),
-    routes = route ? [route] : branch.routes,
+    routes = route ? [route] : treeLanes(branch.routes),
     line = route || branch.tanks;
   treeEl('branch-number').textContent = branch.number;
   treeEl('branch-title').textContent = route ? 'Путь к танку: ' + route.at(-1).n : branch.title;
@@ -167,7 +181,7 @@ function renderTree() {
   canvas.style.width = mapWidth + 'px';
   canvas.style.height = mapHeight + 'px';
   ctx.scale(dpr, dpr);
-  // Routes sharing a prefix are adjacent in the catalogue. Draw each shared
+  // Routes sharing a prefix now occupy contiguous lanes. Draw each shared
   // node once, centred over the lanes that descend from it, including later forks.
   const pos = new Map();
   for (const t of line) {

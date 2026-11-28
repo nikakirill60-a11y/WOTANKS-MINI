@@ -11,9 +11,7 @@ function buildBattleWorld(scene, state) {
     port = arena.id === 'port',
     frost = arena.id === 'frost',
     quarry = arena.id === 'quarry';
-  const weather = WeatherEngine.currentWeather,
-    night = weather === 'night',
-    overcast = weather === 'rain' || weather === 'snow';
+  const weather = WeatherEngine.currentWeather, night=weather==='night';
   let seed = spec.seed;
   const random = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
   const box = new T.BoxGeometry(),
@@ -54,115 +52,7 @@ function buildBattleWorld(scene, state) {
       );
     }
   }
-  const skyTop =
-    spec.sky && !night && !overcast
-      ? spec.sky[0]
-      : night
-        ? '#435e79'
-        : overcast
-          ? '#7c8f96'
-          : frost
-            ? '#789cab'
-            : port
-              ? '#719bb0'
-              : sand
-                ? '#7cabb4'
-                : '#779eae';
-  const horizon =
-    spec.sky && !night && !overcast
-      ? spec.sky[1]
-      : night
-        ? '#b6b7ab'
-        : frost
-          ? '#dce6e5'
-          : overcast
-            ? '#c6ccbe'
-            : sand
-              ? '#ead6a4'
-              : quarry
-                ? '#d9bd9a'
-                : port
-                  ? '#cfdfdf'
-                  : '#ded7b9';
-  scene.background = new T.Color(horizon);
-  scene.fog = new T.FogExp2(
-    horizon,
-    weather === 'sandstorm' ? 0.00095 : overcast ? 0.0006 : spec.haze || 0.00041
-  );
-  const sky = new T.Mesh(
-    new T.SphereGeometry(diagonal + 2300, 32, 16),
-    new T.ShaderMaterial({
-      side: T.BackSide,
-      depthWrite: false,
-      uniforms: { zenith: { value: new T.Color(skyTop) }, rim: { value: new T.Color(horizon) } },
-      vertexShader:
-        'varying vec3 dir;void main(){dir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-      fragmentShader: `uniform vec3 zenith,rim;varying vec3 dir;void main(){vec3 d=normalize(dir);
-      float y=max(d.y,0.);vec3 c=mix(rim,zenith,smoothstep(0.,.76,pow(y,.75)));
-      float s=max(dot(d,normalize(vec3(.82,.26,-.53))),0.);c+=vec3(.31,.21,.09)*pow(s,32.)+vec3(.8,.65,.4)*smoothstep(.99955,.9999,s);
-      gl_FragColor=vec4(c,1.);
-      #include <colorspace_fragment>
-    }`
-    })
-  );
-  sky.renderOrder = -2;
-  scene.add(sky);
-  scene.add(
-    new T.HemisphereLight(
-      night || frost ? '#dceaf7' : '#fff6df',
-      frost ? '#8ea6b5' : sand ? '#ac895a' : '#697064',
-      night ? 1.75 : 1.85
-    )
-  );
-  const sun = new T.DirectionalLight(frost ? '#f3f9ff' : night ? '#f5debd' : '#fff0d1', night ? 1.85 : 2.25);
-  sun.position.set(-470, 740, -510);
-  scene.add(sun);
-
-  // Two ridgelines made of continuous, faceted terrain, behind the play area.
-  for (let row = 0; row < 2; row++) {
-    const pos = [],
-      n = 84,
-      radius = (diagonal + 200) / 0.75 + row * 460,
-      ridge = [];
-    for (let i = 0; i < n; i++) {
-      const a = (i * 2 * Math.PI) / n,
-        r = radius + random() * 200;
-      ridge.push([
-        Math.cos(a) * r,
-        (row ? 235 : 105) + Math.sin(a * 7) * 54 + random() * 100,
-        Math.sin(a) * r
-      ]);
-    }
-    for (let i = 0; i < n; i++) {
-      const a = ridge[i],
-        b = ridge[(i + 1) % n],
-        foot = (v) => [v[0] * 0.75, -14, v[2] * 0.75];
-      pos.push(...foot(a), ...a, ...b, ...foot(a), ...b, ...foot(b));
-    }
-    const geo = new T.BufferGeometry();
-    geo.setAttribute('position', new T.BufferAttribute(new Float32Array(pos), 3));
-    geo.computeVertexNormals();
-    scene.add(
-      new T.Mesh(
-        geo,
-        new T.MeshLambertMaterial({
-          color: frost
-            ? row
-              ? '#c3d0d6'
-              : '#9aafb2'
-            : quarry
-              ? '#ab8d78'
-              : sand
-                ? '#ac805b'
-                : row
-                  ? '#809393'
-                  : '#65796b',
-          side: T.DoubleSide,
-          flatShading: true
-        })
-      )
-    );
-  }
+  const atmosphere=SectorArt.climate(scene,arena,weather,random);
   const groundMap = texture(256, 256, (ctx) => {
     ctx.fillStyle = spec.ground;
     ctx.fillRect(0, 0, 256, 256);
@@ -347,14 +237,10 @@ function buildBattleWorld(scene, state) {
         }
       }
     }
+    SectorArt.yards(ctx,arena);
     ctx.lineJoin = ctx.lineCap = 'round';
     for (const p of arena.paths) {
-      ctx.strokeStyle = p.type === 'cobble' ? '#beb7a3' : '#827c64';
-      ctx.lineWidth = 2 * p.radius + 3;
-      pathStroke(ctx, p);
-      ctx.strokeStyle = { cobble: '#99968b', trail: '#a39670', gravel: '#ad9e83', timber: '#907458' }[p.type];
-      ctx.lineWidth = 2 * p.radius;
-      pathStroke(ctx, p);
+      SectorArt.road(ctx,p,pathStroke);
       if (p.type === 'timber') {
         const [a, b] = p.points,
           dx = b.x - a.x,
@@ -390,6 +276,7 @@ function buildBattleWorld(scene, state) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     noise(ctx, tile, 38000, 1.1);
   });
+  SectorArt.details(scene,arena,random);
   const field = arena.ground,
     mesh = new T.PlaneGeometry(W * 2, H * 2, field.cols, field.rows);
   mesh.rotateX(-Math.PI / 2);
@@ -424,11 +311,12 @@ function buildBattleWorld(scene, state) {
       shader.fragmentShader =
         'uniform sampler2D stoneMask; uniform sampler2D stoneTile;\n' + shader.fragmentShader;
     }
+    shader.uniforms.atlasGrain = {value:atmosphere.chart};
     shader.uniforms.soilTile = { value: groundMap };
     shader.uniforms.tileCount = { value: new T.Vector2((2 * W) / 64, (2 * H) / 64) };
     shader.uniforms.baseLight = { value: tint.r * 0.299 + tint.g * 0.587 + tint.b * 0.114 };
     shader.fragmentShader =
-      'uniform sampler2D soilTile; uniform vec2 tileCount; uniform float baseLight;\n' +
+      'uniform sampler2D atlasGrain; uniform sampler2D soilTile; uniform vec2 tileCount; uniform float baseLight;\n' +
       shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
@@ -437,15 +325,17 @@ function buildBattleWorld(scene, state) {
       float value=clamp(dot(grain,vec3(.299,.587,.114))/baseLight,.68,1.28);
       vec3 ground = mix(grain,paint.rgb*mix(1.,value,.35),paint.a);
       ${cobbled ? 'ground=mix(ground,texture2D(stoneTile,vMapUv*tileCount*1.8).rgb,texture2D(stoneMask,vMapUv).r);' : ''}
+      float drift=texture2D(atlasGrain,vMapUv*vec2(6.,10.)).r;
+      ground*=mix(vec3(.71,.76,.76),vec3(1.19,1.16,1.08),smoothstep(.22,.74,drift)*(1.-paint.a*.6));
       diffuseColor.rgb *= ground;
     `
       );
   };
-  scene.add(new T.Mesh(mesh, soil));
+  const terrain=new T.Mesh(mesh, soil);terrain.receiveShadow=true;scene.add(terrain);
   if (arena.id === 'cape') {
     const sea = new T.Mesh(
       new T.PlaneGeometry(edge - W, edge * 2),
-      new T.MeshLambertMaterial({ color: '#638c96' })
+      SectorArt.water(atmosphere,false)
     );
     sea.rotation.x = -Math.PI / 2;
     sea.position.set((edge + W) / 2, 0.035, 0);
@@ -454,12 +344,7 @@ function buildBattleWorld(scene, state) {
   if (arena.water.length) {
     const pool = new T.InstancedMesh(
       new T.PlaneGeometry(),
-      new T.MeshPhongMaterial({
-        color: frost ? '#94c0cc' : '#638d9a',
-        transparent: true,
-        opacity: 0.7,
-        depthWrite: false
-      }),
+      SectorArt.water(atmosphere,frost),
       arena.water.length
     );
     for (const [i, r] of arena.water.entries()) {
@@ -627,6 +512,19 @@ function buildBattleWorld(scene, state) {
         0,
         (w.turn * Math.PI) / 2
       );
+      // A depot enamel sign on two feet at the edge of each named lot. Its posts,
+      // face and lettering leave the scene with the same destructible owner.
+      const label=arena.sights.findIndex(p=>Math.abs(p.x-x)<.01 && Math.abs(p.y-z)<.01);
+      if(label>=0){
+        const sign=texture(512,128,c=>{
+          c.fillStyle='#29474a';c.fillRect(0,0,512,128);c.fillStyle=spec.light;c.fillRect(0,0,11,128);
+          c.strokeStyle='#b8ba9e';c.lineWidth=2;c.strokeRect(18,9,484,110);c.fillStyle='#e5c58a';
+          c.font='600 18px monospace';c.fillText('C I T Y   /   '+spec.sector+'  —  0'+(label+1),32,44);
+          c.fillStyle='#f1e7cd';c.font='bold 37px sans-serif';c.fillText(arena.sights[label].name.toUpperCase(),30,89,451);
+        }),yaw=w.turn*Math.PI/2,cs=Math.cos(yaw),sn=Math.sin(yaw),front=(odd?a:d)*.49,span=Math.min(74,(odd?d:a)*.70),level=21;
+        for(const k of [-.37,.37])buildingPart(w,box,edgeMat,x+front*sn+k*span*cs,level*.49,z+front*cs-k*span*sn,1.3,level,1.3);
+        buildingPart(w,floorQuad,new T.MeshLambertMaterial({map:sign,side:T.DoubleSide}),x+(front+.8)*sn,level,z+(front+.8)*cs,span,span/4,1,0,yaw);
+      }
       if (w.type === 'building')
         buildingPart(
           w,
@@ -741,15 +639,21 @@ function buildBattleWorld(scene, state) {
     });
     scene.add(shadows);
   }
-  if (city)
-    for (const sign of [-1, 1])
-      for (let x = -W + 120; x < W; x += 330) {
-        const z = sign * ((17 / 2) * (spec.size[1] / spec.plan[1]) + 1) * BATTLE_UNITS_PER_METRE;
-        baseHeight = field.at(x, z);
-        place(cylinder, x, 14, z, 1.5, 28, 1.5, '#64685b');
-        place(box, x, 28, z - sign * 4.2, 1, 1, 9.3, '#62675d');
-        place(box, x, 27.1, z - sign * 9, 2.4, 1.5, 4.3, '#e8dab3');
+  // Road furniture follows the new geometry; no lamp posts in the middle of a junction.
+  for (const p of arena.paths) {
+    if (!['asphalt','cobble','ice','gravel'].includes(p.type)) continue;
+    for (let j=1;j<p.points.length;j++) {
+      const a=p.points[j-1],b=p.points[j],dx=b.x-a.x,dz=b.y-a.y,d=Math.hypot(dx,dz);
+      for(let along=155;along<d-75;along+=310) for(const side of [-1,1]) {
+        const x=a.x+(dx*along-side*dz*(p.radius+7))/d,z=a.y+(dz*along+side*dx*(p.radius+7))/d;
+        if(arena.paths.some(other=>other!==p && BattleMaps.onPath(other,x,z,14)) || state.walls.some(w=>x>w.x && x<w.x+w.w && z>w.y && z<w.y+w.h))continue;
+        baseHeight=field.at(x,z);
+        if(city||arena.id==='burgstadt'){
+          place(cylinder,x,17,z,1.9,34,1.9,'#465b58');place(box,x,34,z,6,2.8,5,'#e9cd97');place(pine,x,36.6,z,7.6,3.3,6,'#506666');
+        }else{place(box,x,4,z,2,8,2,frost?'#b67055':'#d5c3a1');place(box,x,6.5,z,2.15,2,2.15,'#546d6c');}
       }
+    }
+  }
   baseHeight = 0;
   // Tree belts and industrial silhouettes are outside the driveable area.
   function tree(x, z, h) {
@@ -837,11 +741,11 @@ function buildBattleWorld(scene, state) {
       m.setMatrixAt(i, transform);
       m.setColorAt(i, color);
     });
-    scene.add(m);
+    m.castShadow=m.receiveShadow=true;scene.add(m);
   }
   for (const batch of buildings.values()) {
     batch.mesh = new T.InstancedMesh(batch.geo, batch.mat, batch.parts.length);
-    scene.add(batch.mesh);
+    batch.mesh.castShadow=batch.mesh.receiveShadow=batch.mat!==shadowMat;scene.add(batch.mesh);
   }
   // Soft roadside trees change pose only on contact, not every frame.
   let treeRevision = -1,
@@ -854,16 +758,10 @@ function buildBattleWorld(scene, state) {
       arena.trees.length
     );
     tops = new T.InstancedMesh(
-      frost ? pine : crown,
-      new T.MeshLambertMaterial({
-        color: frost ? '#92aa94' : arena.id === 'sawmill' ? '#ffffff' : '#75835a'
-      }),
-      arena.trees.length
+      SectorArt.canopy(arena.id),new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide}),arena.trees.length
     );
-    if (arena.id === 'sawmill')
-      for (let i = 0; i < arena.trees.length; i++)
-        tops.setColorAt(i, new T.Color(['#c58b48', '#b27a45', '#c2a150', '#a36d43', '#8e8a53'][i % 5]));
-    scene.add(trunks, tops);
+    for(let i=0;i<arena.trees.length;i++)tops.setColorAt(i,new T.Color().setScalar(.83+.17*random()));
+    trunks.castShadow=tops.castShadow=true;scene.add(trunks, tops);
   }
   function syncTrees() {
     if (!trunks || treeRevision === arena.treeRevision) return;
@@ -883,7 +781,7 @@ function buildBattleWorld(scene, state) {
         mesh.setMatrixAt(i, matrix.matrix);
       }
       piece(trunks, t.height * 0.29, 2 * t.r, t.height * 0.6);
-      piece(tops, t.height * 0.69, t.height * 0.48, t.height * 0.63);
+      piece(tops,t.height*(sand ? .82:.68),t.height*(sand ? .85:frost ? .54:.74),t.height*(sand ? .49:.76));
     }
     for (const mesh of [trunks, tops]) {
       mesh.instanceMatrix.needsUpdate = true;
@@ -892,8 +790,9 @@ function buildBattleWorld(scene, state) {
   }
   let drawnRevision = -1;
   function syncBuildings() {
+    const treesChanged=treeRevision!==arena.treeRevision && !!trunks;
     syncTrees();
-    if (drawnRevision === arena.revision) return;
+    if (drawnRevision === arena.revision) return treesChanged;
     drawnRevision = arena.revision;
     for (const { mesh, parts } of buildings.values()) {
       let count = 0;
@@ -901,7 +800,8 @@ function buildBattleWorld(scene, state) {
       mesh.count = count;
       mesh.instanceMatrix.needsUpdate = true;
     }
+    return true;
   }
   syncBuildings();
-  return { syncBuildings, shadowMat };
+  return { syncBuildings, shadowMat, time:atmosphere.time };
 }

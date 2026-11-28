@@ -350,7 +350,7 @@ const BotAI = (() => {
       ) {
         // Check the actual barrel(s), including friendly cover, not an imaginary centre shot.
         const clear = u.modelAsset?.muzzles
-          ? u.modelAsset.muzzles.every(tip => u.sightHit(d + 40, true, false, tip).hit === t)
+          ? u.firingTips().every(tip => u.sightHit(d + 40, true, false, tip).hit === t)
           : u.sightHit(d + 40, true).hit === t;
         if (clear) u.fire(b.shell);
         else if (b.mode === 'engage') b.shift = true;

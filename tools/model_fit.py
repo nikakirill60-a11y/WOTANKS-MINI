@@ -57,7 +57,7 @@ def fit_t55(data):
 
 
 def face_forward(data):
-    # These three Blitz exports look down -Z. Rotate, don't mirror: triangle
+    # These Blitz exports look down -Z. Rotate, don't mirror: triangle
     # winding and left/right details stay intact. Rebase the pitch joint onto
     # the bore so the barrel does not orbit an offset origin when elevated.
     for key in ('pivot', 'gunPivot'):
@@ -75,7 +75,45 @@ def face_forward(data):
         part[1] = encode(pts, '<hhh')
 
 
+def lower_chassis_bounds(data):
+    # Both G.W. Tigers carry a long, raised rear platform. It remains visible and
+    # hittable, but its overhang isn't part of the chassis on the ground. Keep
+    # all the belt vertices and the lower half-belt-height slice of the body.
+    parts = {m[0]:m for m in data['meshes']}
+    tracks = triples(parts['tracks'][1], '<hhh')
+    mid = (min(y for _,y,_ in tracks) + max(y for _,y,_ in tracks))/2
+    points = tracks + [p for p in triples(parts['body'][1], '<hhh') if p[1] <= mid]
+    x, _, z = zip(*points)
+    data['contactXZ'] = [v/1000 for v in (min(x), min(z), max(x), max(z))]
+
+
+def fit_m24(data):
+    # The Blitz viewer stores assembled chassis-space vertices, down -Z. Its
+    # generic pivots would put the turret off the ring and swing the barrel in
+    # an orbit. Rebase around the lower turret ring and measured breech axis;
+    # join the rear face of the gun to the mantlet. Rotate, never mirror faces.
+    ring = (0,1232,-510)
+    joint = (0,1566,340)
+    for part in data['meshes']:
+        pts = [(-x,y,-z) for x,y,z in triples(part[1], '<hhh')]
+        origin = ring if part[0]=='turret' else (0,1566,538) if part[0]=='gun' else (0,0,0)
+        part[1] = encode((tuple(c-d for c,d in zip(p,origin)) for p in pts), '<hhh')
+    data['pivot'] = [a/1000 for a in ring]
+    data['gunPivot'] = [(a-b)/1000 for a,b in zip(joint,ring)]
+
+
 def prepare(data, slug):
+    import national_models
+    if data['source'].startswith(national_models.ARCHIVE+' / '):
+        return national_models.prepare(data)
+    if data['id'] == 'AMX13M24':
+        fit_m24(data)
+    if data['id'] in ('BC15555','BC15558'):
+        slug = slug.replace('â','a')  # consistent ASCII package paths
+    if slug in ('gw-tiger-p', 'gw-tiger'):
+        lower_chassis_bounds(data)
+    if slug == 'grille' and data['id'] == 'GRILLE':
+        data['id'] = 'GRILLE-SPG'  # GRILLE in older saves is the tier-X Grille 15 TD.
     if slug in ('stug-iii-ausf-b','stuig-33-b','brummbaer','sturmpanzer-ii','sturmtiger-p','baer'):
         from assault_running_gear import fit_export
         fit_export(data, slug)

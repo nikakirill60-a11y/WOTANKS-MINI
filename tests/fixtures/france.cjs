@@ -39,5 +39,31 @@ const scout = [ft,
   ['B-C-25-T-AP','Bat.-Châtillon 25 t AP','mt',1600,300,6,34.0,232,50,30,65,5827],
   ['B-C-25-T','Bat.-Châtillon 25 t','mt',1850,390,5,34.0,259,60,50,65,8613]
 ];
-const routes = [td,heavy,m4,scout];
-module.exports = { routes, unique:[...new Set(routes.flat())] };
+// Four 1.5 sheets; dashes are references to the same row, not new unlocks.
+const light = [...scout.slice(0,8),
+  ['AMX1390','AMX 13 90','lt',1320,240,4,20,205,40,40,64,7726],
+  ['AMX13105','AMX 13 105','lt',1600,360,3,21,234,50,40,68,7502]];
+const wheels = [...scout.slice(0,5),
+  ['AMD178B','Panhard AMD 178B','lt',600,110,1,3.6,125,20,26,72,7160],
+  ['HOTCHKISSEBR','Hotchkiss EBR','lt',780,175,1,5.2,150,30,20,78,8366],
+  ['LYNX6X6','Panhard AML Lynx 6×6','lt',980,240,1,6.8,182,20,20,80,8029],
+  ['EBR90','Panhard EBR 90','lt',1200,240,1,6.2,190,40,40,85,9501],
+  ['EBR105','Panhard EBR 105','lt',1450,360,1,9.2,210,40,40,90,9711]];
+const medium = [...scout.slice(0,6),
+  ['AMX13M24','AMX 13 M24','mt',1050,175,1,4.6,165,40,40,58,1809],
+  ['ERAC105','ERAC 105 Proto','mt',1300,300,2,12.5,205,50,70,60,7010],
+  ['PROJETLOUIS','Projet Louis','mt',1600,350,2,13,232,120,160,60,11727],
+  ['PROJETMURAT','Projet Murat','mt',1900,390,2,12.5,252,150,220,62,9073]];
+const arty = [ft,
+  ['RENAULTFT75BS','Renault FT 75 BS','spg',120,190,1,13,34,16,null,14,5674],
+  ['LORRAINE39LAM','Lorraine 39L AM','spg',165,240,1,14.5,38,12,null,37,7338],
+  ['AMX105AM47','AMX 105 AM mle. 47','spg',220,310,1,17,42,20,null,60,7228],
+  ['AMX13105AM50','AMX 13 105 AM mle. 50','spg',260,390,1,18.5,45,20,null,60,6931],
+  ['AMX13F3AM','AMX 13 F3 AM','spg',320,500,1,22,48,20,null,60,6997],
+  ['LORRAINE15550','Lorraine 155 mle. 50','spg',370,600,1,25,50,50,null,60,7618],
+  ['LORRAINE15551','Lorraine 155 mle. 51','spg',420,650,1,26,52,50,null,60,7667],
+  ['BC15555','Bat.-Châtillon 155 55','spg',480,680,1,27,52,50,16,56,7893],
+  ['BC15558','Bat.-Châtillon 155 58','spg',540,680,3,48,54,16,16,62,7535]];
+const routes = [td,heavy,m4,scout,light,wheels,medium,arty];
+const additions = [...light.slice(8),...wheels.slice(5),...medium.slice(6),...arty.slice(1)];
+module.exports = {routes, additions, unique:[...new Set(routes.flat())], native:{AMD178B:4,HOTCHKISSEBR:6,LYNX6X6:6,EBR90:8,EBR105:8}};

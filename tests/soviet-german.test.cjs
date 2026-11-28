@@ -5,7 +5,7 @@ const paths = require('./fixtures/soviet-german.cjs');
 const rows = new Map(paths.flatMap(p => p.rows.map(r => [r[0], r])));
 const costs = [0,150,350,1500,4000,8000,25000,60000,120000,195000];
 
-test('New Year checkpoint: the local ST-II and Leopard 1 artwork, entry controls and caption fit without starting the garage', async t => {
+test('New Year checkpoint: the local Object 261 artillery artwork, entry controls and caption fit without starting the garage', async t => {
   const {page,click,saved}=await openGame(t,{enterGuest:false});
   await page.context().setOffline(true);
   for (const [width,height] of [[320,568],[390,844],[768,1024],[568,320],[844,390],[1024,768],[1366,768]]) {
@@ -20,13 +20,17 @@ test('New Year checkpoint: the local ST-II and Leopard 1 artwork, entry controls
     });
     assert.deepEqual(result,Array(7).fill(true),`${width}×${height}`);
   }
-  // The offline ZIP deliberately omits the 33 MB film. Both links open the
+  // The offline ZIP deliberately omits the film. Both links open the
   // same published MP4 in another tab without starting a download at entry.
   for(const link of [page.locator('.entry-film'),page.locator('.bay-film')]) {
-    assert.equal(await link.getAttribute('href'),'https://wotanks-mini.vercel.app/CITY-TANKS-1.4-TRAILER.mp4');
+    assert.equal(await link.getAttribute('href'),'https://wotanks-mini.vercel.app/CITY-TANKS-1.5-TRAILER.mp4');
     assert.equal(await link.getAttribute('target'),'_blank');assert.match(await link.getAttribute('rel'),/noopener/);
   }
-  assert.match(await page.locator('.entry-foot').innerText(),/СТ-II · Leopard 1/);
+  assert.match(await page.locator('.entry-film').innerText(),/2:29/);
+  const archive=page.getByRole('link',{name:'Скачать игру (ZIP)',exact:true});
+  assert.equal(await archive.getAttribute('href'),'https://wotanks-mini.vercel.app/CITY-TANKS.zip');
+  assert.equal(await archive.getAttribute('download'),'CITY-TANKS.zip');
+  assert.equal(await page.locator('.entry-model strong').innerText(),'САУ «Объект 261»');
   assert.equal(await saved(),null);await click('ГОСТЬ');assert.ok(await page.locator('#ui').isVisible());
 });
 

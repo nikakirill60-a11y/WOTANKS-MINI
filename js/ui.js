@@ -32,6 +32,7 @@ function updateResources() {
   if (gold) gold.innerText = GameState.GOLD;
   if (silver) silver.innerText = GameState.SILVER;
   refreshSupplyTab();
+  RouletteDesk.refreshWallet();
   if (!document.getElementById('bay-research').hidden) renderTree();
 }
 
@@ -89,7 +90,7 @@ function payConsumable(i) {
   const el = document.getElementById('cons' + (i + 1)), mel = document.getElementById('mcons' + (i + 1));
   el?.classList.add('used'); el?.classList.remove('ready'); mel?.classList.add('used');
   combatMessage(['🔧 Починено!','+15% HP','💉 Адреналин!','🧯 Огонь потушен!','Доп.паёк · +5% урона','Топливо 105'][i], '#c6e7c5');
-  snd('hit'); saveProgress();
+  snd('service',.65); saveProgress();
 }
 
 // ========== Бустеры ==========

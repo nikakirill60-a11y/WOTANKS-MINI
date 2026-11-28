@@ -5,10 +5,10 @@ const {routes,unique} = require('./fixtures/france.cjs');
 const ids = rows => rows.map(row => row[0]);
 const costs = [0,150,350,1500,4000,8000,25000,60000,120000,195000];
 
-test('France on a phone: buy all 31 vehicles through four routes, never repay the FT or the shared heavy line', async t => {
+test('France on a phone: buy all 51 vehicles through eight routes, never repay the FT or the shared heavy line', async t => {
   const owned = ['MS1'];
   let xp = unique.reduce((sum,row) => sum + costs[routes.find(r => r.includes(row)).indexOf(row)],0);
-  const {page,click,saved} = await openGame(t,{mobile:true,seed:{owned,selected:'MS1',XP:xp,garageSlots:32}});
+  const {page,click,saved} = await openGame(t,{mobile:true,seed:{owned,selected:'MS1',XP:xp,garageSlots:52}});
   await click('Дерево развития'); await click('ФРАНЦИЯ');
   const picker = page.getByLabel('Показать ветку'), nodes = page.locator('#nodes .node');
   const visibleIds = () => nodes.evaluateAll(ns => ns.map(n => n.dataset.tankId));
@@ -32,25 +32,25 @@ test('France on a phone: buy all 31 vehicles through four routes, never repay th
       if ((id==='FT' && owned.length===2) || (id==='AMX-M4-45' && !owned.includes('AMX-50-100'))) {
         await picker.selectOption('');
         const available = await page.locator('#nodes .available').evaluateAll(ns => ns.map(n => n.dataset.tankId));
-        assert.deepEqual(available,id==='FT'?['FT-AC','D1','H35']:['AMX-50-100','AMX-65-T','H35']);
+        assert.deepEqual(available,id==='FT'?['FT-AC','D1','H35','RENAULTFT75BS']:['AMX-50-100','AMX-65-T','H35','RENAULTFT75BS']);
         await picker.selectOption(end);
       }
     }
   }
   await page.reload(); const s = await saved();
-  assert.deepEqual([s.owned,s.XP,s.selected,s.curNat],[owned,0,'B-C-25-T','france']);
-  assert.equal(await page.locator('#bay-name').innerText(),'Bat.-Châtillon 25 t');
+  assert.deepEqual([s.owned,s.XP,s.selected,s.curNat],[owned,0,'BC15558','france']);
+  assert.equal(await page.locator('#bay-name').innerText(),'Bat.-Châtillon 155 58');
   await click('ТРЕНИРОВКА'); await page.locator('#train-nat-select').selectOption({label:'Франция'});
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(ns => ns.map(n=>n.value)),ids(unique));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(ns => ns.map(n=>n.value)),ids(unique).concat(require('./fixtures/national.cjs').ids('france')));
 });
 
-test('old French save keys restore their own vehicles and equipment, not the old R35 or AMX 13 90 as substitutes', async t => {
+test('old French save keys restore their own vehicles and equipment, including the real AMX 13 90, but never substitute the retired R35', async t => {
   const aliases = 'D2 B1 AMX38 SAU40 S35CA ARLV39 AC46 AC48 FOCH FOCH155 BDRG1B ARL44 AMXM445 AMX50100 AMX50120 AMX50B AMX65T AMXM451 AMXM454 AMXELC AMX12T AMX1375 BC25TAP BC25T'.split(' ');
   const canonical = 'D2 B1 AMX-38 SAU-40 S35-CA ARL-V39 AMX-AC-46 AMX-AC-48 FOCH FOCH-155 BDR-G1-B ARL-44 AMX-M4-45 AMX-50-100 AMX-50-120 AMX-50-B AMX-65-T AMX-M4-51 AMX-M4-54 AMX-ELC-BIS AMX-12-T AMX-13-75 B-C-25-T-AP B-C-25-T'.split(' ');
   const {page,saved} = await openGame(t,{seed:{XP:317,owned:[...aliases,'FOCH-155','R35','AMX1390'],selected:'BC25T',
-    modules:{BC25T:['optics'],FOCH155:['rammer'],'FOCH-155':['turbo'],AMX1390:['camo']},upgrades:{AMX50B:{engine:1}}}});
-  const s = await saved(); assert.deepEqual([s.owned,s.selected,s.curNat,s.XP],[canonical,'B-C-25-T','france',317]);
-  assert.deepEqual(s.modules,{'B-C-25-T':['optics'],'FOCH-155':['turbo']}); assert.deepEqual(s.upgrades,{'AMX-50-B':{engine:1}});
+    modules:{BC25T:['optics'],FOCH155:['rammer'],'FOCH-155':['turbo'],AMX1390:['camo','optics']},upgrades:{AMX50B:{engine:1}}}});
+  const s = await saved(); assert.deepEqual([s.owned,s.selected,s.curNat,s.XP],[[...canonical,'AMX1390'],'B-C-25-T','france',317]);
+  assert.deepEqual(s.modules,{'B-C-25-T':['optics'],'FOCH-155':['turbo'],AMX1390:[null,'optics']}); assert.deepEqual(s.upgrades,{'AMX-50-B':{engine:1}});
   await page.reload(); assert.deepEqual(await saved(),s);
 });
 

@@ -109,6 +109,7 @@ function decodeProgress(data) {
   for (const count of [data.charges,restored.inventory.supply,restored.inventory.waffentrager])
     if (Number.isSafeInteger(count) && count>0) restored.GOLD=Math.min(Number.MAX_SAFE_INTEGER,restored.GOLD+100*count);
   restored.inventory = migrateSupplyBoxes(restored.inventory);
+  restored.roulette907 = Roulette907.restore(restored.roulette907);
   restored.tree2026 = TreeEvent.counts(restored.tree2026);
   restored.treeSlots2026 = TreeEvent.restoreSlots(restored.treeSlots2026, restored.tree2026);
   // The module UI expects arrays, not arbitrary nested save data.

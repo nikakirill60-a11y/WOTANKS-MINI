@@ -2,17 +2,22 @@
 // the date, not of visits, account balance, or how often a player reloads the shop.
 const WinterSeason = (() => {
   const DAY = 86400000, premium = SPECIAL_TANKS.filter(t => t.source === 'premium');
-  const triples = [];
-  for (let i=0; i<premium.length; i++) for (let j=i+1; j<premium.length; j++)
-    for (let k=j+1; k<premium.length; k++) triples.push([premium[i],premium[j],premium[k]]);
   const now = () => Accounts.active ? Accounts.now() : Date.now();
   const dateKey = ms => new Date(ms).toISOString().slice(0,10);
   function offers(ms) {
     const day = Math.floor(ms / DAY);
-    let seed = Math.imul(day ^ 0x6374a1, 0x21f0aaad);
-    seed = Math.imul(seed ^ (seed >>> 15), 0x735a2d97);
-    // Disjoint even/odd sets guarantee a midnight refresh never repeats the entire trio.
-    return triples[2 * (((seed ^ (seed >>> 16)) >>> 0) % 5) + (day & 1)];
+    // Three equally spaced positions on a ring. Every vehicle gets a turn within
+    // ceil(pool/3) days; reloading or changing profile cannot reroll the shop.
+    const n=premium.length, offset=((day%n)+n)%n;
+    return [0,1,2].map(i=>premium[(offset+Math.floor(i*n/3))%n]);
+  }
+  function saleDates(ms) {
+    const next=new Map();
+    for(let d=0; next.size<premium.length && d<premium.length; d++) {
+      const when=ms+d*DAY;
+      for(const t of offers(when)) if(!next.has(t.id)) next.set(t.id,when);
+    }
+    return premium.map(tank=>({tank,when:next.get(tank.id)}));
   }
   function reward(visit) {
     const resources = visit % 7 === 0 ? { GOLD:700, SILVER:50000 } : { GOLD:50, SILVER:10000, XP:1000 };
@@ -55,7 +60,7 @@ const WinterSeason = (() => {
     window.addEventListener('pageshow', () => refresh(true));
     refresh(true);
   }
-  return { now, dateKey, offers, reward, visit, refresh, init };
+  return { now, dateKey, offers, saleDates, reward, visit, refresh, init };
 })();
 
 function rewardText(reward) {

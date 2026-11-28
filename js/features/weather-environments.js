@@ -25,13 +25,16 @@ const WeatherEngine = {
       }
     }
     const h = tank._placed ? tank.rideHeight : (this.ground?.at(tank.x, tank.y) ?? 0);
+    if (inWater && !tank.wetTracks && Math.abs(tank.speedKmh) > 2)
+      snd('splash', Math.min(.85, .3 + Math.abs(tank.speedKmh) / 55), tank);
+    tank.wetTracks = inWater;
     const deep = inWater && -h > (tank.modelAsset?.height ?? 2) * BATTLE_UNITS_PER_METRE * 0.62;
     tank.submersion = deep ? (tank.submersion || 0) + dt : Math.max(0, (tank.submersion || 0) - 2 * dt);
     tank.drownTimer = deep ? Math.max(0, 10 - tank.submersion) : null;
     if (deep && tank.submersion >= 10) {
       tank.hp = 0;
       tank.dead = true;
-      snd('boom');
+      snd('splash',1,tank);
       updateScoreboard();
     }
   }

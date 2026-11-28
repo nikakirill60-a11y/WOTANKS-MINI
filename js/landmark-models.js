@@ -49,6 +49,12 @@ function makeLandmarkGeometry(kind, variant = 0) {
         ]);
     shell(c, ring(-d / 2), ring(d / 2), [x, y, z]);
   }
+  function strut(col,a,b,r){
+    const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),D=B.clone().sub(A).normalize();
+    const u=new THREE.Vector3(Math.abs(D.y)>.85?1:0,Math.abs(D.y)>.85?0:1,0).cross(D).normalize().multiplyScalar(r),
+      v=D.clone().cross(u),ring=p=>[[-1,-1],[1,-1],[1,1],[-1,1]].map(([i,j])=>p.clone().addScaledVector(u,i).addScaledVector(v,j).toArray());
+    shell(col,ring(A),ring(B),A.clone().lerp(B,.5).toArray());
+  }
   function cone(c, x, z, bottom, top, rx, rz, rtx = rx, rtz = rz, n = 12) {
     const ring = (y, w, d) =>
         Array.from({ length: n }, (_, i) => [
@@ -208,6 +214,105 @@ function makeLandmarkGeometry(kind, variant = 0) {
     door(dock ? 0 : -0.17, 0.451, dock ? 0.53 : 0.13, dock ? 0.48 : 0.22, dock ? '#435a58' : timber);
     box('#875f4f', 0.31, 0.9, -0.12, 0.078, 0.22, 0.09);
     box(snow ? '#e5e7dd' : '#afa08c', 0.31, 1.012, -0.12, 0.1, 0.035, 0.11);
+  } else if (kind === 'gasworks') {
+    // Riveted bell holder inside an open lattice crown, with a smaller pump house at its foot.
+    const rust='#ad664b',steel='#3e6268';
+    cone('#9e8c70',-.08,0,0,.08,.39,.46);cone('#739290',-.08,0,.08,.66,.36,.42);
+    for(const y of [.18,.38,.58,.80])cone(steel,-.08,0,y,y+.023,.394,.463,.394,.463,16);
+    cone('#b88766',-.08,0,.66,.77,.365,.426,.08,.085,16);
+    for(let j=0;j<12;j++) {const a=tau*j/12,x=-.08+.38*Math.cos(a),z=.45*Math.sin(a);
+      box(rust,x,.46,z,.027,.88,.027);box(trim,x,.91,z,.042,.024,.042);
+      const b=a+tau/12,X=-.08+.38*Math.cos(b),Z=.45*Math.sin(b);
+      for(const y of [.18,.40,.62])strut(steel,[x,y,z],[X,y+.18,Z],.007);
+    }
+    box('#9b654f',.33,.17,.05,.31,.34,.57);roof('#52666b',.33,.05,.34,.62,.34,.46);
+    for(const x of [.24,.32,.40])panel(glass,x,.19,.339,.048,.12);
+    cone(rust,.39,-.33,0,.93,.049,.055,.033,.039);cone(trim,.39,-.33,.83,.86,.039,.045);
+  } else if (kind === 'glasshouse') {
+    // Cast-iron conservatory; each roof facet has its own glazing bars.
+    const iron='#477571';box('#ba936e',0,.09,0,1,.18,.92);
+    box('#80b4af',0,.39,0,.96,.43,.86);prism('#a4d0c4',0,.99,[[.60,-.45],[.86,-.23],[1,0],[.86,.23],[.60,.45]]);
+    for(const s of [-1,1]) {
+      box(iron,0,.60,s*.442,1,.027,.029);box(trim,0,.22,s*.44,.99,.022,.022);
+      for(let i=-5;i<=5;i++){const x=i*.094;box(iron,x,.40,s*.445,.012,.42,.016);
+        prism(iron,x,.014,[[.60,s*.456],[.87,s*.238],[1.01,0],[.99,0],[.85,s*.23]]);}
+      for(let i=-4;i<5;i++)panel(i%3?'#73a9a8':'#92bfac',(i+.5)*.094,.40,s*.437,.076,.32);
+    }
+    for(const s of [-1,1]){for(let k=-2;k<=2;k++){
+        panel('#587e7c',s*.483,.4,k*.155,.137,.30,true);panel('#9ccac2',s*.487,.45,k*.155,.112,.148,true);}
+      strut(iron,[s*.492,.60,-.43],[s*.492,.98,0],.011);strut(iron,[s*.492,.98,0],[s*.492,.60,.43],.011);}
+    box('#e5cf9a',0,.27,.449,.17,.36,.033);box(iron,0,.24,.47,.12,.33,.02);
+  } else if (kind === 'observatory') {
+    const clay='#ba7557', blue='#48777c', brass='#dfb568';
+    cone('#b39876',0,0,0,.09,.50,.48,.48,.46,16);cone(clay,0,0,.09,.50,.45,.43,.40,.39,16);
+    for(const y of [.14,.36,.48])cone(brass,0,0,y,y+.027,.455-(y-.14)*.10,.438-(y-.14)*.10,undefined,undefined,16);
+    for(let j=0;j<5;j++){const a=j*Math.PI/10,b=(j+1)*Math.PI/10;
+      cone(j%2?'#68969a':blue,0,0,.52+.43*Math.sin(a),.52+.43*Math.sin(b),.411*Math.cos(a),.401*Math.cos(a),.411*Math.cos(b),.401*Math.cos(b),20);}
+    for(const x of [-.042,.042])for(let j=-4;j<4;j++){
+      const pt=k=>[x,.525+.441*Math.cos(k*Math.PI/8),.408*Math.sin(k*Math.PI/8)];strut(brass,pt(j),pt(j+1),.009);}
+    box(brass,0,.97,0,.045,.06,.043);for(let i=-2;i<=2;i++)panel('#534c47',i*.105,.26,.425-.035*Math.abs(i),.041,.083);
+    box('#e8bb83',0,.11,.434,.20,.22,.1);door(0,.49,.11,.17);
+  } else if (kind === 'gantry') {
+    const steel='#416974',ochre='#d29746';box('#928c75',0,.04,0,.97,.08,.96);
+    for(const z of [-.34,.34]){
+      for(const x of [-.32,.32]){box(steel,x,.13,z,.19,.10,.17);strut(ochre,[x,.15,z],[x*.82,.76,z*.85],.027);}
+      box(ochre,-.055,.78,z*.85,.89,.06,.06);box(ochre,-.055,.94,z*.85,.89,.034,.047);
+      for(let j=0;j<7;j++){const x=-.48+j*.119;strut(steel,[x,j%2?.93:.80,z*.85],[x+.119,j%2?.80:.93,z*.85],.009);}
+    }
+    for(const x of [-.46,-.24,.05,.32])box(steel,x,.78,0,.025,.035,.62);
+    box('#d4b46e',.21,.83,.04,.26,.16,.52);box(glass,.21,.85,.31,.21,.079,.028);
+    for(const x of [-.46,-.20])strut(dark,[x,.77,.09],[x,.41,.09],.004);
+    box('#b56448',-.33,.35,.09,.35,.13,.31);for(let i=0;i<8;i++)box('#e59c6d',-.48+.043*i,.35,.25,.009,.11,.008);
+    for(const [x,z] of [[-.14,-.21],[.15,-.18],[.10,.19]]){box(steel,x,.16,z,.27,.17,.3);for(let j=0;j<5;j++)box('#89a199',x-.11+j*.055,.16,z+.153,.012,.16,.007);}
+  } else if (kind === 'headframe') {
+    const rust='#a35b42',iron='#3d5357';box('#9b8772',0,.038,0,.97,.076,.91);
+    box('#9b7662',.21,.19,0,.48,.32,.74);roof('#5f6f6c',.21,0,.54,.83,.35,.47);
+    for(const z of [-.25,.25]){strut(rust,[-.43,.08,z],[-.31,.87,z],.033);strut(rust,[.41,.09,z],[-.19,.87,z],.032);
+      for(let j=0;j<3;j++){const y=.18+j*.19;strut(iron,[-.40+j*.028,y,z],[.30-j*.14,y+.13,z],.012);}
+      box(trim,-.24,.79,z,.38,.035,.09);}
+    for(const x of [-.34,-.15]){
+      const at=a=>[x+.145*Math.cos(a),.905+.097*Math.sin(a),.29];
+      for(let j=0;j<12;j++){strut(iron,at(j*tau/12),at((j+1)*tau/12),.012);if(!(j%2))strut(rust,[x,.905,.29],at(j*tau/12),.006);}
+      strut(dark,[x,.99,.29],[.41,.32,.29],.004);
+    }
+    for(const x of [.05,.17,.29])panel(glass,x,.23,.373,.075,.085);
+  } else if (kind === 'radome') {
+    box('#876454',0,.16,0,.90,.32,.8);box('#e6e7d9',0,.335,0,1,.07,.93);
+    cone('#657d82',0,0,.37,.51,.30,.34,.28,.32,12);
+    const ring=(lat,step)=>Array.from({length:12},(_,j)=>{const a=(j+step)*tau/12;return [.43*Math.cos(lat)*Math.cos(a),.67+.34*Math.sin(lat),.49*Math.cos(lat)*Math.sin(a)];});
+    for(let k=0;k<5;k++){const a=ring(-.55+k*.40,(k%2)*.5),b=ring(-.55+(k+1)*.40,((k+1)%2)*.5);
+      for(let j=0;j<12;j++){const n=(j+1)%12,inside=[0,.67,0];face(['#dce8e4','#cbdbde','#eff0dd'][(j+k)%3],[a[j],b[j],a[n]],inside);face('#cfdddd',[a[n],b[j],b[n]],inside);}
+      if(k===4)face('#e6eee8',b,[0,.67,0]);}
+    for(const x of [-.29,-.13,.03,.19])panel('#c4ced0',x,.20,.403,.085,.083);
+    box('#b65e49',.40,.51,.33,.018,.36,.021);box(trim,.40,.708,.33,.037,.032,.039);
+  } else if (kind === 'belfry') {
+    box('#b98970',0,.25,0,.78,.50,.80);box(stone,0,.06,0,.92,.12,.94);
+    for(const s of [-1,1]){box(trim,s*.355,.36,0,.045,.51,.84);clock(0,.42,s*.415,.134);
+      for(const y of [.17,.29,.49])box('#d9ab87',0,y,0,.82,.017,.84);
+      for(const z of [-.22,0,.22]){panel(trim,s*.394,.285,z,.118,.158,true);panel(pane,s*.399,.285,z,.076,.125,true);}}
+    door(0,.409,.20,.195);
+    box(trim,0,.55,0,.9,.052,.93);
+    for(const x of [-.30,.30])for(const z of [-.31,.31])box('#d9bd91',x,.66,z,.10,.20,.10);
+    cone('#a87844',0,0,.61,.70,.20,.20,.12,.12,12);
+    hip('#497877',0,0,.95,1,.75,.89);cone('#548683',0,0,.84,1.05,.16,.17,0,0,8);
+  } else if (kind === 'daymark') {
+    cone('#ac9e88',0,0,0,.13,.46,.48,.39,.41,8);
+    for(const x of [-.28,.28])for(const z of [-.26,.26]) box('#8f624d',x,.48,z,.074,.80,.079,-Math.sign(x)*.15);
+    for(const s of [-1,1]){box('#efe4c5',0,.75,s*.32,.46,.46,.063,Math.PI/4);box('#bd5a49',0,.75,s*.358,.28,.28,.03,Math.PI/4);}
+    for(const y of [.21,.35,.49])box('#ede2c7',0,y,.26,.64,.033,.04);
+  } else if (kind === 'kiln') {
+    box('#a66349',0,.25,0,.96,.50,.87);roof('#586a68',0,0,1,.98,.50,.66);
+    for(const x of [-.30,0,.30]){cone('#9e624a',x,-.19,.54,.97,.069,.093,.047,.068,8);cone('#d3b184',x,-.19,.93,.99,.065,.084,.065,.084,8);
+      box('#60483e',x,.18,.444,.21,.30,.032);for(let i=0;i<4;i++)panel('#bf8c56',x,.09+i*.061,.465,.18,.016);}
+    for(const s of [-1,1]) box('#dabd8d',0,.45,s*.439,.97,.032,.03);
+  } else if (kind === 'terminal') {
+    const ivory='#dfd8bf',teal='#497980';box(ivory,0,.19,0,.96,.38,.82);
+    box(teal,0,.29,0,1,.046,.89);box('#b1b9a4',0,.405,0,.97,.07,.87);
+    box(ivory,0,.47,-.02,.31,.50,.77);box(teal,0,.69,-.02,.34,.06,.82);
+    for(const s of [-1,1]){for(let i=-5;i<=5;i++)panel(glass,i*.082,.16,s*.412,.062,.16);
+      panel(pane,0,.52,s*.395-.02,.26,.15);for(const x of [-.09,0,.09])panel(glass,x,.54,s*.401-.02,.072,.094);}
+    for(const x of [-.115,0,.115])box(ivory,x,.77,-.02,.026,.20,.50);box(teal,0,.81,-.02,.29,.032,.59);
+    cone('#b37859',0,0,.84,1.05,.012,.025,0,0,7);
   } else if (kind === 'townhall') {
     box('#bf9277', 0, 0.25, 0, 0.96, 0.5, 0.8);
     windows(7, [0.18, 0.37], { depth: 0.8 });

@@ -103,17 +103,40 @@ const BattleModels = (() => {
     geo.dispose(); flat.dispose();
     return {position,normal,color,decorative:!!override};
   }
+  // Lift whole triangles from the two supplied groups into each axle's local
+  // frame. Keep their original normals and every tyre/hub face; only repaint.
+  const rubber=new THREE.Color('#151515').r; // neutral rubber black in linear colour space
+  function nativeWheel(parts, ranges, [x,y,z]) {
+    const count=ranges.reduce((n,run)=>n+run.reduce((v,len,i)=>v+(i%2?len:0),0),0)*9;
+    const position=new Float32Array(count), normal=new Float32Array(count), color=new Float32Array(count);
+    let offset=0;
+    ranges.forEach((run,k)=>{
+      const part=parts[k];
+      for (let i=0;i<run.length;i+=2) {
+        const start=run[i]*9, end=start+run[i+1]*9;
+        position.set(part.position.subarray(start,end),offset); normal.set(part.normal.subarray(start,end),offset);
+        offset+=end-start;
+      }
+    });
+    color.fill(rubber);
+    return join([{position,normal,color}]).translate(-x,-y,-z);
+  }
   const wheelPaint=new Map();
   function build(data) {
-    const [fit,omit]=WHEEL_FITS[data.id];
+    const [fit,omit,nativeFaces]=WHEEL_FITS[data.id];
     const groups = {body:[], tracks:[], wheels:[], turret:[], gun:[]};
     data.meshes.forEach(([kind,positions,indices,override],i)=>{
       const p=decodePart(data,kind,positions,indices,override); p.omit=omit[i]; groups[kind].push(p);
     });
-    if (!wheelPaint.has(data.color)) wheelPaint.set(data.color,join(STURM_WHEEL.map(
+    const spare=nativeFaces?.spare;
+    if (spare) for (let i=0;i<spare.length;i+=2) groups.body[0].color.fill(rubber,spare[i]*9,(spare[i]+spare[i+1])*9);
+    const axles=fit.map(row=>row.map(v=>v/1000));
+    if (!nativeFaces && !wheelPaint.has(data.color)) wheelPaint.set(data.color,join(STURM_WHEEL.map(
       ([pos,ix,paint])=>decodePart(data,'wheels',pos,ix,paint))));
     const a = {
-      axles: fit.map(row=>row.map(v=>v/1000)), wheel:wheelPaint.get(data.color), sourceTriangles:data.triangles,
+      axles, wheel:nativeFaces ? null : wheelPaint.get(data.color),
+      nativeWheels:nativeFaces?.wheels.map((ranges,i)=>nativeWheel([groups.body[0],groups.wheels[0]],ranges,axles[i])),
+      sourceTriangles:data.triangles,
       hull: join([...groups.body, ...groups.tracks, ...groups.wheels]),
       turret: join(groups.turret),
       gun: join(groups.gun),
@@ -132,7 +155,7 @@ const BattleModels = (() => {
     // The export is quantized to whole mm, then stored as Float32 metres.
     // For twins, include the full 12 mm slice of BOTH rims: a half-quantum
     // margin admits the boundary vertices but never those 13 mm from the tip.
-    const twin = DB[data.id].salvo === 2, rimZ = z - (twin ? .0125 : .012);
+    const twin = DB[data.id].salvo === 2 || DB[data.id].barrels === 2, rimZ = z - (twin ? .0125 : .012);
     let x0 = Infinity,
       x1 = -Infinity,
       y0 = Infinity,
@@ -165,6 +188,11 @@ const BattleModels = (() => {
       a.hitTurret = solidBox(groups.turret);
     }
     const hull = a.hitHull || a.hull.boundingBox;
+    if (data.contactXZ) {
+      // Raised rear equipment still takes hits, but doesn't widen the ground footprint.
+      a.contactHull = hull.clone();
+      [a.contactHull.min.x, a.contactHull.min.z, a.contactHull.max.x, a.contactHull.max.z] = data.contactXZ;
+    }
     a.groundY = -hull.min.y;
     if (DB[data.id].oscillating) {
       // The upper turret is in the gun group. Don't inflate its hit box with the long, narrow barrel.
@@ -191,7 +219,11 @@ const BattleModels = (() => {
     // A tier variant can share a physical asset, never a save slot or gun stats.
     const id = modelKey(vehicleId);
     if (signal.aborted) return Promise.reject(signal.reason);
-    if (cache.has(id)) return Promise.resolve(cache.get(id));
+    if (cache.has(id)) {
+      const asset=cache.get(id);
+      cache.delete(id); cache.set(id,asset);
+      return Promise.resolve(asset);
+    }
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       const timer = setTimeout(() => fail(new Error('Нет ответа от файла модели.')), 15000);
@@ -212,7 +244,12 @@ const BattleModels = (() => {
       waiters.set(script, (data) => {
         try {
           if (data.id !== id) throw Error('Неверный файл модели.');
-          if (!cache.has(id)) cache.set(id, build(data));
+          if (!cache.has(id)) {
+            cache.set(id, build(data));
+            // Keep a full 15×15 match hot, not 428 expanded geometries in a long
+            // session. Active scenes own their references; eviction never disposes them.
+            if (cache.size>32) cache.delete(cache.keys().next().value);
+          }
           clean();
           resolve(cache.get(id));
         } catch (e) {

@@ -13,7 +13,7 @@ test('phone: a third Marder II fork; old StuG G keeps its slot and equipment, an
   assert.deepEqual((await saved()).owned,owned); assert.equal((await saved()).selected,'STUG3G');
   await click('Дерево развития'); await click('ГЕРМАНИЯ');
   const nodes=page.locator('#nodes .node'), picker=page.getByLabel('Показать ветку');
-  assert.equal(await nodes.count(),65);assert.equal(await picker.locator('option').count(),13);
+  assert.equal(await nodes.count(),74);assert.equal(await picker.locator('option').count(),14);
   assert.deepEqual(await page.evaluate(()=>BRANCHES.germany.tanks.filter(t=>t.parent==='MARDER2').map(t=>t.id)),['MARDER38','HETZER','STUG3B']);
   const before=await saved(); await picker.selectOption('STURMTIGER');
   assert.deepEqual(await nodes.evaluateAll(ns=>ns.map(n=>n.dataset.tankId)),prefix.concat(rows.map(r=>r[0])));

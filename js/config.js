@@ -129,6 +129,7 @@ function initialProgress() {
     researched: [STARTER_TANK], owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
     garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [], rentalBattles: {},
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
+    roulette907: {spins:0, prize:'', amount:0},
     tree2026: TreeEvent.counts(), treeSlots2026: TreeEvent.emptySlots(),
     modules: {}, upgrades: {}, upgradesBought: {},
     totalBattles: 0, lifetimeWins: 0, lifetimeKills: 0,

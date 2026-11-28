@@ -14,7 +14,7 @@ const CombatMechanics = {
       duration: 12.0, // 12 секунд
       maxDuration: 12.0
     });
-    if (typeof snd === 'function') snd('hit');
+    if (typeof snd === 'function') snd('smoke',.7,caster);
   },
 
   // 24. АРТИЛЛЕРИЙСКИЙ УДАР (Artillery Strike)
@@ -45,7 +45,7 @@ const CombatMechanics = {
         if (typeof spawnParticles === 'function') {
           spawnParticles(a.x, a.y, '#ff2200', 60, 10, 45);
         }
-        if (typeof snd === 'function') snd('boom');
+        if (typeof snd === 'function') snd('boom',1,a);
         if (GameState.units) {
           GameState.units.forEach(u => {
             const dist = Math.hypot(u.x - a.x, u.y - a.y);

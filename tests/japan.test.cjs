@@ -35,7 +35,7 @@ test('Japan on a phone: research both routes once, keep the premium STA-2 separa
   await page.reload();const s=await saved();assert.deepEqual([s.owned,s.XP,s.curNat,s.selected],[owned,0,'japan','TYPE-5-H']);
   assert.equal(await page.locator('#bay-name').innerText(),'Type 5 Heavy');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption({label:'Япония'});
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(os=>os.map(o=>o.value)),[...ids(unique),'STA2']);
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(os=>os.map(o=>o.value)),[...ids(unique),'STA2',...require('./fixtures/national.cjs').ids('japan')]);
 });
 
 test('old Japanese save keys restore only the same machines, selection and equipment; no substitute Chi-Ni or premium unlock',async t=>{

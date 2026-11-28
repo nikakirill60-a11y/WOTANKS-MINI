@@ -60,6 +60,8 @@ const BattleView = (() => {
     const { x, y } = GameState.arena.bounds;
     camera.far = 2 * Math.hypot(x, y) + 2700;
     camera.updateProjectionMatrix();
+    renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
     world = buildBattleWorld(scene, GameState);
     const bodyMat = new T.MeshPhongMaterial({ vertexColors: true, specular: '#464338', shininess: 24 });
     const allyMat = bodyMat.clone(),
@@ -448,7 +450,8 @@ const BattleView = (() => {
       v.shade.rotation.set(-u.groundPitch, v.root.rotation.y, u.groundRoll, 'YXZ');
       v.shade.rotateX(-Math.PI / 2);
       if (u.dead && v.hull.material !== v.wreck) {
-        v.wheels.mesh.material = v.hull.material = v.turret.material = v.gun.material = v.wreck;
+        v.wheels.setMaterial(v.wreck);
+        v.hull.material = v.turret.material = v.gun.material = v.wreck;
         if (v.treads) v.treads.material = v.wreck;
       }
       v.marker.visible = !u.dead && u !== g.player && (u.team !== 'enemy' || u.visible);
@@ -462,7 +465,8 @@ const BattleView = (() => {
         v.hp.position.x = (v.hp.scale.x - 14) / 2;
       }
     }
-    world.syncBuildings();
+    if(world.syncBuildings())renderer.shadowMap.needsUpdate=true;
+    world.time.value=BattleClock.now()/1000;
     for (const { mesh } of Object.values(layers)) mesh.count = 0;
     for (const b of g.bullets)
       stamp(layers.shells, b.x, b.h, b.y, 1.1, 1.1, 8, Math.PI / 2 - b.a, -Math.asin(b.dh), b.color);
@@ -570,6 +574,7 @@ const BattleView = (() => {
         mats = new Set(),
         textures = new Set();
       scene.traverse((o) => {
+        o.shadow?.dispose();
         if (o.geometry) geos.add(o.geometry);
         if (o.material) for (const m of [].concat(o.material)) mats.add(m);
         if (o.isInstancedMesh) o.dispose();
@@ -634,6 +639,7 @@ const BattleView = (() => {
     toggleAutoAim,
     toggleScope,
     get artillery() { return artillery; },
+    get listenerYaw() { return artillery ? -Math.PI/2 : look?.yaw; },
     cycleZoom: () => { if (artillery) artillery.level = (artillery.level + 1) % 3; else look?.cycleZoom(); },
     screenPoint,
     aim,

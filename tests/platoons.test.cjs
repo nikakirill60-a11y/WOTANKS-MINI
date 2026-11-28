@@ -58,7 +58,7 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
     await p.locator('#profile-pass').fill('local fixture password');await p.locator('#account-submit').click();await p.waitForFunction(()=>Accounts.active && !Accounts.switching);};
   await Promise.all([register(a,'commander'),register(b,'friend_2')]);
   // Compatible IV/V or V/V human seats. T67 is still the invited player's rental.
-  const commandTank=fallback?'KV1':'SAU-40';
+  const commandTank=fallback?'KV1':'NAT100';
   await a.evaluate(id=>{GameState.owned.push(id);GameState.selected=id;renderCarousel();saveProgress();},commandTank);
   const sector=fallback?'field':'burgstadt';
   await a.locator('#map-select').selectOption(sector);
@@ -68,6 +68,7 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   const balances=await Promise.all([a,b].map((p,i)=>p.evaluate(i=>{
     GameState.tree2026.bauble=1; // Both own a ball, only the wingman hangs his.
     if(i) TreeEvent.setSlot(GameState,3,'bauble');
+    const drop=nationalVictoryBox;nationalVictoryBox=(g,won)=>drop(g,won,()=>.19999);
     const settle=TreeEvent.settle;TreeEvent.settle=(g,base)=>settle(g,base,()=>.25);saveProgress();
     return [GameState.XP,GameState.GOLD];
   },i)));
@@ -175,6 +176,7 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   assert.equal(await a.evaluate(()=>GameState.battleKills),0);assert.equal(await b.evaluate(()=>GameState.battleKills),1);assert.ok(await b.evaluate(()=>GameState.battleDmg>=90));
   assert.equal(await b.evaluate(()=>GameState.totalBattles),1);assert.equal(await a.evaluate(()=>GameState.totalBattles),1);
   const income=await Promise.all([a,b].map((p,i)=>p.evaluate(([xp,gold])=>[GameState.XP-xp, GameState.GOLD-gold, GameState.inventory.ornament||0],balances[i])));
+  assert.deepEqual(await Promise.all([a,b].map(p=>p.evaluate(()=>Object.entries(GameState.inventory).filter(([id])=>id.startsWith('national-'))))),[[[fallback?'national-ussr':'national-france',1]],[['national-usa',1]]]);
   assert.deepEqual(income,[[300,50,0],[880+550*targetTier,55,1]]);
   if (!fallback) assert.ok(relay.counts.get('drive')>2 && relay.counts.get('world')>2);
   assert.deepEqual(relay.errors,[]);

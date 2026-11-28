@@ -1,0 +1,17 @@
+{
+  "voice_id": "voice-02",
+  "language": "ru",
+  "reference_sha256": "e889aba51fcc97e7c1becb01b1d2794f7a2c90e83126d338d0228dfbd10b45a6",
+  "takes": {
+    "01-depot.mp3": "11275187348c232ab7fa518c1c487e358b137111d1ece27d30ac1f5da22ce510",
+    "02-atlas.mp3": "f3777c9164f96bcdfa9ca932fbcb6aaf00819dcee6e8964d802b3c1ad449d7d3",
+    "03-boxes.mp3": "b3fbf11536e5c9225e82ba60a514d242c1dd2b84b42c900892d12234ae051fa7",
+    "04-fleet.mp3": "8d989e65663d91be3517be5592a6e91b2144bc8badf5f0c00bb31b0c87993fd2",
+    "05-wheel.mp3": "56e366cf7fa59730db41994223f5fa920bc9704db3be551b8c2b62366c864bf9",
+    "06-germany.mp3": "682742bdc1f2fb9aaa13f2fc9ca7c70a4074e860b16cefae607c80f176004310",
+    "07-ussr.mp3": "0c52c4fff82863784440626d327d7e66e1aed0aadae9cace8f1813edc75aeb9a",
+    "08-france.mp3": "36306255052f8bfcb560a90fac086fd617f6e4522d6965a1efc7eb795b969805",
+    "09-scouts.mp3": "9b012090b5ee5ccbfb5b4e38f037d0eff49e0f7546d175b7ef1b0db90e224769",
+    "10-murat.mp3": "e212625bc4efef265c4e8e8bbc56c1fbe3e48ca0225e1db811eae98891c0459a"
+  }
+}

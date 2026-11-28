@@ -26,6 +26,7 @@ const CrateModel = (() => {
   }
 
   function build(id) {
+    if (Object.hasOwn(NationalCrates.catalog,id)) return NationalCrates.build(id);
     if (id === 'ornament') return OrnamentModels.caseRig();
     if (!Object.hasOwn(paints,id)) throw Error('Unknown crate');
     const festive=id==='collection', shell=paints[id], frame=festive?'#273d24':'#3c4630';
@@ -116,13 +117,21 @@ const CrateModel = (() => {
     scene.add(new T.HemisphereLight('#eef4ef','#4c5a52',1.7));
     const sun=new T.DirectionalLight('#ffffff',2.15);sun.position.set(-4,7,5);scene.add(sun);
   }
-  function studio(scene){
-    light(scene);scene.background=new T.Color('#26353a');
-    const floor=new T.Mesh(new T.PlaneGeometry(40,40),new T.MeshLambertMaterial({color:'#3b5146'}));
+  function studio(scene,rig){
+    const exhibit=rig?.exhibit;
+    light(scene);scene.background=new T.Color(exhibit?'#253a48':'#26353a');
+    const floor=new T.Mesh(new T.PlaneGeometry(40,40),new T.MeshLambertMaterial({color:exhibit?'#445560':'#3b5146'}));
     floor.rotation.x=-Math.PI/2;scene.add(floor);
-    const grid=new T.GridHelper(40,40,'#789180','#637a6b');grid.material.transparent=true;
+    const grid=new T.GridHelper(40,40,exhibit?'#8e999a':'#789180',exhibit?'#748487':'#637a6b');grid.material.transparent=true;
     grid.material.opacity=.12;grid.material.depthWrite=false;grid.position.y=.003;scene.add(grid);
-    const shade=new T.Mesh(new T.CircleGeometry(1,28),new T.MeshBasicMaterial({color:'#172422',transparent:true,opacity:.28,depthWrite:false}));
+    const ink=new T.MeshBasicMaterial({color:'#172422',transparent:true,opacity:.28,depthWrite:false});
+    if(exhibit){
+      // A soft contact shadow on the display bench, baked locally without a shadow-map pass.
+      const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');
+      const fade=g.createRadialGradient(48,48,0,48,48,48);fade.addColorStop(0,'#ffffff');fade.addColorStop(.53,'#ffffffce');fade.addColorStop(1,'#ffffff00');
+      g.fillStyle=fade;g.fillRect(0,0,96,96);ink.map=new T.CanvasTexture(c);ink.color.set('#12212a');ink.opacity=.66;
+    }
+    const shade=new T.Mesh(new T.CircleGeometry(1,28),ink);
     shade.rotation.x=-Math.PI/2;shade.position.y=.008;shade.scale.set(1.9,1.45,1);scene.add(shade);
   }
   function dispose(root){

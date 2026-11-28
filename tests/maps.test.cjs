@@ -47,7 +47,7 @@ function game() {
     vm.runInContext(readFileSync(path.join(root, file + '.js'), 'utf8'), ctx, { filename: file });
   }
   return vm.runInContext(
-    '({DB,PLAYABLE_NATIONS,makeRosters,BOT_CLEARANCE,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,getTerrainAt,nearestBattleWall})',
+    '({DB,PLAYABLE_NATIONS,makeRosters,BOT_CLEARANCE,BATTLE_UNITS_PER_METRE,BattleRecon,BattleMaps,BattleNavigation,battleFormation,BotAI,GameState,Tank,damageWall,canSee,teamSees,CombatMechanics,WeatherEngine,TrackDrive,getTerrainAt,nearestBattleWall,crossesMapRect})',
     ctx
   );
 }
@@ -705,5 +705,29 @@ test('every adjacent-tier platoon gets only opponents and allies within one tier
     if(Math.abs(DB[a].tier-DB[b].tier)>1){assert.throws(()=>makeRosters(a,7,()=>.4,party),/соседних уровней/);continue;}
     const teams=makeRosters(a,7,()=>.42,party);
     for(const id of teams.flat())assert.ok(party.every(h=>Math.abs(DB[h].tier-DB[id].tier)<=1),[a,b,id]);
+  }
+});
+
+
+test('field atlas: the full width of each drawn road stays open and no traversable pocket is cut off', () => {
+  const { BattleMaps, BattleNavigation, crossesMapRect, BATTLE_UNITS_PER_METRE: m } = game();
+  const sectors = Object.values(BattleMaps.specs);
+  for (const key of ['chapter', 'sector', 'seed']) assert.equal(new Set(sectors.map(s => s[key])).size, sectors.length, key);
+  for (const id of Object.keys(BattleMaps.specs)) {
+    const arena = BattleMaps.create(id), nav = new BattleNavigation(arena);
+    for (const { points, radius } of arena.paths) for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      assert.ok(!nav.obstacles.some(r => crossesMapRect(a.x, a.y, b.x, b.y, r, radius + 2 * m)), id + ' blocked road shoulder');
+    }
+    // Four-way flood: do not escape a painted-in courtyard by cutting diagonally between two walls.
+    const seen = nav.blocked.slice(), queue = [nav.nearest(0, 0)];
+    seen[queue[0]] = 1;
+    for (let j = 0; j < queue.length; j++) {
+      const k = queue[j], col = k % nav.cols;
+      for (const q of [col ? k - 1 : -1, col + 1 < nav.cols ? k + 1 : -1, k - nav.cols, k + nav.cols]) {
+        if (q >= 0 && q < seen.length && !seen[q]) { seen[q] = 1; queue.push(q); }
+      }
+    }
+    assert.equal(seen.indexOf(0), -1, id + ' has an inaccessible pocket');
   }
 });

@@ -7,10 +7,12 @@
   display:flex; flex-direction:column; padding:0 var(--edge); background:#0b151e;
   color:#f3f5f3; font:15px/1.45 'Segoe UI',Arial,sans-serif;
 }
-#entry-screen::before { content:""; position:absolute; z-index:-1; inset:0; pointer-events:none;
-  background:linear-gradient(0deg,rgba(7,17,26,.92),transparent 22%,transparent 84%,rgba(7,17,26,.48)),
-    linear-gradient(90deg,rgba(6,16,25,.94),rgba(7,18,28,.78) 24%,rgba(8,19,28,.08) 55%,transparent 70%),
-    var(--scene) right center/cover no-repeat; }
+/* The panoramic artwork puts the SPG at x=42–88%. Limit its scale so the
+   vehicle stays beside the login form, rather than underneath the title. */
+#entry-screen::before { content:""; position:absolute; z-index:-1; inset:0; max-height:43vw; margin-block:auto; pointer-events:none;
+  background:linear-gradient(0deg,#0b151e,transparent 12%,transparent 90%,#0b151e),
+    linear-gradient(90deg,rgba(6,16,25,.9),rgba(7,18,28,.66) 23%,transparent 55%),
+    var(--scene) 74% 70%/cover no-repeat; }
 .entry-mast,.entry-foot { display:flex; align-items:center; gap:16px; flex-shrink:0; }
 .entry-mast { min-height:clamp(70px,10vh,98px); justify-content:space-between; border-bottom:1px solid var(--hair); }
 .entry-brand { display:flex; align-items:center; gap:12px; }
@@ -34,6 +36,7 @@
 #entry-guest { display:flex; gap:8px; align-items:center; justify-content:center; width:100%; margin-top:16px; min-height:44px; background:#0a1824b8; border-color:#b3c5cf60; }
 #entry-guest svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.5; }
 .entry-actions small { display:block; text-align:center; font-size:10px; font-weight:400; letter-spacing:.02em; margin-top:7px; color:var(--mist); }
+.entry-actions .entry-download { display:inline-flex; align-items:center; min-height:24px; white-space:nowrap; color:var(--sand); }
 .entry-actions button:not(:disabled):hover { filter:brightness(1.16); border-color:var(--sand); }
 .entry-actions button:focus-visible { outline:2px solid #ffe6bb; outline-offset:3px; }
 .entry-actions button:disabled { opacity:.58; cursor:wait; }
@@ -55,10 +58,9 @@
 #account-form input:focus-visible { outline:2px solid #edc88c; outline-offset:1px; }
 @media (max-width:1024px) and (orientation:portrait) {
   #entry-screen { --edge:clamp(16px,6vw,34px); }
-  /* On a phone the picture gets its own strip, above (never behind) the actions.
-     At most 80vw tall: a right-aligned cover crop keeps BOTH vehicles in view. */
-  #entry-screen::before { position:relative; inset:auto; flex:1 1 0; min-height:130px; max-height:80vw; margin-inline:calc(0px - var(--edge));
-    background:linear-gradient(0deg,#0b151e,transparent 15%),var(--scene) right 15%/cover no-repeat; }
+  /* Give the portrait strip its own focal point and keep the entire SPG in frame. */
+  #entry-screen::before { position:relative; inset:auto; flex:1 1 0; min-height:130px; max-height:68vw; margin:0 calc(0px - var(--edge));
+    background:linear-gradient(0deg,#0b151e,transparent 10%),var(--scene) 80% 70%/cover no-repeat; }
   .entry-mast { order:-1; min-height:clamp(48px,8svh,68px); }
   .entry-brand { gap:8px; }.entry-brand svg { width:24px; height:27px; }
   .entry-season { font-size:9px; letter-spacing:.055em; gap:6px; }.entry-season b { padding:4px; }
@@ -78,17 +80,17 @@
   .entry-mast { gap:6px; } .entry-brand b { font-size:15px; letter-spacing:.07em; white-space:nowrap; }
   .entry-season { font-size:8px; white-space:nowrap; }
 }
-/* A full-height cover crop on 4:3 screens cuts off the two barrel tips behind
-   the login form. Frame the same WebP as a separate right-hand plate instead. */
+/* A separate right-hand plate keeps the silhouette clear of the controls on
+   4:3 screens and on phones in landscape. */
 @media (orientation:landscape) and (max-aspect-ratio:8/5), (orientation:landscape) and (max-height:550px) {
-  #entry-screen::before { inset:50% 0 auto auto; width:66%; height:min(100%,55vw); transform:translateY(-50%);
-    background:linear-gradient(0deg,#0b151e,transparent 15%,transparent 94%,#0b151e),
-      linear-gradient(90deg,#0b151e,transparent 12%),var(--scene) right center/auto 100% no-repeat; }
+  #entry-screen::before { inset:50% 0 auto auto; width:66%; height:min(100%,43vw); transform:translateY(-50%);
+    background:linear-gradient(0deg,#0b151e,transparent 12%,transparent 90%,#0b151e),
+      linear-gradient(90deg,#0b151e,transparent 12%),var(--scene) 80% 70%/cover no-repeat; }
   .entry-content { width:32vw; } #entry-title { font-size:clamp(36px,5.2vw,84px); }
 }
 @media (orientation:landscape) and (max-height:550px) {
   .entry-mast { min-height:clamp(36px,10vh,48px); }
-  .entry-content { padding:8px 0; width:34vw; }
+  .entry-content { padding:4px 0; width:34vw; }
   .entry-actions { margin-top:10px; } .entry-actions button,#entry-guest { min-height:36px; }
   #entry-guest { margin-top:6px; } .entry-foot { min-height:32px; }
   #entry-title { font-size:clamp(27px,4.8vw,44px); margin:5px 0; }

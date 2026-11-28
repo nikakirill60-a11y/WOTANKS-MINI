@@ -387,26 +387,240 @@ const GERMAN_KPZ67_BRANCH = defineLine('germany', [
   ['VPZ-57','Versuchspanzer 57','ht','vpz-57',   2000,390,9200,255,105,320,40,1.16,375,.08,{minPitch:-9,maxPitch:15}],
   ['KPZ-67','Kampfpanzer 67','ht','kpz-67',      2250,420,9200,270,120,340,40,1.20,395,.07,{weapon:'calibration',minPitch:-10,maxPitch:18}]
 ], GERMAN_E100_BRANCH.slice(0,7));
+// Three research routes from soviet-german-artillery-23.zip. The supplied viewers share
+// these mount stops. All use the playable SPG's single round, not the auxiliary map strike.
+const SPG_MOUNT = Object.freeze({yawLimits:Object.freeze([-10,10]), minPitch:-5, maxPitch:45});
+const FRENCH_13_105_BRANCH = defineLine('france', [
+  ['AMX1390','AMX 13 90','lt','amx-13-90',     1320,240*4,20000,205,40,40,64,.86,395,.37,{weapon:'drum',mag:4,clipMs:2500,oscillating:true,minPitch:-6,maxPitch:13}],
+  ['AMX13105','AMX 13 105','lt','amx-13-105',  1600,360*3,21000,234,50,40,68,.89,400,.36,{weapon:'drum',mag:3,clipMs:2730,oscillating:true,minPitch:-8,maxPitch:12}]
+], FRENCH_BATCHAT_BRANCH.slice(0,8));
+const FRENCH_EBR_BRANCH = defineLine('france', [
+  ['AMD178B','Panhard AMD 178B','lt','panhard-amd-178b',     600,110,3600,125,20,26,72,.78,350,.40],
+  ['HOTCHKISSEBR','Hotchkiss EBR','lt','hotchkiss-ebr',     780,175,5200,150,30,20,78,.82,355,.39],
+  ['LYNX6X6','Panhard AML Lynx 6×6','lt','panhard-aml-lynx-6x6',980,240,6800,182,20,20,80,.84,360,.38],
+  ['EBR90','Panhard EBR 90','lt','panhard-ebr-90',         1200,240,6200,190,40,40,85,.87,370,.38],
+  ['EBR105','Panhard EBR 105','lt','panhard-ebr-105',      1450,360,9200,210,40,40,90,.90,380,.37]
+], FRENCH_BATCHAT_BRANCH.slice(0,5));
+const FRENCH_MURAT_BRANCH = defineLine('france', [
+  ['AMX13M24','AMX 13 M24','mt','amx-13-m24',      1050,175,4600,165,40,40,58,.88,365,.29],
+  ['ERAC105','ERAC 105 Proto','mt','erac-105-proto',1300,300*2,12500,205,50,70,60,.94,375,.27,{weapon:'drum',mag:2,clipMs:2500,minPitch:-8,maxPitch:15}],
+  ['PROJETLOUIS','Projet Louis','mt','projet-louis',1600,350*2,13000,232,120,160,60,1,390,.24,{weapon:'drum',mag:2,clipMs:2400,oscillating:true,minPitch:-8,maxPitch:15}],
+  ['PROJETMURAT','Projet Murat','mt','projet-murat',1900,390*2,12500,252,150,220,62,1.04,400,.22,{weapon:'drum',mag:2,clipMs:2000,minPitch:-8,maxPitch:15}]
+], FRENCH_BATCHAT_BRANCH.slice(0,6));
+const FRENCH_155_BRANCH = defineLine('france', [
+  ['RENAULTFT75BS','Renault FT 75 BS','spg','renault-ft-75-bs',         120,190,13000,34,16,null,14,.65,270,.29,SPG_MOUNT],
+  ['LORRAINE39LAM','Lorraine 39L AM','spg','lorraine-39l-am',          165,240,14500,38,12,null,37,.73,280,.27,SPG_MOUNT],
+  ['AMX105AM47','AMX 105 AM mle. 47','spg','amx-105-am-mle-47',       220,310,17000,42,20,null,60,.79,290,.26,SPG_MOUNT],
+  ['AMX13105AM50','AMX 13 105 AM mle. 50','spg','amx-13-105-am-mle-50',260,390,18500,45,20,null,60,.83,300,.26,SPG_MOUNT],
+  ['AMX13F3AM','AMX 13 F3 AM','spg','amx-13-f3-am',                  320,500,22000,48,20,null,60,.87,310,.24,SPG_MOUNT],
+  ['LORRAINE15550','Lorraine 155 mle. 50','spg','lorraine-155-mle-50', 370,600,25000,50,50,null,60,.99,320,.20,SPG_MOUNT],
+  ['LORRAINE15551','Lorraine 155 mle. 51','spg','lorraine-155-mle-51', 420,650,26000,52,50,null,60,1.02,330,.19,SPG_MOUNT],
+  ['BC15555','Bat.-Châtillon 155 55','spg','bat-chatillon-155-55',     480,680,27000,52,50,16,56,1.04,340,.18,{minPitch:-5,maxPitch:45}],
+  ['BC15558','Bat.-Châtillon 155 58','spg','bat-chatillon-155-58',     540,680*3,48000,54,16,16,62,1.06,350,.17,{weapon:'drum',mag:3,clipMs:10000,minPitch:-5,maxPitch:45}]
+], FRENCH_TD_BRANCH.slice(0,1));
+const USSR_261_BRANCH = defineLine('ussr', [
+  ['SU18','СУ-18','spg','su-18',                   120,200,14000,35,15,null,20,.65,270,.29,SPG_MOUNT],
+  ['SU26','СУ-26','spg','su-26',                   170,240,15000,38,15,  15,30,.74,280,.28,SPG_MOUNT],
+  ['SU5','СУ-5','spg','su-5',                      230,320,18000,42,15,null,30,.78,290,.27,SPG_MOUNT],
+  ['SU122A','СУ-122А','spg','su-122a',             280,420,21000,48,15,null,30,.85,300,.26,SPG_MOUNT],
+  ['SU8','СУ-8','spg','su-8',                     340,520,24000,52,20,null,48,1.05,310,.21,SPG_MOUNT],
+  ['S51','С-51','spg','s-51',                     390,750,34000,56,60,null,30,1.10,320,.17,SPG_MOUNT],
+  ['SU14-2','СУ-14-2','spg','su-14-2',            460,850,36000,60,60,null,30,1.27,330,.13,SPG_MOUNT],
+  ['OBJ212','212А','spg','212a',                  520,900,34000,62,60,null,35,1.22,340,.14,SPG_MOUNT],
+  ['OBJ261','Объект 261','spg','object-261',       580,850,26000,65,75,null,50,1.16,350,.16,SPG_MOUNT]
+], USSR_BRANCH.slice(0,1));
+const USSR_261V4_BRANCH = defineLine('ussr', [
+  ['SU122','СУ-122','spg','su-122',                        650,420,14000,160, 45,null,46,.98,310,.23,SPG_MOUNT],
+  ['SUD15','СУ-Д15','spg','su-d15',                        850,620,19000,210, 75,null,34,1.02,320,.21,SPG_MOUNT],
+  ['ISU2SH','ИСУ-2Ш','spg','isu-2sh',                    1200,650,20000,255,130,null,36,1.09,330,.20,SPG_MOUNT],
+  ['OBJ715G','Объект 715Г','spg','object-715g',           1350,750,22000,290,160,null,40,1.13,340,.18,SPG_MOUNT],
+  ['OBJ261V4','Объект 261 Вариант 4','spg','object-261-variant-4',1500,850,24000,320,210,null,45,1.16,350,.16,SPG_MOUNT]
+], USSR_261_BRANCH.slice(0,5)); // one shared СУ-122А; СУ-122 is a separate VI
+const GERMAN_GWE100_BRANCH = defineLine('germany', [
+  ['BISON','Sturmpanzer I Bison','spg','sturmpanzer-i-bison',120,250,17500,38, 13,null,35,.70,270,.29,SPG_MOUNT],
+  ['WESPE','Wespe','spg','wespe',                          160,260,16000,38, 15,null,40,.76,280,.28,SPG_MOUNT],
+  ['PZSFLIVB','Pz.Sfl. IVb','spg','pz-sfl-ivb',            220,330,18000,42, 20,  15,35,.83,290,.27,SPG_MOUNT],
+  ['GRILLE-SPG','Grille','spg','grille',                   270,450,22000,48, 15,null,42,.85,300,.26,SPG_MOUNT],
+  ['HUMMEL','Hummel','spg','hummel',                       340,550,24000,52, 30,null,42,1.00,310,.22,SPG_MOUNT],
+  ['GWPANTHER','G.W. Panther','spg','gw-panther',           400,600,25000,54, 50,  16,46,1.05,320,.19,SPG_MOUNT],
+  ['GWTIGERP','G.W. Tiger (P)','spg','gw-tiger-p',         470,850,35000,58,100,null,35,1.18,330,.15,SPG_MOUNT],
+  ['GWTIGER','G.W. Tiger','spg','gw-tiger',                510,920,37000,62, 30,null,40,1.22,340,.13,SPG_MOUNT],
+  ['GWE100','G.W. E 100','spg','gw-e-100',                 600,950,34000,65, 80,null,38,1.28,350,.12,SPG_MOUNT]
+], GERMAN_BRANCH.slice(0,1));
 function nationTree(number,title,...routes) {
   return Object.freeze({number,title,routes:Object.freeze(routes),tanks:Object.freeze([...new Set(routes.flat())])});
 }
 const BRANCHES = Object.freeze({
   ussr: nationTree('01','ИС-7, ИС-4, СТ-II и другие ветки СССР',
     USSR_BRANCH, USSR_277_BRANCH, USSR_705A_BRANCH, USSR_STII_BRANCH, USSR_IS4_BRANCH, USSR_TET_BRANCH,
-    USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH, USSR_268V4_BRANCH, USSR_263X_BRANCH),
+    USSR_MEDIUM_BRANCH, USSR_430U_BRANCH, USSR_K91_BRANCH, USSR_LIGHT_BRANCH, USSR_268_BRANCH, USSR_268V4_BRANCH, USSR_263X_BRANCH,
+    USSR_261_BRANCH, USSR_261V4_BRANCH),
   germany: nationTree('02','Rhm. Panzerwagen, Leopard 1, Maus и другие ветки Германии',
     GERMAN_BRANCH, GERMAN_TD_BRANCH, GERMAN_GRILLE_BRANCH, GERMAN_JGPZE100_BRANCH, GERMAN_STURMTIGER_BRANCH,
-    GERMAN_MAUS_BRANCH, GERMAN_PZVII_BRANCH, GERMAN_VK72_BRANCH, GERMAN_E50M_BRANCH, GERMAN_LEOPARD1_BRANCH, GERMAN_E100_BRANCH, GERMAN_KPZ67_BRANCH),
+    GERMAN_MAUS_BRANCH, GERMAN_PZVII_BRANCH, GERMAN_VK72_BRANCH, GERMAN_E50M_BRANCH, GERMAN_LEOPARD1_BRANCH, GERMAN_E100_BRANCH, GERMAN_KPZ67_BRANCH,
+    GERMAN_GWE100_BRANCH),
   usa: nationTree('03','M48 Patton, T110E3, T110E4, Ares 90 и другие ветки США',
     US_BRANCH, US_T57_BRANCH, US_ARES_BRANCH, US_T110E5_BRANCH, US_YOH_BRANCH, US_SHERIDAN_BRANCH,
     US_E3_BRANCH, US_E4_BRANCH),
   sweden: nationTree('04','Kranvagn и Strv 103B',SWEDISH_BRANCH,SWEDISH_TD_BRANCH),
   hungary: nationTree('05','Путь к танку: T-55AM',HUNGARIAN_BRANCH),
   japan: nationTree('06','STB-1 и Type 5 Heavy',JAPANESE_MEDIUM_BRANCH,JAPANESE_HEAVY_BRANCH),
-  france: nationTree('07','AMX 50 Foch (155), AMX 50 B, AMX M4 mle. 54 и Bat.-Châtillon 25 t',
-    FRENCH_TD_BRANCH, FRENCH_50B_BRANCH, FRENCH_M454_BRANCH, FRENCH_BATCHAT_BRANCH)
+  france: nationTree('07','Франция · восемь веток от Renault FT',
+    FRENCH_TD_BRANCH, FRENCH_50B_BRANCH, FRENCH_M454_BRANCH, FRENCH_BATCHAT_BRANCH,
+    FRENCH_13_105_BRANCH, FRENCH_EBR_BRANCH, FRENCH_MURAT_BRANCH, FRENCH_155_BRANCH)
 });
 const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
+// Specials share the same arcade visibility/scale defaults, regardless of acquisition.
+function specialVehicle(spec) {
+  const {cls,tier}=spec;
+  return Object.freeze({s:({lt:.86,mt:1,ht:1.12,td:1.04})[cls],vr:300+8*tier,camo:({lt:.32,mt:.22,ht:.09,td:.28})[cls],...spec});
+}
+// National supply series. Serial numbers are the permanent keys in batch114; gaps have no verified mesh.
+// Input damage below is per projectile. The catalogue stores total clip/salvo alpha; Tank uses shotDamage().
+function nationalSeries(nat, source, rows) {
+  return rows.map(([serial,n,cls,tier,hp,shot,reload,pen,armor,turretArmor,speed,extra={}]) => {
+    const key=String(serial).padStart(3,'0'), slug='national-'+key;
+    return specialVehicle({id:'NAT'+key,n,nat,source,cls,tier,hp,alpha:shot*(extra.mag||extra.salvo||1),reload,pen,armor,turretArmor,speed,
+      file:slug+'.mesh.js',thumbnail:slug+'.webp',
+      minPitch:-10,maxPitch:20, ...(turretArmor===null ? {yawLimits:[-10,10]} : {}), ...(source==='premium' ? {price:900*tier} : {supplyBox:'national-'+nat}), ...extra});
+  });
+}
+const NATIONAL_TANKS = Object.freeze([
+  ...nationalSeries('ussr','collection',[
+    [1,'Т-60','lt',2,175,15,4200,46,35,25,44,{mag:6,clipMs:130,weapon:'machinegun'}],
+    [2,'Т-70','lt',3,255,55,2400,65,35,50,45],
+    [3,'БТ-СВ','lt',3,260,55,2300,62,25,20,62],
+    [4,'Т-80','lt',4,370,60,2400,75,45,45,45],
+    [5,'КВ-220-2','ht',5,760,115,3600,110,100,75,33],
+    [6,'КВ-2','ht',6,1020,650,17500,110,75,75,35],
+    [7,'СУ-100Y','td',6,750,440,12200,196,60,null,35],
+    [8,'КВ-85','ht',6,950,390,12000,175,75,100,34],
+    [9,'КВ-13','mt',7,1150,180,4800,155,120,100,50],
+    [10,'КВ-5','ht',8,1780,300,7800,196,180,180,40],
+    [11,'Объект 703 Вариант II','ht',8,1550,390,19000,221,140,220,38,{salvo:2}],
+    [12,'Объект 84','lt',9,1450,280,6600,205,90,170,65],
+    [13,'Объект 260','ht',10,2200,440,9200,260,150,300,60],
+    [14,'Объект 907','mt',10,2000,320,5600,250,110,240,55]
+  ]),
+  ...nationalSeries('ussr','premium',[
+    [16,'Объект 252У Защитник','ht',8,1550,440,12500,225,130,250,35],
+    [17,'Т-54 первый образец','mt',8,1400,250,6500,190,120,180,44],
+    [18,'СУ-130ПМ','td',8,1100,520,11200,243,20,15,65,{yawLimits:[-78,78]}],
+    [19,'ЛТ-432','lt',8,1150,180,4500,176,70,160,70]
+  ]),
+  ...nationalSeries('germany','collection',[
+    [20,'Pz.Kpfw. I','lt',2,160,12,4800,40,13,13,40,{mag:8,clipMs:130,weapon:'machinegun'}],
+    [21,'Pz.Kpfw. II Ausf. G','lt',3,240,30,5600,75,30,30,55,{mag:4,clipMs:170,weapon:'machinegun'}],
+    [22,'Pz.Kpfw. III Ausf. E','mt',3,255,50,2400,62,30,30,64],
+    [23,'Pz.Kpfw. III Ausf. J','mt',4,390,75,2800,88,70,57,60],
+    [24,'Durchbruchswagen 2','ht',4,480,75,2900,88,50,50,35],
+    [25,'Pz.Kpfw. V/IV','mt',5,680,125,3700,125,85,50,55],
+    [26,'Pz.Kpfw. III/IV','mt',5,580,125,3800,125,60,50,55],
+    [27,'VK 30.01 (H)','ht',5,720,135,3800,150,50,80,35],
+    [28,'Dicker Max','td',6,620,300,8200,169,50,null,40],
+    [29,'Tiger 131','ht',6,1050,220,6400,145,100,100,40],
+    [30,'E 25','td',7,880,135,2600,150,50,null,65],
+    [31,'VK 168.01 (P)','ht',8,1800,440,12600,220,180,230,20],
+    [32,'Kunze Panzer','mt',9,1600,390,8200,268,70,90,65],
+    [33,'Kampfpanzer 50 t','mt',9,1750,320,6400,268,120,250,60],
+    [34,'VK 90.01 (P)','ht',10,2600,490,11500,258,220,280,30]
+  ]),
+  ...nationalSeries('germany','premium',[
+    [35,'Rheinmetall Skorpion','td',8,1150,490,10600,246,30,20,60],
+    [36,'E 75 TS','ht',8,1600,360,9000,227,120,230,45],
+    [37,'Pz.Kpfw. 58 Mutz','mt',8,1350,250,6200,212,90,120,50],
+    [38,'leKpz M 41 90 mm','lt',8,1100,240,5600,182,25,25,72]
+  ]),
+  ...nationalSeries('usa','collection',[
+    [39,'M22 Locust','lt',3,240,45,2100,56,25,25,64],
+    [40,'MTLS-1G14','lt',3,250,40,3200,56,38,38,55,{barrels:2,mag:2,clipMs:350,weapon:'machinegun'}],
+    [41,'T14','ht',5,720,115,3500,110,76,102,34],
+    [114,'M7','lt',5,540,80,2100,110,38,51,60], // replacement for the struck US row
+    [42,'M4A2E4 Sherman','mt',5,610,115,3500,115,64,76,52],
+    [43,'T21','lt',6,650,115,3200,138,29,29,56],
+    [44,'T78','td',6,660,240,6400,160,51,76,55],
+    [45,'M56 Scorpion','td',7,820,240,5800,219,5,null,45],
+    [46,'T28 Concept','td',7,1020,320,8200,198,203,null,29],
+    [47,'M6A2E1','ht',8,1600,320,8600,218,191,191,29],
+    [48,'Chrysler K','ht',8,1600,320,8200,212,152,254,35],
+    [49,'T92E1','lt',9,1400,490,13500,210,35,40,65],
+    [50,'AE Phase I','ht',9,1900,400,9200,258,127,290,35],
+    [51,'Concept 1B','ht',9,1850,400,8800,258,120,280,45],
+    [52,'T95E6','ht',10,2050,420,7600,258,114,210,56]
+  ]),
+  ...nationalSeries('usa','premium',[
+    [53,'T26E4 SuperPershing','mt',8,1500,240,6200,202,140,180,40],
+    [54,'M54 Renegade','ht',8,1550,360,8400,226,140,250,45],
+    [55,'TS-5','td',8,1500,400,7600,248,260,null,26],
+    [56,'T92','lt',8,1050,150,3600,175,25,25,60]
+  ]),
+  ...nationalSeries('sweden','collection',[
+    [57,'Tomte L-60','lt',2,170,45,2300,48,15,15,45],
+    [58,'Strv m/31','lt',3,250,50,2400,62,24,24,45],
+    [59,'Lago M38','mt',3,255,50,2300,64,34,34,48],
+    [61,'Strv m/42-57 Alt A.2','mt',6,780,150,15000,148,55,40,45,{mag:4,clipMs:2000,weapon:'drum'}],
+    [62,'Strv 74A2','mt',6,790,150,11500,148,55,55,45,{oscillating:true,mag:3,clipMs:2000,weapon:'drum'}],
+    [63,'Turbo','mt',6,800,160,4400,145,60,80,50],
+    [64,'Svear','mt',7,1080,220,5600,168,75,90,52],
+    [65,'Primo Victoria','mt',8,1400,240,5800,226,76,254,50],
+    [66,'Stridsyxa','mt',8,1350,320,7800,210,70,120,50],
+    [67,'Lätt Stridsfordon 120','td',8,1150,390,8200,272,25,null,65],
+    [68,'Object Kust','td',8,1200,420,9000,265,40,null,55],
+    [69,'Strv K','ht',9,1850,390,8200,252,120,254,45],
+    [70,'UDES 03 Alt 3','mt',9,1600,360,22000,252,45,70,55,{mag:3,clipMs:2500,weapon:'drum'}],
+    [71,'Bofors Pagod TK105','mt',9,1650,360,7400,254,60,140,52]
+  ]),
+  ...nationalSeries('sweden','premium',[
+    [72,'Lansen C','mt',8,1350,320,7600,208,60,70,50],
+    [73,'Strv 81','mt',8,1400,240,5800,226,76,254,50],
+    [74,'EMIL 1951','ht',8,1450,320,22000,217,100,180,45,{oscillating:true,mag:3,clipMs:2750,weapon:'drum'}],
+    [75,'Bofors Tornvagn','ht',8,1600,400,10600,248,200,280,32]
+  ]),
+  ...nationalSeries('japan','collection',[
+    [76,'Type 97 Te-Ke','lt',2,165,45,2300,45,12,12,42],
+    [77,'Chi-Ni','mt',2,180,60,3200,44,25,25,30],
+    [78,'Type 98 Ke-Ni','lt',3,250,45,2000,58,16,16,50],
+    [79,'Type 98 Ke-Ni Otsu','lt',3,255,45,1800,58,16,16,50],
+    [80,'Type 5 Ke-Ho','lt',4,370,75,2400,88,20,20,50],
+    [81,'O-I Experimental','ht',5,820,240,8200,125,75,75,35],
+    [83,'Edelweiss','mt',8,1380,240,5600,212,90,120,58],
+    [84,'Nameless','ht',8,1600,320,8200,215,160,200,40],
+    [85,'Chi-Se','ht',8,1620,320,7600,220,140,220,40],
+    [86,'Stitch','ht',8,1600,320,7800,220,140,220,40],
+    [88,'Kame','mt',9,1650,360,7200,245,80,150,50],
+    [89,'Saryuda','td',9,1500,520,10500,278,120,null,45],
+    [90,'Ashigaru','td',10,1850,600,11200,305,150,null,45]
+  ]),
+  ...nationalSeries('japan','premium',[
+    [91,'Type 3 Chi-Nu Kai','mt',5,600,125,3800,124,50,75,39],
+    [92,'Heavy Tank No. VI','ht',6,1020,220,6400,145,100,100,40],
+    [93,'Type 63','ht',8,1550,320,7800,225,120,260,42,{oscillating:true}],
+    [94,'Type 5 Ka-Ri','td',8,1250,500,10800,252,190,null,40]
+  ]),
+  ...nationalSeries('france','collection',[
+    [95,'AM Gendron','lt',2,160,40,2100,46,15,15,60],
+    [96,'AMR 35','lt',2,165,40,2200,46,13,13,55],
+    [97,'Renault R35','lt',2,185,40,2300,46,40,40,23],
+    [98,'FCM 36','lt',2,180,40,2300,46,40,40,24],
+    [99,'FCM 36 Pak 40','td',3,195,110,3800,98,40,null,24],
+    [100,'AMX 13 FL 11','lt',5,480,110,3200,110,40,40,60],
+    [101,'M10 RBFM','td',5,480,115,3100,128,51,57,48],
+    [102,'AMX 13 57','lt',7,880,90,15000,143,40,40,61,{oscillating:true,mag:8,clipMs:1000,weapon:'drum'}],
+    [103,'Panhard EBR 75 (FL 10)','lt',8,950,175,8200,180,40,40,80,{oscillating:true,mag:2,clipMs:1500,weapon:'drum'}],
+    [104,'FCM 50 t','ht',8,1500,240,6000,212,120,120,51],
+    [105,'AMX Chasseur de chars','mt',8,1350,240,5800,212,30,30,57],
+    [106,'Lorraine 40 t','mt',8,1300,300,26000,232,40,45,60,{oscillating:true,mag:4,clipMs:2500,weapon:'drum'}],
+    [107,'Char Futur 4','mt',9,1750,390,32000,264,90,110,60,{mag:4,clipMs:4000,weapon:'drum'}],
+    [108,'AMX 30 1er prototype','mt',9,1650,390,8200,248,80,150,65],
+    [109,'AMX 30 B','mt',10,1900,390,7000,248,80,150,65]
+  ]),
+  ...nationalSeries('france','premium',[
+    [110,'ELC EVEN 90','lt',8,950,220,22000,175,15,15,70,{oscillating:true,mag:3,clipMs:2500,weapon:'drum'}],
+    [111,'Bat.-Châtillon Bourrasque','mt',8,1250,360,18000,190,40,40,62,{mag:2,clipMs:2000,weapon:'drum'}],
+    [112,'Somua SM','ht',8,1450,300,30000,232,140,120,37,{oscillating:true,mag:5,clipMs:2250,weapon:'drum'}],
+    [113,"AMX Canon d'assaut 105",'td',8,1150,390,8400,260,100,null,55]
+  ])
+]);
 // Special vehicles have a real tier, but no XP price or research parent.
 // The category determines the garage label and resale currency, not the contents of a seasonal box.
 const SPECIAL_TANKS = Object.freeze([
@@ -426,10 +640,10 @@ const SPECIAL_TANKS = Object.freeze([
   ['premium','STRVS1','Strv S1','sweden',8,'td','strv-s1',1100,390,8800,288,30,null,50,{price:6500,stance:'hull',yawLimits:[0,0],minPitch:-11,maxPitch:11}],
   ['advent','BT42','БТ-42','finland',4,'lt','bt-42',370,210,7500,75,22,15,54,{minPitch:-5,maxPitch:15}],
   ['advent','TL7OLEN','TL-7 Олень','usa',9,'td','tl-7-olen',1500,1440,32000,252,100,200,50,{mag:4,clipMs:2300,weapon:'drum',minPitch:-10,maxPitch:15}]
-].map(([source,id,n,nat,tier,cls,slug,hp,alpha,reload,pen,armor,turretArmor,speed,extra]) => Object.freeze({
+].map(([source,id,n,nat,tier,cls,slug,hp,alpha,reload,pen,armor,turretArmor,speed,extra]) => specialVehicle({
   source,id,n,nat,tier,cls,file:slug+'.mesh.js',thumbnail:slug+'.webp',hp,alpha,reload,pen,armor,turretArmor,speed,
-  s:({lt:.86,mt:1,ht:1.12,td:1.04})[cls],vr:300+8*tier,camo:({lt:.32,mt:.22,ht:.09,td:.28})[cls],...extra
-})));
+  ...extra
+})).concat(NATIONAL_TANKS));
 const DB = Object.freeze(Object.fromEntries([...Object.values(BRANCHES).flatMap(b=>b.tanks),...SPECIAL_TANKS].map(t=>[t.id,t])));
 const TRAINING_NATIONS = Object.freeze([...new Set(Object.values(DB).map(t=>t.nat))]);
 const STARTER_TANK = 'MS1';

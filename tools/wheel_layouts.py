@@ -1,7 +1,8 @@
 """Build offline instancing data; keep the authored hull, armour and track loops intact.
-One wheel from the actual Sturmtiger mesh is shared by every model. On ordinary exports
+Tracked vehicles share a wheel from the actual Sturmtiger mesh. On ordinary exports
 read the axle from each welded wheel cylinder, not from a tier/length approximation.
-The masks omit old drums and separate static hub caps only from the render index.
+Masks affect only the render index. Wheeled vehicles retain their own tyres, with
+per-axle source face ranges built by french_running_gear.py.
 """
 import json
 from pathlib import Path
@@ -10,6 +11,9 @@ from itertools import groupby
 from math import hypot
 from model_fit import triples, encode
 from assault_running_gear import axles, ROAD
+import artillery_running_gear
+import french_running_gear
+import national_models
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,8 +56,21 @@ def template():
     return result
 
 
+def mask_runs(removed):
+    runs = []
+    for _, group in groupby(enumerate(sorted(removed)), key=lambda p:p[1]-p[0]):
+        seq = list(group); runs.extend((seq[0][1], len(seq)))
+    return runs
+
+
 def build(d):
     model=d['id']; parts={i:components(m) for i,m in enumerate(d['meshes']) if m[0]=='wheels' or (m[0]=='body' and len(m)==3)}
+    if d.get('source','').startswith(national_models.ARCHIVE+' / '):
+        body, = (groups for i,groups in parts.items() if d['meshes'][i][0]=='body')
+        return french_running_gear.fit(d, body, mask_runs, native_counts=national_models.NATIVE, seat=national_models.seat(model))
+    if d.get('source','').startswith(french_running_gear.ARCHIVE+' / '):
+        body, = (groups for i,groups in parts.items() if d['meshes'][i][0]=='body')
+        return french_running_gear.fit(d, body, mask_runs)
     wheels=[g for i,groups in parts.items() if d['meshes'][i][0]=='wheels' for g in groups]
     # [signed X, axle height, longitudinal Z, radius, full tyre width], mm.
     if model in ROAD:
@@ -83,9 +100,17 @@ def build(d):
         if model=='T95': # source only includes the two end axles; twin belts either side of hull
             rows.extend((side*x,344,z,257,250) for side in (-1,1) for x in (1260,1920)
                         for z in (-2715,-1825,-1190,-300,335,1226,1820,2710))
+    hide={}
+    if d.get('source','').startswith(artillery_running_gear.ARCHIVE+' / '):
+        body, = (i for i in parts if d['meshes'][i][0]=='body')
+        wheel, = (i for i in parts if d['meshes'][i][0]=='wheels')
+        track, = (m for m in d['meshes'] if m[0]=='tracks')
+        assert len(rows)==len(wheels) and all(len(g[3])==32 for g in wheels), model
+        rows, removed = artillery_running_gear.fit(rows, parts[body], triples(track[1], '<hhh'))
+        hide = {str(body):mask_runs(removed), str(wheel):True}
     rows=sorted([tuple(round(v) for v in row) for row in rows],key=lambda r:(r[0],r[2]))
     assert sum(x>0 for x,*_ in rows)>=3 and sum(x<0 for x,*_ in rows)>=3,(model,rows)
-    hide={}
+    if hide: return [rows,hide]
     for i,groups in parts.items():
         kind=d['meshes'][i][0]; removed=[]
         for (cx,cy,cz),(w,h,l),points,indices in groups:
@@ -102,11 +127,7 @@ def build(d):
             if whole: removed.extend(indices)
         if removed:
             if len(removed)==len(triples(d['meshes'][i][2],'<HHH')): hide[str(i)]=True
-            else:
-                runs=[]
-                for _,g in groupby(enumerate(sorted(removed)),key=lambda p:p[1]-p[0]):
-                    v=list(g);runs.extend((v[0][1],len(v)))
-                hide[str(i)]=runs
+            else: hide[str(i)]=mask_runs(removed)
     return [rows,hide]
 
 

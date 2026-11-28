@@ -111,3 +111,27 @@ for (const http of [false,true]) for (const hz of [60,120])
     assert.equal(checked,hz*11-1);assert.ok(Math.hypot(p.x-h.g.units[1].x,p.y-h.g.units[1].y)<.1);
     h.n.stop();w.n.stop();
   });
+
+test('peers reject mismatched terrain revisions before consuming poses or applying an input',()=>{
+  const h=machine(0),w=machine(1);h.g.arena.spec={seed:100};w.g.arena.spec={seed:101};
+  let rejected=0;h.n.service.wrongAtlas=w.n.service.wrongAtlas=()=>rejected++;
+  const world=h.n.snapshot();w.n.receiveWorld(world);assert.equal(w.n.lastWorld,-1);assert.equal(rejected,1);
+  w.n.lastSent=null;w.n.sendInput();h.n.receiveInput(1,w.env.out.at(-1));assert.equal(h.n.inputs.size,0);assert.equal(rejected,2);
+  delete world.atlas;w.n.receiveWorld(world);assert.equal(rejected,3);h.n.stop();w.n.stop();
+});
+
+test('a wingman hears current visible reports, fallen timber and demolished cover once, not a replay or a hidden enemy',()=>{
+  const h=machine(0),w=machine(1),notes=[];
+  for(const m of [h,w]){
+    const u=m.g.units[0];u.team='enemy';u.visible=true;u.muzzle=()=>({x:0,y:0,h:0});
+    m.g.arena.trees=[{x:25,y:8}];m.g.arena.treeRevision=0;m.g.arena.revision=0;
+    const wall={x:50,y:20,w:20,h:20};m.g.walls.push(wall);m.n.walls=[wall];
+  }
+  Object.assign(w.env,{snd:(key,gain,source)=>notes.push([key,source]),spawnParticles(){}});
+  const u=h.g.units[0],send=()=>{h.bodyTick();w.n.receiveWorld(h.n.snapshot());};
+  u.shotsFired=1;send();assert.equal(notes.length,0); // no history on connection
+  u.shotsFired++;u.visible=false;send();assert.equal(notes.length,0);
+  u.shotsFired++;u.visible=true;h.g.arena.trees[0].fallen=true;h.g.arena.trees[0].angle=.5;h.n.walls[0].destroyed=true;
+  send();assert.deepEqual(notes.map(n=>n[0]),[u.reportSound,'collapse','timber']);assert.equal(notes[0][1],w.g.units[0]);
+  send();assert.equal(notes.length,3);h.n.stop();w.n.stop();
+});

@@ -26,20 +26,24 @@ const jagdIds = ['HETZER','STUG3G','JGPZIV','JAGDP','FERDINAND','JAGDTIGER','JGP
 const assault = require('./fixtures/sturmtiger.cjs');
 const batch5 = require('./fixtures/batch5.cjs');
 const additions = nation => batch5.filter(route=>route.nation===nation).flatMap(route=>route.rows.map(row=>row[0]));
+const artilleryPack = require('./fixtures/artillery-23.cjs');
+const artyIds = nation => artilleryPack.filter(p=>p.nation===nation).flatMap(p=>p.rows.map(r=>r[0]));
 const sovger = require('./fixtures/soviet-german.cjs');
 const newIds = end => sovger.find(path=>path.end===end).rows.map(row=>row[0]);
 const {e3,e4,ares} = require('./fixtures/american.cjs');
 const americanRows = batch5.filter(r=>r.nation==='usa').flatMap(r=>r.end==='T57HEAVY' ? [...r.rows,...ares] : r.rows);
 const usTreeIds = usIds.concat([...americanRows,...e3,...e4].map(row=>row[0]));
 const sovietTreeIds = sovietIds.concat(newIds('OBJ-277'),newIds('OBJ-705A'),newIds('ST-II'),is4Ids,newIds('TET-100'),
-  mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'));
+  mediumIds,obj430Ids,k91Ids,scoutIds,additions('ussr'),newIds('OBJ-2684'),newIds('OBJ-263-X'),artyIds('ussr'));
 const germanTreeIds = germanIds.concat(tdIds,'GRILLE15',jagdIds,assault.map(r=>r[0]),panzerIds,mausIds,newIds('PZKPFW-VII'),
-  newIds('VK-7201-K'),e50Ids,newIds('LEOPARD-1'),e100Ids,newIds('KPZ-67'));
+  newIds('VK-7201-K'),e50Ids,newIds('LEOPARD-1'),e100Ids,newIds('KPZ-67'),artyIds('germany'));
 
 const retiredFields = ['vaults','rankedRating','worldBossHp','claimedMail','clans','clanId','clanTag','quest23',
   'collectionBonusesClaimed','battlePass','camos','equippedCamo','crew','blueprints','newsLastSeenId','achievements','dailyQuests'];
 const checkClean = data => { for (const key of retiredFields) assert.ok(!(key in data),key); };
-const meshCounts = {'PZ-II-J':4155,T67:4437,
+const national = require('./fixtures/national.cjs');
+const meshCounts = {...Object.fromEntries(national.active.map(t=>[t.id,t.triangles])),'PZ-II-J':4155,T67:4437,
+  ...Object.fromEntries(artilleryPack.flatMap(p=>p.rows.map(r=>[r[0],r[9]]))),
   ...Object.fromEntries([...e3,...e4,...ares,...assault].map(row=>[row[0],row.at(-1)])),
   ...Object.fromEntries(require('./fixtures/france.cjs').unique.map(row=>[row[0],row.at(-1)])),
   GPZ:2823,...Object.fromEntries(sovger.flatMap(p=>p.rows.map(row=>[row[0],row.at(-1)]))),
@@ -126,7 +130,7 @@ test('fresh garage, local rewards, selected tank and settings survive an immedia
     assert.equal(await page.locator('#container-modal .tab-content:visible').count(), 1);
   }
   assert.deepEqual(await page.locator('#container-modal .tab-content').evaluateAll(els=>els.map(e=>e.id)),['tab-shop','tab-inventory']);
-  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Ёлка','Топы','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
+  assert.deepEqual(await page.locator('.top-btns button').allInnerTexts(),['Гость','Ёлка','Рулетка','Топы','Адвент','Премиум-магазин','Код','Контейнеры','Инвентарь','Модули','Прокачка','Обучение']);
   assert.equal(await page.locator('#battlepass-track,#features-modals-root,#quest-widget,#sixth-sense-lamp').count(),0);
   await click('В ангар');
   await click('Адвент');
@@ -301,7 +305,7 @@ test('migration keeps earned late tiers, supplies, modules, settings and currenc
   await click('Дерево развития');assert.equal(await page.locator('.n-btn.active-n').innerText(),'ГЕРМАНИЯ');
   await click('СССР');assert.equal(await page.locator('#nodes .node.owned').count(),3);
   await click('Выбрать: Объект 257');assert.equal(await page.locator('#dispatch-name').innerText(),'Объект 257');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietTreeIds.concat(['T62A','IS6']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),sovietTreeIds.concat(['T62A','IS6'],national.ids('ussr')));
   const rewards=await page.evaluate(()=>{
     for(const id of ['basic','premium'])openContainerDirect(id);
     for(const code of ['BETA_TEST','WT220','START2025']){document.getElementById('promo-input').value=code;activatePromo();}
@@ -693,7 +697,7 @@ test('Leopard player and VK 28.01 practice opponent: the supplied models fight w
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','LEOPARD'],selected:'LEOPARD'})}});
   assert.equal(await page.locator('#dispatch-dmg-label').innerText(),'Урон кассеты');assert.equal(await page.locator('#dispatch-dmg').innerText(),'240 (8 × 30)');
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('germany');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['GPZ','JPANTHERII','LOWE']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),germanTreeIds.concat(['GPZ','JPANTHERII','LOWE'],national.ids('germany')));
   await page.locator('#enemy-select').selectOption('VK2801');await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);
   const units=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -732,7 +736,7 @@ test('US M3 Lee: real depot and mobile sortie, limited traverse, swipe to aim, t
   const {page,click}=await offlineGame(t,{webgl:true,mobile:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','M3LEE'],selected:'M3LEE'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),meshCounts.M3LEE);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('usa');
-  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['T67','M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN']));
+  assert.deepEqual(await page.locator('#enemy-select option').evaluateAll(opts=>opts.map(o=>o.value)),usTreeIds.concat(['T67','M4A3E2','T71DA','TL7','T34HEAVY','TL7OLEN'],national.ids('usa')));
   await page.locator('#enemy-select').selectOption('M4SHERMAN');await click('НАЧАТЬ');await chooseControls(page,'mobile');await ready(page);
   const models=await page.evaluate(()=>GameState.units.map(u=>[u.id,u.hp,u.dmg,u.magSize,u.reloadTime,u.pen,
     ['hull','turret','gun'].reduce((n,k)=>n+u.modelAsset[k].attributes.position.count/3,0)]));
@@ -920,7 +924,7 @@ test('supplied Swedish rigs in combat: Kranvagn fires 3 × 400; hydraulic mounts
   const {page,click}=await offlineGame(t,{webgl:true,seed:{[saveKey]:JSON.stringify({owned:['MS1','KRANVAGN','STRV103B','UDES03'],selected:'KRANVAGN'})}});
   assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),meshCounts.KRANVAGN);
   await click('ТРЕНИРОВКА');await page.locator('#train-nat-select').selectOption('sweden');
-  assert.equal(await page.locator('#enemy-select option').count(),20);await page.locator('#enemy-select').selectOption('STRV103B');
+  assert.equal(await page.locator('#enemy-select option').count(),20+national.ids('sweden').length);await page.locator('#enemy-select').selectOption('STRV103B');
   await click('НАЧАТЬ');await chooseControls(page,'pc');await ready(page);await centerPractice(page);
   await lockedButton(page,true);await page.waitForFunction(()=>GameState.player.isReloading);await lockedButton(page,false);await page.waitForFunction(()=>!GameState.bullets.length);
   assert.deepEqual(await page.evaluate(()=>[GameState.player.reloadTime,GameState.player.curMag,GameState.battleDmg,GameState.units[1].hp]),[22000,0,1200,600]);

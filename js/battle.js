@@ -111,6 +111,7 @@ function makeRosters(playerId, size, random = Math.random, seats = [playerId]) {
 }
 async function launchBattle(teamSize, net = null) {
   if (GameState.gameActive || battleLaunch || !GameState.owned.includes(GameState.selected)) return false;
+  AudioSystem.stopPreview();AudioSystem.unlock(); // before awaiting local meshes (mobile gesture gate)
   const ticket = (battleLaunch = new AbortController());
   GarageViewer.suspend();
   battleNotice('Выезд на позицию', 'Готовим модели и местность…');
@@ -264,6 +265,7 @@ function endBattle(won) {
   xpReward = Math.floor(xpReward * xpMul) + GameState.battleKillXP;
   let goldReward = Math.floor((won ? 50 : 10) * goldMul);
   const tree = TreeEvent.settle(GameState, { silver, xp:xpReward, gold:goldReward });
+  const nationalBox = nationalVictoryBox(GameState, won);
   silver += tree.extra.silver; xpReward += tree.extra.xp; goldReward += tree.extra.gold;
 
   GameState.SILVER += silver;
@@ -309,6 +311,7 @@ function endBattle(won) {
   const {silver:s, xp:x, gold:g} = tree.extra;
   document.getElementById('result-tree').textContent = [
     (s || x || g) ? `В награду вошёл бонус ёлки: +${s} ₽, +${x} XP, +${g} G.` : '',
+    nationalBox ? `За победу получен «${CONTAINERS[nationalBox].name}». Откройте его в инвентаре.` : '',
     tree.dropped ? 'Получен ёлочный ларец! Откройте его в ангаре → «Ёлка».' : `Ёлочный ларец не выпал (шанс ${tree.chance}%).`
   ].filter(Boolean).join(' ');
   updateInvCount(); updateBoosterUI();

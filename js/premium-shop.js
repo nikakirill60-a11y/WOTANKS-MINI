@@ -29,6 +29,15 @@ function renderPremiumShop() {
     buy.textContent = GameState.owned.includes(t.id) ? 'В ангаре' : full ? 'Нет свободного слота' : buy.disabled ? 'Не хватает золота' : 'Купить за золото';
     buy.onclick = () => buyPremium(t.id,day); card.append(buy); return card;
   }));
+  const schedule=WinterSeason.saleDates(ms), fmt=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'short',timeZone:'UTC'});
+  document.getElementById('premium-roster').replaceChildren(...PLAYABLE_NATIONS.flatMap(nat=>{
+    const rows=schedule.filter(({tank})=>tank.nat===nat);
+    if(!rows.length)return [];
+    const section=document.createElement('section');
+    section.innerHTML=`<h4>${CONFIG.NATIONS[nat]}</h4><ul>${rows.map(({tank,when})=>`<li><span>${tank.n} · ${tank.price.toLocaleString('ru-RU')} G</span>
+      <time datetime="${WinterSeason.dateKey(when)}">${when===ms?'Сегодня':fmt.format(when)}</time></li>`).join('')}</ul>`;
+    return section;
+  }));
 }
 function openPremiumShop() {
   document.getElementById('premium-status').textContent = HangarSlots.free() <= 0 ? HangarSlots.fullMessage() : '';

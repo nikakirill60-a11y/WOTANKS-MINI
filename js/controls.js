@@ -71,6 +71,7 @@ const BattleInput = (() => {
         : 'Взять управление';
     el('resume-input').disabled = s === 'requesting';
     el('relative-hint').hidden = s !== 'relative';
+    if (running() && g.gameActive) AudioSystem.enter(); else AudioSystem.stop();
     if (s === 'off') return;
     if (running()) {
       BattleClock.resume();
@@ -110,6 +111,7 @@ const BattleInput = (() => {
   }
   function acquire() {
     if (!g.gameActive || (state !== 'waiting' && state !== 'paused')) return;
+    AudioSystem.unlock();
     const canvas = el('game');
     canvas.focus({ preventScroll: true });
     if (g.controlMode === 'mobile') {
@@ -242,7 +244,7 @@ const BattleInput = (() => {
     else if (e.code === 'Digit8' && CONFIG.ARTILLERY_SUPPORT) CombatMechanics.callArtilleryStrike(g.aim.x, g.aim.y);
     else if (e.code === 'KeyP') el('hud').classList.toggle('photo-mode');
     else if (e.code === 'KeyH') {
-      snd('hit');
+      snd('signal',.65);
       combatMessage('Сигнал!', '#ffd49c');
     }
   }

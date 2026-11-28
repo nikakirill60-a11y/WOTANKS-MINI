@@ -104,6 +104,23 @@ test('berths, pending Advent tank and box receipt belong only to the signed-in p
   assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#fleet-count').innerText(),'1 / 12');assert.deepEqual(api.forbidden,[]);
 });
 
+test('national stock, a reserved collector and an owned premium round-trip in the account, never the guest',async t=>{
+  const api=service(),uid=randomUUID(),email='national_pilot@players.citytanks.invalid';api.time='2026-11-22T10:00:00Z';
+  api.users.set(email,{id:uid,email,password:'fixture phrase'});
+  const fleet=['MS1','LTR','T26','T46','KV1','IS','IS3','NAT110','NAT085','NAT086'];
+  api.rows.set(uid,{revision:3,progress:{owned:fleet,selected:'NAT086',garageSlots:10,inventory:{'national-usa':2,'national-france':1}}});
+  const {page,click,saved}=await openGame(t,{route:api.route,seed:{inventory:{'national-japan':3}}}),guest=await saved();
+  await form(page,'national_pilot','fixture phrase','Войти');await active(page);await click('В ангар');
+  await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
+  await page.locator('.inv-card').filter({hasText:'Ящик США × 2'}).locator('.inv-open').evaluate(b=>{
+    const old=Math.random,rolls=[.019,3.5/15];try{Math.random=()=>rolls.length?rolls.shift():old();b.click();}finally{Math.random=old;}
+  });
+  await synced(page);const expected=[fleet,'NAT086',['NAT114'],{'national-usa':1,'national-france':1}];
+  const state=g=>[g.owned,g.selected,g.pendingVehicles,g.inventory];assert.deepEqual(state(api.rows.get(uid).progress),expected);
+  await page.reload();await active(page);assert.deepEqual(await page.evaluate(()=>[GameState.owned,GameState.selected,GameState.pendingVehicles,GameState.inventory]),expected);
+  await logout(page);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
+});
+
 test('25_zar stacks on a partially used ARTA rental, syncs with its receipt and stays separate from the guest',async t=>{
   const api=service(),uid=randomUUID(),password='test promo pass'; api.time='2026-11-22T10:00:00Z';
   api.users.set('promo_pilot@players.citytanks.invalid',{id:uid,email:'promo_pilot@players.citytanks.invalid',password});
@@ -236,4 +253,19 @@ test('1.4.2 gold refund: isolated guest, old cloud row and old outbox merge only
   await logout(page);await draft(2,999);await login();await page.locator('#cloud-recover').waitFor();assert.equal(api.rows.get(uid).progress.GOLD,921);
   page.once('dialog',d=>d.accept());await page.locator('#cloud-recover').click();await synced(page);assert.equal(await page.locator('#gold-val').innerText(),'921');
   await page.reload();await active(page);await synced(page);assert.equal(api.rows.get(uid).revision,6);assert.deepEqual(await saved(),guest);
+});
+
+test('907 wheel: the paid price, next turn and receipt survive cloud reload without spending guest gold', async t=>{
+  const api=service(),uid=randomUUID(),nick='roulette_driver',email=nick+'@players.citytanks.invalid',password='depot test phrase';
+  api.time='2026-11-22T10:00:00Z';api.users.set(email,{id:uid,email,password});
+  api.rows.set(uid,{revision:1,progress:{GOLD:150,SILVER:0}}); // pre-wheel cloud profile
+  const {page,click,saved}=await openGame(t,{route:api.route,seed:{GOLD:350,roulette907:{spins:4,prize:'silver',amount:6200}}});
+  const guest=await saved();await form(page,nick,password,'Войти');await active(page);await click('В ангар');await click('Рулетка');
+  assert.equal(await page.locator('#roulette-spin').innerText(),'Крутить · 150 G');
+  await page.locator('#roulette-spin').evaluate(b=>{const old=Math.random;try{Math.random=()=>0;b.click();}finally{Math.random=old;}});
+  await synced(page);const state=api.rows.get(uid).progress;
+  assert.deepEqual([state.GOLD,state.roulette907,state.owned],[0,{spins:1,prize:'NAT014',amount:1},['MS1','NAT014']]);
+  await page.reload();await active(page);await click('Рулетка');assert.equal(await page.locator('#roulette-result').innerText(),'Объект 907');
+  assert.equal(await page.locator('#roulette-spin').innerText(),'Крутить · 200 G');await click('В ангар');await logout(page);await click('В ангар');
+  await click('Рулетка');assert.equal(await page.locator('#roulette-spin').innerText(),'Крутить · 350 G');assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
 });

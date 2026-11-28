@@ -128,7 +128,7 @@ class PlatoonMatch {
     }
     const on=BattleInput.running && !GameState.player.dead && !document.hidden;
     const n=++this.sequence;
-    const sent=this.send('drive',{...c,n,...(action && on && {action,value})});
+    const sent=this.send('drive',{...c,n,atlas:GameState.arena.spec?.seed,...(action && on && {action,value})});
     if (sent) { this.lastSent=c; this.sentAt=now; this.prediction?.markSent(n); }
     return sent;
   }
@@ -141,6 +141,7 @@ class PlatoonMatch {
         ![cmd.forward,cmd.turn,cmd.yaw,cmd.pitch].every(Number.isFinite)) return;
     const p = GameState.units[seat], prev = this.inputs.get(seat);
     if (!p || p.driverSeat!==seat || cmd.n <= (prev?.n ?? -1)) return;
+    if (cmd.atlas!==GameState.arena.spec?.seed) { this.service.wrongAtlas(); return; }
     const now = performance.now(); this.seen.set(seat,now);
     const point = pair => Array.isArray(pair) && pair.length===2 && pair.every(Number.isFinite)
       ? [bounded(pair[0],-GameState.arena.bounds.x,GameState.arena.bounds.x),bounded(pair[1],-GameState.arena.bounds.y,GameState.arena.bounds.y)] : null;
@@ -199,7 +200,7 @@ class PlatoonMatch {
   // Poses are compact tuples in stable formation order, never serialized Tank objects.
   snapshot() {
     const g=GameState, now=BattleClock.now(), q=(x,d=100)=>Math.round(x*d)/d;
-    return {n:++this.sequence, tick:ticks, units:g.units.map(u=>[
+    return {n:++this.sequence, atlas:g.arena.spec?.seed, tick:ticks, units:g.units.map(u=>[
       ...PlatoonMatch.pose.map((k,i)=>q(u[k],i<3?100:10000)), q(u.hp),
       +u.dead | (+u.visible<<1) | (+!!u.spotted<<2) | (+u.airborne<<3) | (+u.trackBroken<<4) | (+u.isMoving<<5),
       q(u.speedKmh), u.currentTerrain, u.shotsFired||0, q(u.vx), q(u.vy)]),
@@ -222,6 +223,8 @@ class PlatoonMatch {
     const g=GameState;
     if (!this.live || this.host || !this.playback || !w || !Number.isSafeInteger(w.tick) || w.tick<0 || !Number.isSafeInteger(w.n) || w.n<=this.lastWorld || w.units?.length!==g.units.length ||
         !w.units.every(r=>Array.isArray(r) && r.length===17 && r.slice(0,13).every(Number.isFinite) && Object.hasOwn(CONFIG.TERRAIN,r[13]) && r.slice(14).every(Number.isFinite))) return;
+    // Wall/tree indices refer to a particular blueprint, not just a map name.
+    if (w.atlas!==g.arena.spec?.seed) { this.service.wrongAtlas(); return; }
     const now = performance.now(), gunTime = BattleClock.now();
     if (!this.playback.push(w,now,this.http)) return;
     const gap=now-this.worldAt; this.worldAt=now; this.seen.set(0,now);
@@ -229,14 +232,16 @@ class PlatoonMatch {
     for (const [i,r] of w.units.entries()) {
       const p=g.units[i], hp=r[10], flags=r[11];
       if (first && p!==g.player) PlatoonMatch.pose.forEach((k,j)=>p[k]=r[j]);
-      if (!p.dead && (flags&1)) boom(p.x,p.y);
-      else if (hp<p.hp) { sparks(p.x,p.y,p.aimHeight); if (p===g.player) dmgLog('−'+Math.ceil(p.hp-hp),'#ffa78b'); }
-      if (r[14]>(p.shotsFired||0)) { const tip=p.muzzle(); p.lastShot=BattleClock.date(); spawnParticles(tip.x,tip.y,'#ffb24c',5,1.2,8,tip.h); if (p===g.player) snd('shot'); }
-      p.hp=hp; p.dead=!!(flags&1); p.visible=!!(flags&2); p.spotted=!!(flags&4); p.airborne=!!(flags&8);
+      // Decide audibility from this sample, not the previous frame's visibility.
+      p.visible=!!(flags&2);const heard=!first && (p.team!=='enemy'||p.visible);
+      if (!p.dead && (flags&1)) { boom(p.x,p.y); if(heard)snd('boom',1,p); }
+      else if (hp<p.hp) { if(heard)snd('hit',1,p); sparks(p.x,p.y,p.aimHeight); if (p===g.player) dmgLog('−'+Math.ceil(p.hp-hp),'#ffa78b'); }
+      if (r[14]>(p.shotsFired||0)) { const tip=p.muzzle(); p.lastShot=BattleClock.date(); spawnParticles(tip.x,tip.y,'#ffb24c',5,1.2,8,tip.h); if (heard) snd(p.reportSound,1,p); }
+      p.hp=hp; p.dead=!!(flags&1); p.spotted=!!(flags&4); p.airborne=!!(flags&8);
       p.trackBroken=!!(flags&16); p.isMoving=!!(flags&32); p.speedKmh=r[12]; p.currentTerrain=r[13]; p.shotsFired=r[14]; p.vx=r[15]; p.vy=r[16];
     }
     for (const [i,mag,loading,until,cal,switchIn,water,mask,focus] of w.guns) {
-      const p=g.units[i]; p.curMag=mag; p.isReloading=!!loading; p.nextShot=gunTime+until; p.drownTimer=water; p.kitMask=mask;
+      const p=g.units[i]; if(!first && p===g.player && p.isReloading && !loading)snd('ready',.5,p); p.curMag=mag; p.isReloading=!!loading; p.nextShot=gunTime+until; p.drownTimer=water; p.kitMask=mask;
       if (p.calibration) { p.calibration.active=cal; p.calibration.until=switchIn===null?null:gunTime+switchIn; }
       if (p===g.player) {
         for (let j=0;j<6;j++) if (mask & (1<<j)) { this.pendingKits.delete(j); payConsumable(j); }
@@ -244,9 +249,10 @@ class PlatoonMatch {
       }
     }
     for (const i of w.walls) { const wall=this.walls[i]; if (wall && !wall.destroyed) {
+      if (!first) snd('collapse',1,{x:wall.x+wall.w/2,y:wall.y+wall.h/2});
       wall.destroyed=true; const at=g.walls.indexOf(wall); if (at>=0) g.walls.splice(at,1); g.arena.revision++;
     } }
-    for (const [i,a] of w.trees) { const t=g.arena.trees[i]; if (t && !t.fallen) { t.fallen=true; t.angle=a; g.arena.treeRevision++; } }
+    for (const [i,a] of w.trees) { const t=g.arena.trees[i]; if (t && !t.fallen) { t.fallen=true; t.angle=a; g.arena.treeRevision++; if (!first) snd('timber',.72,t); } }
     const team=g.navigation.recon.teams[0]; team.count=0; w.visited.forEach((v,i)=>{team.visited[i]=v?1:-1; if(v) team.count++;});
     g.bullets=w.shells.map(([x,y,h,a,dh,color])=>({x,y,h,a,dh,color}));
     CombatMechanics.smokeClouds=w.smoke.map(([x,y,duration])=>({x,y,duration,radius:38,maxDuration:12}));

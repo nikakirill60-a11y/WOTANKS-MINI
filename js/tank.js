@@ -110,7 +110,17 @@ class Tank {
     if (this.isReloading && now >= this.nextShot) {
       this.curMag = this.magSize;
       this.isReloading = false;
+      if(this===GameState.player)snd('ready',.50,this);
     }
+  }
+
+  get reportSound(){return this.usesMagazine && this.dmg<165 ? 'rapidfire' : this.isSPG || this.dmg>=370 ? 'bigshot' : 'shot';}
+
+  firingTips() {
+    const rims = this.modelAsset.muzzles;
+    // A twin salvo fires both barrels now; MTLS alternates its two during a clip.
+    if (!rims) return [this.modelAsset.muzzle];
+    return this.salvoSize>1 ? rims : [rims[(this.magSize-this.curMag)%rims.length]];
   }
 
   fire(shellType = 0, sight = null) {
@@ -129,8 +139,7 @@ class Tank {
     const base = sh.alpha === undefined ? this.dmg * sh.dMul : Math.floor(sh.alpha * this.calibration.damageScale);
     const damage = base * getCritMultiplier(this, 'dmg') *
       ((this.fieldKit?.paiokActive || (this === GameState.player && GameState.paiokActive)) ? 1.05 : 1);
-    const tips = this.modelAsset.muzzles || [this.modelAsset.muzzle];
-    for (const tip of tips) {
+    for (const tip of this.firingTips()) {
       const ray = this.barrelRay(tip);
       const shell = {
         ...ray, a: Math.atan2(ray.dy, ray.dx), team: this.team, shooter: this,
@@ -155,7 +164,7 @@ class Tank {
       ((this.fieldKit?.adrenalineTimer > BattleClock.date() || (this === GameState.player && GameState.adrenalineActive)) ? 0.5 : 1) * getCritMultiplier(this, 'reload');
     this.nextShot = now + (this.curMag ? this.shotDelay : this.reloadTime * multiplier);
     this.isReloading = !this.curMag;
-    snd(this.usesMagazine ? 'rapidfire' : 'shot');
+    snd(this.reportSound,1,this);
     return true;
   }
 

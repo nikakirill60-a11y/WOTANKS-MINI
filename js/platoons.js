@@ -105,6 +105,7 @@ const Platoons = (() => {
       s.prepAt=performance.now();
       s.net=new PlatoonMatch(s.room,{
         finish:result=>request(s,'finish',{result}), lost:()=>fail(s,'Потеряна связь между участниками.'),
+        wrongAtlas:()=>fail(s,'Разные версии карты. Откройте одну и ту же сборку игры.'),
         fallback:()=>request(s,'relay'), frame:packet=>s.conn.frame(s.ticket,packet)
       });
       GameState.controlMode=el('device').value; document.body.classList.toggle('mobile-mode',GameState.controlMode==='mobile');

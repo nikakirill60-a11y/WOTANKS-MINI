@@ -14,7 +14,7 @@ try{const file=path.join(tmp,'index.html');fs.writeFileSync(file,`<meta charset=
    scene.add(new T.HemisphereLight(0xeaf1fa,0x8d877b,1.65));const light=(c,p,i)=>{const l=new T.DirectionalLight(c,i);l.position.set(...p);scene.add(l);return l;};
    const sun=light(0xffdd9b,[5,7,4],3.6);light(0x94d6ff,[-4,3,-3],3.0);light(0xfcdfb5,[3,3,-5],1.3);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-8,right:8,top:8,bottom:-8,near:.1,far:26});sun.shadow.bias=-.0005;
    let model,center,distance,high,wide;
-   window.loadPlate=async id=>{if(model){scene.remove(model);model.getObjectByName('Опорные катки').dispose();}const a=await BattleModels.load(modelKey(id),new AbortController().signal);model=new T.Group();
+   window.loadPlate=async id=>{if(model){scene.remove(model);model.getObjectByName('Опорные катки').dispose?.();}const a=await BattleModels.load(modelKey(id),new AbortController().signal);model=new T.Group();
      const h=new T.Mesh(a.hull,mat),t=new T.Mesh(a.turret,mat),g=new T.Mesh(a.gun,mat);t.position.fromArray(a.pivot);g.position.fromArray(a.gunPivot);t.add(g);const wheels=new RoadWheels(a,mat).mesh;wheels.castShadow=wheels.receiveShadow=true;model.add(h,t,wheels);scene.add(model);model.updateMatrixWorld(true);
      const box=new T.Box3().setFromObject(model);center=box.getCenter(new T.Vector3());high=box.max.y-box.min.y;wide=id==='ST-II'?.66:1.12;distance=0;
      const slope=Math.tan(cam.fov*Math.PI/360),vec=new T.Vector3();for(const angle of [wide-.46,wide-.23,wide,wide+.19]){

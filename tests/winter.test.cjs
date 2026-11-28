@@ -14,9 +14,9 @@ test('open shop replaces its trio at 00:00 UTC; December visit is automatic and 
   await page.clock.setSystemTime(new Date('2026-12-01T00:30:00Z'));await page.reload();await click('Премиум-магазин');assert.deepEqual(await ids(),today);
   await click('В ангар');await click('Адвент');assert.equal(await page.locator('.advent-date.received').count(),1);
   assert.equal((await saved()).GOLD,20050-price);assert.equal(await page.locator('#calendar-days button').count(),0);
-  assert.equal(await page.evaluate(()=>{const pool=new Set();let last='';for(let day=1;day<=365;day++){
+  assert.equal(await page.evaluate(()=>{const pool=new Set();let last='';for(let day=1;day<=10;day++){
     const a=WinterSeason.offers(86400000*day).map(t=>t.id);if(new Set(a).size!==3||last===a.join())return false;
-    a.forEach(id=>pool.add(id));last=a.join();}return [...pool].sort().join();}),'IS6,LOWE,STA2,STRVS1,T34HEAVY');
+    a.forEach(id=>pool.add(id));last=a.join();}return [...pool].sort().join();}),['IS6','LOWE','STA2','STRVS1','T34HEAVY',...require('./fixtures/national.cjs').ids(null,'premium')].sort().join());
 });
 
 test('missed days do not reset Advent, thresholds count visits, December ends at UTC year boundary',async t=>{

@@ -119,7 +119,7 @@ const { chromium } = require('../tests/node_modules/playwright-core'),
         const o = out.getContext('2d');
         o.imageSmoothingQuality = 'high';
         o.drawImage(c, l, top, w, ht, 8, 8, 624, out.height - 16);
-        scene.remove(group); wheels.dispose();
+        scene.remove(group); wheels.dispose?.(); // instancing buffer; native tyre geometries belong to the cached asset
         return out.toDataURL('image/webp', 0.92).split(',')[1];
       };
     });

@@ -55,7 +55,25 @@ def extract(src):
     if count != int(re.search(r'\btriangles:(\d+)',meta)[1]):
         raise ValueError(f'{src}: triangle count mismatch')
     model_id = string('id').upper()
-    return dict(id={'T28':'T28_USSR'}.get(model_id,model_id),color=string('color'),source=string('sourceUrl'),
+    source = string('sourceUrl')
+    # The 23 SPG viewers reused a template's unrelated Hungarian archive credit.
+    from artillery_running_gear import ARCHIVE, EXPORT_IDS
+    if model_id in EXPORT_IDS and 'source:"Lesta game model mirror"' in meta:
+        source = f'{ARCHIVE} / {src.name} · Lesta Games · https://github.com/unicum-gg/wot.models/tree/Lesta'
+    # These viewers' template sourceUrl says "undefined/model.glb"; url credits
+    # the actual per-vehicle model (including the one BlitzKit M24).
+    import french_running_gear as french
+    if model_id in french.EXPORT_IDS and 'nation:"france"' in meta:
+        source = f'{french.ARCHIVE} / {src.name} · {string("source")} · {string("url")}'
+    import national_models as national
+    if re.fullmatch(r'V[0-9]{3}',model_id) and src.name.startswith(model_id[1:]+'-'):
+        serial = model_id[1:]
+        # The PC template's sourceUrl is undefined. url is its actual vehicle path;
+        # the Blitz exports have a valid per-vehicle GLB. Do not import viewer code.
+        origin = ('BlitzKit · '+source if string('sourceType')=='blitzkit' else string('url'))
+        source = f'{national.ARCHIVE} / {src.name} · {origin}'
+        model_id = 'NAT'+serial
+    return dict(id={'T28':'T28_USSR'}.get(model_id,model_id),color=string('color'),source=source,
                 tracks=(string('trackColor') if 'trackColor:' in meta else
                         '#313527' if 'nation:"ussr"' in meta and '#313527' in text[:start] else
                         '#2e3227' if 'nation:"japan"' in meta and '#2e3227' in text[:start] else

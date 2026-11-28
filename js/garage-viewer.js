@@ -34,7 +34,7 @@ const GarageViewer = (() => {
   }
 
   async function showStand() {
-    if (!inspecting || GameState.gameActive || el('container-modal').open || el('tree-modal').open) {
+    if (!inspecting || GameState.gameActive || el('container-modal').open || el('tree-modal').open || el('roulette-modal').open) {
       suspend();
       return;
     }

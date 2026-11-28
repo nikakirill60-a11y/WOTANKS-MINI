@@ -1,8 +1,11 @@
 // Each vehicle-bearing crate has its own manifest. The ordinary resource ranges are unchanged.
 const NATIONAL_BOX_CHANCE = .20;
+// Unconditional chance per opening, in basis points (1 bp = 0.01%). Index = prize tier.
+const NATIONAL_TIER_BP = Object.freeze([0, 0, 300, 240, 170, 120, 80, 50, 25, 10, 5]);
+const NATIONAL_TOTAL_BP = NATIONAL_TIER_BP.reduce((total, bp) => total + bp, 0);
 const CONTAINERS = {
   ...Object.fromEntries(Object.entries(NationalCrates.catalog).map(([id,model]) => [id,{
-    name:model.name, icon:'📦', color:model.accent, national:true, slotChance:0, vehicleChance:.10,
+    name:model.name, icon:'📦', color:model.accent, national:true, slotChance:0, vehicleChance:NATIONAL_TOTAL_BP / 10000,
     vehicles:NATIONAL_TANKS.filter(t=>t.supplyBox===id).map(t=>t.id),
     drops:[['silver',5000,15000,60],['xp',2000,8000,30],['gold',50,200,10]]
   }])),
@@ -47,16 +50,42 @@ function migrateSupplyBoxes(inventory) {
 
 // Each box rolls independently at opening (also in bulk). The vehicle chance applies to the pool, not to each vehicle.
 const missingPrize = id => !HangarSlots.received(id) || !!GameState.rentalBattles[id];
+// Cumulative upper bounds on the original [0,1) roll. Shared by the receipt and
+// the displayed odds; never cache eligibility across openings, including in a batch.
+function vehicleBands(box) {
+  const missing = box.vehicles?.filter(missingPrize);
+  if (!missing?.length) return [];
+  if (!box.national) return [{vehicles:missing, end:box.vehicleChance}];
+
+  const bands = [];
+  for (let tier = 2; tier < 10; tier++) {
+    const vehicles = missing.filter(id => DB[id].tier === tier);
+    if (vehicles.length) bands.push({tier, vehicles});
+  }
+  const top = missing.filter(id => DB[id].tier === 10);
+  const topBP = top.length ? NATIONAL_TIER_BP[10] : 0;
+  const lowerBP = NATIONAL_TOTAL_BP - topBP;
+  const weight = bands.reduce((sum, b) => sum + NATIONAL_TIER_BP[b.tier], 0);
+  let cumulative = 0;
+  for (const band of bands) {
+    cumulative += NATIONAL_TIER_BP[band.tier];
+    band.end = lowerBP * cumulative / (10000 * weight);
+  }
+  // Never redistribute into tier X: even if ONLY X is missing, its entire
+  // band is 5 basis points (split equally between the remaining tier-X tanks).
+  if (top.length) bands.push({tier:10, vehicles:top, end:weight ? box.vehicleChance : topBP / 10000});
+  return bands;
+}
 function rollPrimary(box, random) {
   let roll = random();
   if (box.vehicles) {
-    const missing = box.vehicles.filter(missingPrize);
-    const chance = missing.length ? box.vehicleChance : 0;
-    if (roll < chance) {
-      const tankId = missing[Math.floor(random() * missing.length)];
+    const bands = vehicleBands(box), hit = bands.find(b => roll < b.end);
+    if (hit) {
+      const tankId = hit.vehicles[Math.floor(random() * hit.vehicles.length)];
       HangarSlots.awardPermanent(tankId);
       return {type:'vehicle', id:tankId, amount:1};
     }
+    const chance = bands.at(-1)?.end ?? 0;
     roll = (roll - chance) / (1 - chance);
   }
   // Weights sum to 100 inside the resource pool, after the independent tank decision.
@@ -204,13 +233,23 @@ function showInvNotification(name, icon) {
   setTimeout(() => notif.remove(), 1500);
 }
 
-function boxOdds(box) {
+const supplyPercentNumber = new Intl.NumberFormat('ru-RU', {maximumFractionDigits:3});
+const supplyPercent = chance => supplyPercentNumber.format(chance * 100) + '%';
+function boxOdds(box, bands = vehicleBands(box)) {
   if (box === CONTAINERS[TreeEvent.boxId]) return `Только одно украшение. ${TreeEvent.oddsText()}.`;
-  const available = box.vehicles?.some(missingPrize), chance = available ? box.vehicleChance : 0;
-  const vehicles = !box.vehicles ? '' : available ? `${chance * 100}% на танк — общий шанс для всех недостающих машин. ` :
+  const chance = bands.at(-1)?.end ?? 0;
+  const vehicles = !box.vehicles ? '' : chance ? `${supplyPercent(chance)} на танк — общий шанс для всех недостающих машин. ` :
     box.national ? 'Все машины этого ящика получены. ' : box === CONTAINERS.collection ? 'Все пять машин уже получены. ' : 'Обе машины уже получены навсегда. ';
-  const resources = box.drops.map(([key,,,weight], i) => `${i ? SUPPLIES[key][1].toLowerCase() : SUPPLIES[key][1]} — ${((1-chance)*weight).toLocaleString('ru-RU',{maximumFractionDigits:2})}%`).join(', ');
+  const resources = box.drops.map(([key,,,weight], i) => `${i ? SUPPLIES[key][1].toLowerCase() : SUPPLIES[key][1]} — ${supplyPercent((1-chance)*weight/100)}`).join(', ');
   return `${vehicles}${resources}.` + (box.national ? ' Без дополнительного слота.' : ` Дополнительный слот ангара — ${slotChance(box) * 100}%.`);
+}
+
+function nationalTierOdds(bands) {
+  const chances = NATIONAL_TIER_BP.map(() => 0);
+  bands.forEach((b,i) => { chances[b.tier] = b.end - (bands[i-1]?.end ?? 0); });
+  return `<dl class="crate-tier-odds" aria-label="Шанс уровня за одно открытие">${chances.slice(1).map((p,i) =>
+    `<div><dt>${CONFIG.TIER_ROMAN[i+1]}</dt><dd>${supplyPercent(p)}</dd></div>`).join('')}</dl>
+    <p>Шанс за один ящик. Внутри уровня недостающие машины равновероятны. Проценты округлены.</p>`;
 }
 
 function renderSupplyStatus(){
@@ -237,9 +276,9 @@ function renderContainerGrid() {
     host.append(card);
   }
   renderNationalShowcase(id=>{
-    const box=CONTAINERS[id];
+    const box=CONTAINERS[id], bands=vehicleBands(box);
     return `<details class="crate-manifest"><summary>Награды · машин: ${box.vehicles.length}</summary>
-      <p>${boxOdds(box)}</p><ul>${box.vehicles.map(k=>`<li>${missingPrize(k)?'':'✓ '}${DB[k].n}</li>`).join('')}
+      <p>${boxOdds(box,bands)}</p>${nationalTierOdds(bands)}<ul>${box.vehicles.map(k=>`<li>${missingPrize(k)?'':'✓ '}${CONFIG.TIER_ROMAN[DB[k].tier]} · ${DB[k].n}</li>`).join('')}
       ${box.drops.map(([t,min,max])=>`<li>${SUPPLIES[t][1]}: ${min.toLocaleString('ru-RU')}–${max.toLocaleString('ru-RU')}</li>`).join('')}</ul></details>`;
   });
 }
@@ -255,9 +294,10 @@ function renderInventoryGrid() {
   waiting.textContent=waiting.hidden?'':`Ожидают слота: ${deliveries.join(', ')}. Машины сохранены и поступят в ангар по очереди, как только освободится или выпадет место.`;
   for(const [id,qty] of Object.entries(GameState.inventory)){
     const box=CONTAINERS[id];if(!box||qty<=0)continue;
+    const bands=vehicleBands(box);
     const card=document.createElement('article');card.className='inv-card';card.style.setProperty('--stripe',box.color);
     card.innerHTML=`${crateArt(id,box.name)}<div class="crate-copy"><small class="season-kicker">НА СКЛАДЕ · ${qty} ШТ.</small><h4 class="inv-name">${box.name} × ${qty}</h4>
-      <p class="c-desc">${boxOdds(box)}</p></div>
+      <p class="c-desc">${boxOdds(box,bands)}</p>${box.national ? `<details class="crate-manifest"><summary>Шансы по уровням</summary>${nationalTierOdds(bands)}</details>` : ''}</div>
       <button class="winter-action inv-open" onclick="openFromInventory('${id}')">ОТКРЫТЬ 1</button>
       ${qty>1?`<button class="winter-back inv-open-all" onclick="openAllFromInventory('${id}')">ОТКРЫТЬ ВСЕ</button>`:''}`;
     grid.append(card);

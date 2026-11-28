@@ -187,7 +187,7 @@ test('national stock, a reserved collector and an owned premium round-trip in th
   await form(page,'national_pilot','fixture phrase','Войти');await active(page);await click('В ангар');
   await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
   await page.locator('.inv-card').filter({hasText:'Ящик США × 2'}).locator('.inv-open').evaluate(b=>{
-    const old=Math.random,rolls=[.019,3.5/15];try{Math.random=()=>rolls.length?rolls.shift():old();b.click();}finally{Math.random=old;}
+    const old=Math.random,rolls=[.05,.5];try{Math.random=()=>rolls.length?rolls.shift():old();b.click();}finally{Math.random=old;}
   });
   await synced(page);const expected=[fleet,'NAT086',['NAT114'],{'national-usa':1,'national-france':1}];
   const state=g=>[g.owned,g.selected,g.pendingVehicles,g.inventory];assert.deepEqual(state(api.rows.get(uid).progress),expected);

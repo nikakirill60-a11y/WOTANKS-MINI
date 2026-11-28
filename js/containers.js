@@ -1,11 +1,10 @@
 // Each vehicle-bearing crate has its own manifest. The ordinary resource ranges are unchanged.
 const NATIONAL_BOX_CHANCE = .20;
-// Unconditional chance per opening, in basis points (1 bp = 0.01%). Index = prize tier.
-const NATIONAL_TIER_BP = Object.freeze([0, 0, 300, 240, 170, 120, 80, 50, 25, 10, 5]);
-const NATIONAL_TOTAL_BP = NATIONAL_TIER_BP.reduce((total, bp) => total + bp, 0);
+// Absolute chance for EACH eligible tank at this tier, per national box (1 bp = 0.01%).
+const NATIONAL_BP_PER_TANK = Object.freeze([0, 0, 300, 240, 170, 120, 80, 50, 25, 10, 5]);
 const CONTAINERS = {
   ...Object.fromEntries(Object.entries(NationalCrates.catalog).map(([id,model]) => [id,{
-    name:model.name, icon:'📦', color:model.accent, national:true, slotChance:0, vehicleChance:NATIONAL_TOTAL_BP / 10000,
+    name:model.name, icon:'📦', color:model.accent, national:true, slotChance:0,
     vehicles:NATIONAL_TANKS.filter(t=>t.supplyBox===id).map(t=>t.id),
     drops:[['silver',5000,15000,60],['xp',2000,8000,30],['gold',50,200,10]]
   }])),
@@ -48,7 +47,7 @@ function migrateSupplyBoxes(inventory) {
   return result;
 }
 
-// Each box rolls independently at opening (also in bulk). The vehicle chance applies to the pool, not to each vehicle.
+// A queued permanent vehicle already counts; a rental can still be won outright.
 const missingPrize = id => !HangarSlots.received(id) || !!GameState.rentalBattles[id];
 // Cumulative upper bounds on the original [0,1) roll. Shared by the receipt and
 // the displayed odds; never cache eligibility across openings, including in a batch.
@@ -57,23 +56,17 @@ function vehicleBands(box) {
   if (!missing?.length) return [];
   if (!box.national) return [{vehicles:missing, end:box.vehicleChance}];
 
+  // One mutually exclusive prize: N tanks × p gives the tier Np of the roll;
+  // uniform selection within it gives each tank exactly p. Never renormalize.
   const bands = [];
-  for (let tier = 2; tier < 10; tier++) {
+  let endBP = 0;
+  for (const [tier, perTankBP] of NATIONAL_BP_PER_TANK.entries()) {
+    if (!perTankBP) continue;
     const vehicles = missing.filter(id => DB[id].tier === tier);
-    if (vehicles.length) bands.push({tier, vehicles});
+    if (!vehicles.length) continue;
+    endBP += vehicles.length * perTankBP;
+    bands.push({tier, vehicles, end:endBP / 10000});
   }
-  const top = missing.filter(id => DB[id].tier === 10);
-  const topBP = top.length ? NATIONAL_TIER_BP[10] : 0;
-  const lowerBP = NATIONAL_TOTAL_BP - topBP;
-  const weight = bands.reduce((sum, b) => sum + NATIONAL_TIER_BP[b.tier], 0);
-  let cumulative = 0;
-  for (const band of bands) {
-    cumulative += NATIONAL_TIER_BP[band.tier];
-    band.end = lowerBP * cumulative / (10000 * weight);
-  }
-  // Never redistribute into tier X: even if ONLY X is missing, its entire
-  // band is 5 basis points (split equally between the remaining tier-X tanks).
-  if (top.length) bands.push({tier:10, vehicles:top, end:weight ? box.vehicleChance : topBP / 10000});
   return bands;
 }
 function rollPrimary(box, random) {
@@ -245,11 +238,14 @@ function boxOdds(box, bands = vehicleBands(box)) {
 }
 
 function nationalTierOdds(bands) {
-  const chances = NATIONAL_TIER_BP.map(() => 0);
-  bands.forEach((b,i) => { chances[b.tier] = b.end - (bands[i-1]?.end ?? 0); });
-  return `<dl class="crate-tier-odds" aria-label="Шанс уровня за одно открытие">${chances.slice(1).map((p,i) =>
-    `<div><dt>${CONFIG.TIER_ROMAN[i+1]}</dt><dd>${supplyPercent(p)}</dd></div>`).join('')}</dl>
-    <p>Шанс за один ящик. Внутри уровня недостающие машины равновероятны. Проценты округлены.</p>`;
+  const rows = NATIONAL_BP_PER_TANK.slice(1).map((bp,i) => {
+    const tier = i+1, count = bands.find(b => b.tier === tier)?.vehicles.length ?? 0;
+    return `<tr><th scope="row">${CONFIG.TIER_ROMAN[tier]}</th><td>${count}</td><td>${bp ? supplyPercent(bp / 10000) : '—'}</td><td>${supplyPercent(count * bp / 10000)}</td></tr>`;
+  });
+  return `<table class="crate-tier-odds" aria-label="Шансы за одно открытие"><thead><tr>
+    <th scope="col">Ур.</th><th scope="col">Доступно</th><th scope="col">На одну</th><th scope="col">Итого</th>
+    </tr></thead><tbody>${rows.join('')}</tbody></table>
+    <p>«На одну» — шанс каждой недостающей машины за ящик. Машины в ангаре и в очереди не выпадают повторно. Их шанс переходит к ресурсам.</p>`;
 }
 
 function renderSupplyStatus(){
@@ -278,7 +274,7 @@ function renderContainerGrid() {
   renderNationalShowcase(id=>{
     const box=CONTAINERS[id], bands=vehicleBands(box);
     return `<details class="crate-manifest"><summary>Награды · машин: ${box.vehicles.length}</summary>
-      <p>${boxOdds(box,bands)}</p>${nationalTierOdds(bands)}<ul>${box.vehicles.map(k=>`<li>${missingPrize(k)?'':'✓ '}${CONFIG.TIER_ROMAN[DB[k].tier]} · ${DB[k].n}</li>`).join('')}
+      <p>${boxOdds(box,bands)}</p>${nationalTierOdds(bands)}<ul>${box.vehicles.map(k=>`<li>${CONFIG.TIER_ROMAN[DB[k].tier]} · ${DB[k].n} — ${missingPrize(k) ? supplyPercent(NATIONAL_BP_PER_TANK[DB[k].tier] / 10000) : '✓ получена'}</li>`).join('')}
       ${box.drops.map(([t,min,max])=>`<li>${SUPPLIES[t][1]}: ${min.toLocaleString('ru-RU')}–${max.toLocaleString('ru-RU')}</li>`).join('')}</ul></details>`;
   });
 }

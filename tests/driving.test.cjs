@@ -317,7 +317,8 @@ test('independent sight and asymmetric M3 mount: turning cannot wind up the gun 
   near(s.tAngle, Math.PI / 2);
   near(s.aimPitch, 0.1);
   near(s.angle, 0);
-  move(190, 0, 1, true);
-  near(s.tAngle, Math.PI / 2);
+  move(190, 0, 1, true); // hull alone carries the mount, not the driver's world-space aim
+  near(s.lookYaw, Math.PI / 2);
+  near(Math.atan2(Math.sin(s.tAngle - s.angle), Math.cos(s.tAngle - s.angle)), Math.PI / 2);
   assert.ok(Math.abs(s.angle) > 2);
 });

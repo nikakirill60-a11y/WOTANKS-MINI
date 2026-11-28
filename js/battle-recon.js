@@ -10,6 +10,7 @@ class BattleRecon {
     this.teams = Array.from({ length: 2 }, () => ({
       visited: new Int32Array(n).fill(-1),
       count: 0,
+      peakStrength: 0, lastStand: false,
       passes: new Uint32Array(n),
       claims: Array(n).fill(null),
       reports: new Map()
@@ -61,6 +62,7 @@ class BattleRecon {
       for (const [key, p] of team.reports) if (p.until <= now) team.reports.delete(key);
     // The roster is stable throughout a match. Its slot is just a contact ID;
     // reading a report never requires looking up the source unit.
+    const living = [[], []];
     for (const [key, u] of units.entries()) {
       if (u.dead) {
         if (u.bot?.sector >= 0) this.release(u);
@@ -69,6 +71,7 @@ class BattleRecon {
       const side = u.team === 'enemy' ? 1 : 0,
         sector = this.cell(u.x, u.y),
         team = this.teams[side];
+      living[side].push(u);
       if (this.anchors[sector]) {
         if (team.visited[sector] < 0) team.count++;
         team.visited[sector] = now;
@@ -77,6 +80,28 @@ class BattleRecon {
       // no extra information about where a vehicle drove after disappearing.
       if (u.spotted)
         this.teams[1 - side].reports.set(key, { x: u.x, y: u.y, until: now + BattleRecon.reportLife });
+    }
+    living.forEach((survivors, side) => this.rallySurvivors(survivors, side));
+  }
+  rallySurvivors(live, side) {
+    const team = this.teams[side];
+    team.peakStrength = Math.max(team.peakStrength, live.length);
+    if (team.lastStand || team.peakStrength <= 2 || !live.length || live.length > 2) return;
+    team.lastStand = true;
+    // Assign fixed, separated berths once. The centre is public, as is the team's
+    // own base. Never read an unspotted enemy position or move a human driver.
+    const nav = this.nav, home = nav.arena.bases[side];
+    const post = live.find(u => u.bot?.post)?.bot.post;
+    const dir = Math.atan2(home.y, home.x), dx = Math.cos(dir), dy = Math.sin(dir);
+    const gap = 2 * BOT_CLEARANCE;
+    const centre = post || {x: .8 * gap * dx, y: .8 * gap * dy};
+    const occupied = post ? [post] : [];
+    for (const [i, u] of live.entries()) {
+      if (!u.bot || u.bot.post) continue;
+      const offset = post ? gap * 1.2 : (i - (live.length - 1) / 2) * gap * 1.4;
+      const n = nav.nearest(centre.x - dy * offset, centre.y + dx * offset,
+        q => occupied.every(p => Math.hypot(p.x - q.x, p.y - q.y) >= gap));
+      if (n >= 0) occupied.push(u.bot.stand = nav.point(n));
     }
   }
   report(u, now) {

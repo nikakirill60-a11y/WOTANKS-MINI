@@ -35,18 +35,6 @@ function updateResources() {
   if (!document.getElementById('bay-research').hidden) renderTree();
 }
 
-// ========== Обмен XP на золото ==========
-function exchangeXP() {
-  if (GameState.XP >= 100) {
-    GameState.XP -= 100;
-    GameState.GOLD += 10;
-    var msg = document.getElementById('exchange-msg');
-    if (msg) { msg.innerText = "✅"; setTimeout(function() { msg.innerText = ""; }, 1500); }
-    updateResources();
-    saveProgress();
-  }
-}
-
 // ========== Выбор нации ==========
 function renderNatButtons() {
   const host = document.getElementById('nat-buttons');
@@ -307,17 +295,20 @@ function activatePromo() {
   const reward = CONFIG.PROMOCODES[code], id = reward.vehicle;
   const items = [];
   if (id) {
-    const name = DB[id].n;
-    if (HangarSlots.received(id)) {
+    const name = DB[id].n, wasRented = !!GameState.rentalBattles[id];
+    if (!HangarSlots.award(id, reward.rentalBattles)) {
       const where = GameState.owned.includes(id) ? 'уже в ангаре' : 'уже ожидает слота';
       return say(`${name} ${where}. Код не потрачен.`, '#eabb70');
     }
-    HangarSlots.award(id, reward.rentalBattles);
-    items.push(GameState.pendingVehicles.includes(id)
-      ? `${name} ожидает слота в инвентаре. Освободите место в ангаре.`
-      : `${name} добавлена в ангар.`);
-    const term = HangarSlots.rentalTerm(id);
-    if (term) items.push(`Аренда на ${term}. Каждый выезд на этой машине, включая тренировку, расходует один бой.`);
+    if (wasRented) {
+      items.push(`${name}: аренда продлена (+${reward.rentalBattles}). Осталось: ${HangarSlots.rentalTerm(id)}.`);
+    } else {
+      items.push(GameState.pendingVehicles.includes(id)
+        ? `${name} ожидает слота в инвентаре. Освободите место в ангаре.`
+        : `${name} добавлена в ангар.`);
+      const term = HangarSlots.rentalTerm(id);
+      if (term) items.push(`Аренда на ${term}. Каждый выезд на этой машине, включая тренировку, расходует один бой.`);
+    }
   }
   if (reward.gold) { GameState.GOLD += reward.gold; items.push(reward.gold + 'G'); }
   if (reward.silver) { GameState.SILVER += reward.silver; items.push(reward.silver + '💰'); }
@@ -446,7 +437,6 @@ function updateScoreboard() {
 window.combatMessage = combatMessage;
 window.dmgLog = dmgLog;
 window.updateResources = updateResources;
-window.exchangeXP = exchangeXP;
 window.setNat = setNat;
 window.setShell = setShell;
 window.useCons = useCons;

@@ -134,25 +134,48 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   // Real fire edge from the remote player's touch button goes through host Tank.fire().
   await b.locator('#fire-btn').click();
   await a.waitForFunction(()=>GameState.units[1].shotsFired>=1);await b.waitForFunction(()=>GameState.player.shotsFired>=1);
-  // Deterministic objective: park the last bot and both survivors, outside blast radius
-  // of the commander. The REAL strike, scoring, snapshot and result code still execute.
-  const aim=await a.evaluate(()=>{
+  // Only the surviving wingman can finish. Set up a stationary last target in the
+  // practice lane, then use a real remote trigger and host-side shell hit, not a strike.
+  await a.evaluate(()=>{
     BotAI.step=()=>{};const g=GameState,p=g.units[1],enemy=g.units.at(-1);
-    for(const u of g.units.filter(u=>u.team==='enemy' && u!==enemy)) {u.dead=true;u.hp=0;} enemy.dead=false;enemy.hp=123;
-    g.player.hp=0;finishUnit(g.player,null);p.hp=p.maxHp-100;
-    return [enemy.x,enemy.y];
+    for(const u of g.units.filter(u=>u.team==='enemy' && u!==enemy)) {u.dead=true;u.hp=0;} enemy.dead=false;enemy.hp=90;
+    g.player.hp=0;finishUnit(g.player,null);p.hp=p.maxHp-100;g.bullets.length=0;
   });
   await b.waitForFunction(()=>GameState.units[0].dead && GameState.player.hp===GameState.player.maxHp-100);
   await b.evaluate(()=>useCons(1));await a.waitForFunction(()=>GameState.units[1].hp>GameState.units[1].maxHp-100);await b.waitForFunction(()=>GameState.consumables[1]);
   assert.ok(await a.evaluate(()=>GameState.gameActive&&!GameState.consumables[1] && GameState.player.dead));
-  await b.evaluate(([x,y])=>CombatMechanics.callArtilleryStrike(x,y),aim);
+  const legacyEdge=await b.evaluate(()=>{
+    GameState.holdTurret=true;const net=GameState.platoon;
+    if(net.action('strike',[0,0])!==false)throw Error('Auxiliary strike enabled on peer');
+    // Send one old-version input through the real sequencer; do not invent an ack on the host.
+    if(!net.sendInput('strike',[0,0]))throw Error('Missing peer input');return net.sequence;
+  });
+  await a.waitForFunction(n=>{const c=GameState.platoon.inputs.get(1);return c?.n>=n && c.hold && !GameState.units[1].isReloading;},legacyEdge);
+  const targetTier=await a.evaluate(()=>{
+    const g=GameState,p=g.units[1],enemy=g.units.at(-1),net=g.platoon;
+    if(p.nextStrike || net.snapshot().strikes.length)throw Error('Disabled auxiliary strike accepted');
+    for(const [u,x] of [[p,-120],[enemy,120]]) {
+      Object.assign(u,{x,y:0,angle:0,tAngle:0,lookYaw:0,driveSpeed:0,yawRate:0,vx:0,vy:0,swayPitch:0,swayRoll:0,pitchVel:0,rollVel:0});TrackDrive.place(u);
+    }
+    enemy.spotted=enemy.visible=true;p.lookAtPoint(enemy.x,enemy.y,enemy.aimHeight);p.slewSight(Math.PI,Math.PI);
+    if(p.sightHit().hit!==enemy)throw Error('Objective outside the firing lane');
+    return enemy.tier;
+  });
+  await b.locator('#fire-btn').click();
   const finished=p=>p.waitForFunction(()=>!GameState.gameActive && document.querySelector('#result-screen').classList.contains('show'));
-  await Promise.all([finished(a),finished(b)]);
+  try { await Promise.all([finished(a),finished(b)]); }
+  catch(e) {
+    const state=await Promise.all([a,b].map(page=>page.evaluate(()=>{
+      const g=GameState,p=g.units[1],enemy=g.units.at(-1),cmd=g.platoon?.inputs.get(1);
+      return {shots:p?.shotsFired,hp:enemy?.hp,scores:g.platoon?.scores,active:g.gameActive,hold:g.holdTurret,
+        source:p && [p.x,p.y,p.tAngle,p.aimPitch],target:enemy && [enemy.id,enemy.x,enemy.y],cmd};
+    })));throw Error('Final remote shot did not settle: '+JSON.stringify(state),{cause:e});
+  }
   for(const p of [a,b])assert.equal(await p.locator('#result-title').innerText(),'ПОБЕДА!');
-  assert.equal(await a.evaluate(()=>GameState.battleKills),0);assert.equal(await b.evaluate(()=>GameState.battleKills),1);assert.ok(await b.evaluate(()=>GameState.battleDmg>=123));
+  assert.equal(await a.evaluate(()=>GameState.battleKills),0);assert.equal(await b.evaluate(()=>GameState.battleKills),1);assert.ok(await b.evaluate(()=>GameState.battleDmg>=90));
   assert.equal(await b.evaluate(()=>GameState.totalBattles),1);assert.equal(await a.evaluate(()=>GameState.totalBattles),1);
   const income=await Promise.all([a,b].map((p,i)=>p.evaluate(([xp,gold])=>[GameState.XP-xp, GameState.GOLD-gold, GameState.inventory.ornament||0],balances[i])));
-  assert.deepEqual(income,[[300,50,0],[880,55,1]]);
+  assert.deepEqual(income,[[300,50,0],[880+550*targetTier,55,1]]);
   if (!fallback) assert.ok(relay.counts.get('drive')>2 && relay.counts.get('world')>2);
   assert.deepEqual(relay.errors,[]);
   await Promise.all([a,b].map(p=>p.locator('#result-screen button').click()));

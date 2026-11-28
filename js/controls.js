@@ -95,6 +95,8 @@ const BattleInput = (() => {
     invalidate();
     clear();
     lastSignal = -Infinity;
+    const strike = el('strike-btn');
+    strike.hidden = strike.disabled = !CONFIG.ARTILLERY_SUPPORT;
     setState(g.controlMode === 'mobile' ? 'touch' : 'waiting');
     el(running() ? 'game' : 'resume-input').focus({ preventScroll: true });
   }
@@ -237,7 +239,7 @@ const BattleInput = (() => {
     else if (/^Digit[1-3]$/.test(e.code)) setShell(Number(e.code.slice(-1)) - 1);
     else if (Object.hasOwn(consumables, e.code)) useCons(consumables[e.code]);
     else if (e.code === 'Digit7') CombatMechanics.deploySmokeScreen(g.player);
-    else if (e.code === 'Digit8') CombatMechanics.callArtilleryStrike(g.aim.x, g.aim.y);
+    else if (e.code === 'Digit8' && CONFIG.ARTILLERY_SUPPORT) CombatMechanics.callArtilleryStrike(g.aim.x, g.aim.y);
     else if (e.code === 'KeyP') el('hud').classList.toggle('photo-mode');
     else if (e.code === 'KeyH') {
       snd('hit');

@@ -50,19 +50,26 @@ async function logout(p) {
   await p.getByRole('button',{name:'Выйти в гостевой ангар'}).click();await p.waitForFunction(()=>!Accounts.active && !Accounts.switching);
 }
 
+async function claimPromo(page, code) {
+  await page.getByRole('button',{name:'Код',exact:true}).click();
+  await page.getByLabel('Промокод',{exact:true}).fill(code);
+  await page.getByRole('button',{name:'АКТИВИРОВАТЬ',exact:true}).click();
+  await page.locator('#promo-modal .btn-close').click();
+}
+
 test('nickname signup, real SDK sign-in, server date, session reload and two isolated cloud players vs an existing guest',async t=>{
   const api=service(),{page,click,saved}=await openGame(t,{route:api.route,seed:{owned:['MS1','IS4'],selected:'IS4',GOLD:19000,XP:1700}});
   const guest=await saved();assert.equal(api.writes,0);await form(page,'polar_one','example pass A','Создать аккаунт');await active(page);await synced(page);
   const alice=api.users.get('polar_one@players.citytanks.invalid').id;
   assert.deepEqual(api.rows.get(alice).progress.owned,['MS1']);assert.equal(api.rows.get(alice).progress.GOLD,50);
   assert.deepEqual(api.rows.get(alice).progress.advent2026.dates,['2026-12-01']);assert.deepEqual(await saved(),guest);
-  await click('В ангар');await click('ОБМЕН');await synced(page);assert.equal(api.rows.get(alice).progress.GOLD,60);
+  await click('В ангар');await claimPromo(page,'BETA_TEST');await synced(page);assert.equal(api.rows.get(alice).progress.GOLD,550);
   const before=api.writes;await page.reload();await active(page);await synced(page);assert.equal(api.writes,before,'reload must not create a new revision or a second reward');
-  assert.equal(await page.locator('#gold-val').innerText(),'60');await logout(page);assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#dispatch-name').innerText(),'ИС-4');
+  assert.equal(await page.locator('#gold-val').innerText(),'550');await logout(page);assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#dispatch-name').innerText(),'ИС-4');
   await form(page,'polar_two','example pass B','Создать аккаунт');await active(page);await synced(page);
   assert.equal(await page.locator('#gold-val').innerText(),'50');await logout(page);
-  await form(page,'polar_one','wrong password','Войти');await page.waitForFunction(()=>!Accounts.switching);assert.equal(await page.evaluate(()=>Accounts.active),false);assert.equal(api.rows.get(alice).progress.GOLD,60);
-  await form(page,'polar_one','example pass A','Войти');await active(page);assert.equal(await page.locator('#gold-val').innerText(),'60');
+  await form(page,'polar_one','wrong password','Войти');await page.waitForFunction(()=>!Accounts.switching);assert.equal(await page.evaluate(()=>Accounts.active),false);assert.equal(api.rows.get(alice).progress.GOLD,550);
+  await form(page,'polar_one','example pass A','Войти');await active(page);assert.equal(await page.locator('#gold-val').innerText(),'550');
   assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
   const storage=await page.evaluate(()=>JSON.stringify({...localStorage,...sessionStorage}));assert.doesNotMatch(storage,/example pass|wrong password/);
 });
@@ -73,12 +80,12 @@ test('failed initial cloud read never initializes a fresh save; offline outbox s
   const {page,saved}=await openGame(t,{route:api.route,seed:{GOLD:13}});const guest=await saved();
   await form(page,'returning','test phrase','Войти');await page.waitForFunction(()=>!Accounts.switching);assert.equal(api.writes,0);assert.deepEqual(await saved(),guest);
   api.failRead=false;await form(page,'returning','test phrase','Войти');await active(page);await synced(page);assert.equal(await page.locator('#dispatch-name').innerText(),'TL-7');
-  api.offline=true;await page.evaluate(()=>exchangeXP());await page.waitForFunction(()=>document.getElementById('save-status').textContent.includes('Нет связи'));
+  await page.locator('#account-back').click();api.offline=true;await claimPromo(page,'BETA_TEST');await page.waitForFunction(()=>document.getElementById('save-status').textContent.includes('Нет связи'));
   await logout(page);assert.deepEqual(await saved(),guest);assert.equal(api.rows.get(who).progress.GOLD,710);
-  api.offline=false;await form(page,'returning','test phrase','Войти');await active(page);await synced(page);assert.equal(api.rows.get(who).revision,9);assert.equal(api.rows.get(who).progress.GOLD,720);
+  api.offline=false;await form(page,'returning','test phrase','Войти');await active(page);await synced(page);assert.equal(api.rows.get(who).revision,9);assert.equal(api.rows.get(who).progress.GOLD,1210);
   // A second device has advanced the same row since sign-in. PATCH of the old revision affects zero rows.
-  const updated={...api.rows.get(who).progress,GOLD:3200};api.rows.set(who,{revision:10,progress:updated});await page.evaluate(()=>exchangeXP());
-  await page.locator('#cloud-recover').waitFor();assert.equal(api.rows.get(who).progress.GOLD,3200);assert.equal(await page.locator('#gold-val').innerText(),'730');
+  const updated={...api.rows.get(who).progress,GOLD:3200};api.rows.set(who,{revision:10,progress:updated});await page.locator('#account-back').click();await claimPromo(page,'START2025');
+  await page.getByRole('button',{name:'Профиль игрока'}).click();await page.locator('#cloud-recover').waitFor();assert.equal(api.rows.get(who).progress.GOLD,3200);assert.equal(await page.locator('#gold-val').innerText(),'1310');
   page.once('dialog',d=>d.accept());const download=page.waitForEvent('download');await page.locator('#cloud-recover').click();assert.equal((await download).suggestedFilename(),'city-tanks-progress.json');
   await synced(page);assert.equal(await page.locator('#gold-val').innerText(),'3200');assert.equal(api.rows.get(who).revision,10);
   await logout(page);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
@@ -97,20 +104,22 @@ test('berths, pending Advent tank and box receipt belong only to the signed-in p
   assert.deepEqual(await saved(),guest);assert.equal(await page.locator('#fleet-count').innerText(),'1 / 12');assert.deepEqual(api.forbidden,[]);
 });
 
-test('ARTA receipt, vehicle and remaining sorties sync to the signed-in profile; a guest has a separate four-battle claim',async t=>{
+test('25_zar stacks on a partially used ARTA rental, syncs with its receipt and stays separate from the guest',async t=>{
   const api=service(),uid=randomUUID(),password='test promo pass'; api.time='2026-11-22T10:00:00Z';
   api.users.set('promo_pilot@players.citytanks.invalid',{id:uid,email:'promo_pilot@players.citytanks.invalid',password});
   const {page,click,saved}=await openGame(t,{route:api.route,webgl:true}); const guest=await saved();
-  const redeem=async()=>{await click('Код');await page.getByLabel('Промокод',{exact:true}).fill('arta');await click('АКТИВИРОВАТЬ');};
+  const redeem=async(code='arta')=>{await click('Код');await page.getByLabel('Промокод',{exact:true}).fill(code);await click('АКТИВИРОВАТЬ');};
   await form(page,'promo_pilot',password,'Войти'); await active(page); await click('В ангар'); await redeem(); await synced(page);
   const claim=api.rows.get(uid).progress;assert.deepEqual([claim.owned,claim.usedPromos,claim.rentalBattles],[['MS1','GPZ'],['ARTA'],{GPZ:4}]);
   await click('ЗАКРЫТЬ');await click('Выбрать для боя: G.Pz. Mk. VI (e)');
   assert.equal(await page.evaluate(async()=>{if(!await startTraining())return false;backToGarage();return true;}),true);
-  await synced(page);const cloud=api.rows.get(uid).progress;assert.deepEqual(cloud.rentalBattles,{GPZ:3});assert.deepEqual(await saved(),guest);
-  await page.reload(); await active(page);assert.equal(await page.locator('.rental-tag').innerText(),'Аренда: 3 боя');
-  await redeem(); assert.match(await page.locator('#promo-result').innerText(),/Уже использован/);
+  await synced(page);const three=api.rows.get(uid).progress;assert.deepEqual(three.rentalBattles,{GPZ:3});
+  await redeem('25_zar');await synced(page);const cloud=api.rows.get(uid).progress;
+  assert.deepEqual(cloud,{...three,usedPromos:['ARTA','25_ZAR'],rentalBattles:{GPZ:9}});assert.deepEqual(await saved(),guest);
+  await page.reload(); await active(page);assert.equal(await page.locator('.rental-tag').innerText(),'Аренда: 9 боёв');
+  await redeem('25_ZAR'); assert.match(await page.locator('#promo-result').innerText(),/Уже использован/);
   await click('ЗАКРЫТЬ'); await logout(page); assert.deepEqual(await saved(),guest); await click('В ангар');
-  await redeem(); const local=await saved(); assert.deepEqual(local.owned,['MS1','GPZ']);assert.deepEqual(local.usedPromos,['ARTA']);assert.deepEqual(local.rentalBattles,{GPZ:4});
+  await redeem('25_zar'); const local=await saved(); assert.deepEqual(local.owned,['MS1','GPZ']);assert.deepEqual(local.usedPromos,['25_ZAR']);assert.deepEqual(local.rentalBattles,{GPZ:6});
   assert.deepEqual(api.rows.get(uid).progress,cloud); assert.deepEqual(api.forbidden,[]);
 });
 

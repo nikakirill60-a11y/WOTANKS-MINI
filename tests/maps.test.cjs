@@ -219,20 +219,29 @@ function fixture(api, id) {
 const wall = () => ({ type: 'building', solid: true, x: -30, y: -110, w: 60, h: 220, height: 45, hp: 40 });
 
 // Use a deterministic stream for coverage; production calls the same deal with Math.random.
-test('separate rosters: every player model and size, all research nations, premium and collectible bots on both sides, no exact copy even at tier I', () => {
+test('separate rosters: every player model and size, all research nations, premium and collectible bots on both sides, distinct models whenever the match band permits', () => {
   const { DB, PLAYABLE_NATIONS, GameState:g, makeRosters } = game();
   let seed = 113;
   const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
   const specialBots = [new Set(), new Set()];
+  const pool = Object.values(DB).filter(t=>!t.source || ['premium','collection'].includes(t.source));
   const owned = JSON.stringify([g.owned, g.rentalBattles, g.usedPromos]);
   for (const player of Object.values(DB)) for (const size of [7,10,15]) {
     for (const roll of [random, () => 0]) {
       const [allies, enemies] = makeRosters(player.id, size, roll);
       assert.equal(allies[0], player.id);
+      const tiers=team=>Array.from(team,id=>DB[id].tier).sort((a,b)=>a-b);
+      assert.deepEqual(tiers(allies),tiers(enemies));
+      const band=new Set(tiers(allies));assert.ok(Math.max(...band)-Math.min(...band)<=1);
       for (const [side, team] of [allies, enemies].entries()) {
         // A special in the player's own seat does not count as a bot appearance.
         for (const id of (side === 0 ? team.slice(1) : team)) if (DB[id].source) specialBots[side].add(id);
-        assert.equal(team.length, size); assert.equal(new Set(team).size, size);
+        assert.equal(team.length,size);
+        for(const tier of band) {
+          const seats=team.filter(id=>DB[id].tier===tier), available=new Set(pool.filter(t=>t.tier===tier).map(t=>t.id));
+          if (side===0 && player.tier===tier) available.add(player.id);
+          assert.equal(new Set(seats).size,Math.min(seats.length,available.size));
+        }
         assert.ok(team.every(id => Math.abs(DB[id].tier - player.tier) <= 1));
         // With a non-research player (the Finnish Advent BT-42), only six of
         // seven places remain in a 7×7. Every seat still represents a different nation.
@@ -240,19 +249,40 @@ test('separate rosters: every player model and size, all research nations, premi
         const represented = new Set(team.map(id => DB[id].nat).filter(n => PLAYABLE_NATIONS.includes(n)));
         assert.equal(represented.size, Math.min(seats, PLAYABLE_NATIONS.length));
       }
-      assert.ok(enemies.some(id => !allies.includes(id)), player.id+' '+size+' distinct sets, not a permutation');
+      if (pool.some(t=>band.has(t.tier) && !allies.includes(t.id)))
+        assert.ok(enemies.some(id => !allies.includes(id)), player.id+' '+size+' distinct sets with a reserve');
     }
   }
   const eligibleSpecials = new Set(Object.values(DB).filter(t => t.source === 'premium' || t.source === 'collection').map(t => t.id));
   for (const seen of specialBots) assert.deepEqual(seen, eligibleSpecials);
   const enemies = new Set(), allies = new Set(), spgCount = [0,0]; let sameFirst = 0;
-  for(let k=0;k<150;k++) {
+  for(let k=0;k<400;k++) {
     const [a,b] = makeRosters('MS1', 7, random);
     allies.add(a.slice().sort().join()); enemies.add(b.slice().sort().join());
     if(b[0]==='MS1')sameFirst++; if(a.includes('GPZ'))spgCount[0]++;if(b.includes('GPZ'))spgCount[1]++;
   }
-  assert.ok(enemies.size>30 && allies.size>30 && sameFirst>0 && sameFirst<100, 'variety, not a compulsory counterpart or a model ban');
-  assert.ok(spgCount.every(n=>n>0 && n<150));assert.equal(JSON.stringify([g.owned,g.rentalBattles,g.usedPromos]),owned);
+  assert.ok(enemies.size>30 && allies.size>30 && sameFirst>0 && sameFirst<350, 'variety, not a compulsory counterpart or a model ban');
+  assert.ok(spgCount.every(n=>n>0 && n<400));assert.equal(JSON.stringify([g.owned,g.rentalBattles,g.usedPromos]),owned);
+});
+
+test('one 50/25/25 band for both teams; boundaries fold to same tier, adjacent and sparse human seats stay legal', () => {
+  const {DB,makeRosters}=game();
+  for(const [id,expected] of [['KV1S',[50,25,25]],['LTR',[75,0,25]],['IS7',[75,25,0]]]) {
+    const tier=DB[id].tier, observed=[0,0,0];
+    for(let k=0;k<100;k++) {
+      let first=true;const random=()=>{if(first){first=false;return k/100;}return .32;};
+      const teams=makeRosters(id,7,random,[id,,id]);assert.equal(teams[0][2],id);
+      const levels=teams.map(team=>Array.from(team,t=>DB[t].tier).sort((a,b)=>a-b));assert.deepEqual(levels[0],levels[1]);
+      const [lo,hi]=[levels[0][0],levels[0][6]];assert.ok(hi-lo<=1 && lo<=tier && tier<=hi);
+      observed[lo===hi?0:lo<tier?1:2]++;
+    }
+    assert.deepEqual(observed,expected,id);
+  }
+  for(const rng of [0,.5,.999]) {
+    const [a,b]=makeRosters('KV1',7,()=>rng,['KV1',,'KV1S']);assert.deepEqual([a[0],a[2]],['KV1','KV1S']);
+    for(const team of [a,b])assert.deepEqual(Array.from(team,t=>DB[t].tier).sort(),[5,5,5,6,6,6,6]);
+  }
+  assert.throws(()=>makeRosters('LTR',7,()=>0,['LTR','IS7']),/соседних/);
 });
 
 test('formation uses both actual rosters: bot SPGs spawn at their own base, scout roles follow each side’s mobile models', () => {
@@ -300,6 +330,43 @@ test('mobile bots hold a usable position, regroup when outnumbered or low on HP 
     const until=bot.bot.regroupUntil;
     for(let i=372;i<=until+20;i++)step(i);
     assert.notEqual(bot.bot.mode,'regroup','not parked for the rest of the match');
+  }
+});
+
+test('last two low-HP bots stop searching and rally to fixed berths; a standing allied SPG stays at its post', () => {
+  for(const withPost of [false,true]) {
+    const api=game(),{nav,vehicle}=fixture(api), home=nav.arena.bases[1];
+    const movers=[vehicle(320,170,'enemy'),withPost?vehicle(home.x,home.y,'enemy','GPZ'):vehicle(320,-170,'enemy')];
+    const lost=vehicle(0,-270,'enemy'), foe=vehicle(-300,-210,'ally');
+    movers.forEach((u,i)=>{api.BotAI.attach(u,{side:1,index:i,lane:i},nav);u.hp=1;});
+    const tick=i=>{api.BotAI.beginTick(nav,i);for(const u of movers)api.BotAI.step(u,i);};
+    tick(1);assert.ok(movers.every(u=>!u.bot.stand));lost.dead=true;tick(12);
+    const [first,other]=movers.map(u=>u.bot.stand || u.bot.post);
+    assert.ok(Math.hypot(first.x-other.x,first.y-other.y)>=2*api.BOT_CLEARANCE);
+    assert.ok(Math.hypot(first.x-(withPost?home.x:0),first.y)<140);
+    for(let i=13;i<1700;i++)tick(i);
+    for(const u of movers){const q=u.bot.stand || u.bot.post;assert.ok(Math.hypot(u.x-q.x,u.y-q.y)<50);
+      assert.equal(u.bot.mode,u.isSPG?'base':'lastStand');assert.equal(u.bot.sector,-1);assert.equal(u.bot.target,null);}
+    foe.x=first.x-90;foe.y=first.y;foe.spotted=true;movers[0].isReloading=true;tick(1728);
+    assert.equal(movers[0].bot.mode,'lastStand');assert.equal(movers[0].bot.target,foe);assert.equal(movers[0].bot.stand,first);
+    if(withPost)assert.deepEqual([movers[1].x,movers[1].y],[home.x,home.y]);
+  }
+});
+
+test('survey, combat and SPG sight never exceed the player hull and relative mount rates on asphalt', () => {
+  const wrap=a=>Math.abs(Math.atan2(Math.sin(a),Math.cos(a)));
+  for(const [id,deg] of [['BT2',52],['M4SHERMAN',42],['KV1',30],['T67',34],['GPZ',34]]) {
+    const api=game(),{nav,g,vehicle}=fixture(api), u=vehicle(0,0,'ally',id), e=vehicle(20,320,'enemy');
+    g.terrainZones=[{x:-600,y:-460,w:1200,h:920,type:'asphalt'}];
+    api.BotAI.attach(u,{side:0,index:0,lane:0},nav);let maxHull=0,maxMount=0;
+    for(let i=1;i<=180;i++) {
+      if(i===61)e.spotted=true;
+      const hull=u.angle,rel=u.tAngle-hull,pitch=u.aimPitch;api.BotAI.beginTick(nav,i);api.BotAI.step(u,i);
+      maxHull=Math.max(maxHull,wrap(u.angle-hull));maxMount=Math.max(maxMount,wrap(u.tAngle-u.angle-rel));
+      assert.ok(Math.abs(u.aimPitch-pitch)<=28*Math.PI/180/60+1e-8,id+' elevation');
+    }
+    assert.ok(maxHull<=api.TrackDrive.profile(u).traverse/60+1e-8,id+' hull');
+    assert.ok(maxMount>0 && maxMount<=deg*Math.PI/180/60+1e-8,id+' relative yaw');
   }
 });
 

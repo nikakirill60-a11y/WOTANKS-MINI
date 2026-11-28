@@ -25,12 +25,12 @@ function driveIntent() {
   return {forward,turn,brake:!!brake};
 }
 function updatePlayer() {
-  const g = GameState, p = g.player, mountYaw = wrapAngle(p.tAngle - p.angle);
+  const g = GameState, p = g.player;
   const {forward,turn,brake} = driveIntent();
   const assist = !turn && !forward && !brake && !g.holdTurret && !p.isMoving ? BattleView.artillery?.steer(p) : 0;
   TrackDrive.step(p, forward, turn || assist || 0, brake);
   BattleInput.consumeLook();
-  BattleView.stepPlayer(1 / 60, mountYaw);
+  BattleView.stepPlayer(1 / 60);
   if (g.mouseDown || g.mobileFireActive) firePlayer();
   if (p.isMoving && ++p.engineTick % 8 === 0) {
     smoke(p.x - 14 * Math.cos(p.angle), p.y - 14 * Math.sin(p.angle));

@@ -23,7 +23,7 @@ const BotAI = (() => {
       scout, hub, opening, post,
       board: post ? new ArtillerySight(nav.arena.bounds, post) : null,
       regroupUntil: 0,
-      rally: null,
+      rally: null, stand: null,
       openingDistance: Infinity,
       openingUntil: 0,
       firstSurvey: scout,
@@ -110,11 +110,11 @@ const BotAI = (() => {
       if (best) b.board.moveTo(best.x, best.y);
       return;
     }
-    if (best && (contacts > friends || u.hp <= u.maxHp * .35)) {
+    if (!b.stand && best && (contacts > friends || u.hp <= u.maxHp * .35)) {
       if (now >= b.regroupUntil) b.rally = rallyPoint(u, b, best, GameState.navigation);
       b.regroupUntil = now + 120; // don't immediately chase when a contact blinks out
     }
-    b.radio = !best && !b.scout ? GameState.navigation.recon.report(u, now) : null;
+    b.radio = !b.stand && !best && !b.scout ? GameState.navigation.recon.report(u, now) : null;
     if (best) b.memory = { x: best.x, y: best.y, until: now + BattleRecon.reportLife };
   }
   function friendInWay(u, t) {
@@ -238,7 +238,7 @@ const BotAI = (() => {
       b.at = 0;
       b.planAfter = now;
       b.steerAt = 0;
-      if (mode === 'regroup' || mode === 'return') {
+      if (mode === 'regroup' || mode === 'return' || mode === 'lastStand') {
         b.backup = b.blocked = 0; // discard recovery inputs for the previous route
         b.crowded = false;
       }
@@ -296,7 +296,8 @@ const BotAI = (() => {
     }
     if (now >= b.nextLook) observe(u, b, now);
     if (b.post) return guardBase(u, b, nav, now);
-    const t = b.target, cautious = now < b.regroupUntil;
+    const t = b.target, cautious = !b.stand && now < b.regroupUntil;
+    const berth = b.stand && Math.hypot(u.x - b.stand.x, u.y - b.stand.y) > 24 ? b.stand : null;
     const rally = cautious && b.rally && Math.hypot(u.x - b.rally.x, u.y - b.rally.y) > 28 ? b.rally : null;
     let dest = null,
       mode = 'advance';
@@ -307,19 +308,23 @@ const BotAI = (() => {
         dy = t.y - u.y,
         d = Math.max(1, Math.hypot(dx, dy));
       const bearing = u.lookAtPoint(t.x, t.y, t.aimHeight);
-      u.slewSight(0.042);
+      u.slewDriver(1 / 60);
       const outOfArc =
         u.minYaw === u.maxYaw ? Math.abs(turn(bearing, u.angle)) > 0.007 : !u.canTraverseTo(bearing);
       const ready = b.open && !outOfArc && Math.abs(turn(u.lookYaw, u.tAngle)) < 0.035;
       b.aimTicks = ready ? b.aimTicks + 1 : 0;
       const closeAlly = b.open && friendInWay(u, t);
       const stand = b.ideal + (u.hp < u.maxHp * 0.4 ? 40 : 0);
-      if (!cautious && b.open && now >= b.yieldUntil && (b.shift || (closeAlly && d < stand + 80))) {
+      if (!b.stand && !cautious && b.open && now >= b.yieldUntil && (b.shift || (closeAlly && d < stand + 80))) {
         b.sideStep = sidestep(u, b, dx / d, dy / d, nav);
         b.yieldUntil = now + 90;
       }
       b.shift = false;
-      if (cautious) {
+      if (b.stand) {
+        mode = 'lastStand';
+        // Fight on contact; don't flee on reload or chase a fading sighting.
+        if (!b.open || closeAlly) dest = berth;
+      } else if (cautious) {
         mode = 'regroup';
         // Hold an available shot, otherwise fall back a short distance, not all
         // the way across the map. Still use ordinary movement and shot checks.
@@ -350,6 +355,10 @@ const BotAI = (() => {
         if (clear) u.fire(b.shell);
         else if (b.mode === 'engage') b.shift = true;
       }
+    } else if (b.stand) {
+      mode = 'lastStand'; dest = berth;
+      u.setLook(u.angle, 0);
+      u.slewDriver(1 / 60);
     } else if (cautious) {
       mode = 'regroup'; dest = rally;
     } else {
@@ -387,7 +396,7 @@ const BotAI = (() => {
             ? u.angle + 0.7 * Math.sin(now * 0.013 + b.order)
             : u.angle;
       u.setLook(look, 0);
-      u.slewSight(0.035);
+      u.slewDriver(1 / 60);
     }
     drive(u, b, mode, dest, nav, now);
   }

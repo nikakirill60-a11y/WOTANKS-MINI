@@ -30,7 +30,7 @@ body[data-hangar=winter] #ui {
 [data-hangar=winter] #ui .tank-slot { background:linear-gradient(135deg,#354c59,#1e2e3c); border-color:#3c5161; }
 [data-hangar=winter] #ui .tank-slot.selected { border-color:var(--bay-gold); }
 [data-hangar=winter] #ui .slot-info, [data-hangar=winter] .bay-supply, [data-hangar=winter] .sector-brief { background:#162733; }
-[data-hangar=winter] .dispatch-map select, [data-hangar=winter] .garage-settings, [data-hangar=winter] #ui #exchange-panel .btn { background:#243744; color:#e2edf4; border-color:#415764; }
+[data-hangar=winter] .dispatch-map select, [data-hangar=winter] .garage-settings { background:#243744; color:#e2edf4; border-color:#415764; }
 [data-hangar=winter] #battle-controls .btn:not(.main-battle-btn) { background:#2d424e; border-color:#475f6b; color:#ecf2f4; }
 #season-note { margin-top:8px; font:600 12px/1.5 'Segoe UI',sans-serif; padding:8px 12px; color:#f6dfb3; border-left:2px solid #e8bc72; background:#293843; }
 /* The three winter desk services use the same hierarchy and keyboard-accessible native dialogs. */

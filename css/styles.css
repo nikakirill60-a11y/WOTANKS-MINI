@@ -11,8 +11,6 @@ body{background:#1a1a1a;color:#eee;font-family:'Courier New',monospace;overflow:
 #res-panel{font-size:14px;display:flex;gap:15px;flex-wrap:wrap}
 .gold-txt{color:#f1c40f}
 .silver-txt{color:#bdc3c7}
-#exchange-panel{background:#1a1a2e;padding:4px 10px;border:1px solid #f1c40f;font-size:11px;display:flex;align-items:center;gap:8px}
-#exchange-msg{color:#2ecc71;font-size:11px}
 .top-btns{display:flex;gap:5px;flex-wrap:wrap}
 
 #main-garage-area{flex:1;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding-bottom:140px}

@@ -127,9 +127,11 @@ const TrackDrive = (() => {
     u.driveSpeed = next;
     const backing = next < -0.5 || (throttle < 0 && next < 0.2);
     const yaw =
-      ((steer * (backing ? -1 : 1) * spec.traverse) / Math.sqrt(drag)) * (Math.abs(next) > 1 ? 0.85 : 1);
-    u.yawRate = toward(u.yawRate, yaw, 4 * dt);
-    u.angle = wrapAngle(u.angle + u.yawRate * dt);
+      ((steer * (backing ? -1 : 1) * spec.traverse) / Math.sqrt(Math.max(1, drag))) * (Math.abs(next) > 1 ? 0.85 : 1);
+    u.yawRate = disabled ? 0 : toward(u.yawRate, yaw, 4 * dt);
+    const hullStep = u.yawRate * dt;
+    u.angle = wrapAngle(u.angle + hullStep);
+    u.tAngle = wrapAngle(u.tAngle + hullStep); // carry the mount, not the world-space sight input
     const c = Math.cos(u.angle),
       s = Math.sin(u.angle),
       speed = next * m * dt,

@@ -6,10 +6,8 @@ const PlatoonMotion = {
   // Identical 60 Hz drive/mount integration on the commander and on the local
   // prediction body. On the peer the sight and suspension are private copies.
   drive(p, c, preview = false) {
-    const rel = wrapAngle(p.tAngle-p.angle);
     const assist = c.board && !c.hold && !c.forward && !c.turn && !p.isMoving ? c.board.steer(p) : 0;
     TrackDrive.step(p,c.forward,c.turn || assist,c.brake,null,preview);
-    p.tAngle=wrapAngle(p.angle+rel); p.constrainTraverse();
     if (c.board) c.board.step(p,1/60,c.hold);
     else if (!c.hold) { p.setLook(c.yaw,c.pitch); p.slewDriver(1/60); }
   }

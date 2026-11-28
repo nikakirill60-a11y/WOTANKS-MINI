@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CITY TANKS 1.4.2 — Зимний выезд</title>
+  <title>CITY TANKS 1.4.3 — Зимний выезд</title>
   
   <!-- СТИЛИ -->
   <link rel="stylesheet" href="css/styles.css">
@@ -27,7 +27,7 @@
     <a class="entry-season entry-film" href="https://wotanks-mini.vercel.app/CITY-TANKS-1.4-TRAILER.mp4" target="_blank" rel="noopener noreferrer" aria-label="Трейлер 1.4 «Зимний выезд» — 4 минуты 5 секунд, в новой вкладке">Трейлер 1.4 <b>4:05</b></a>
   </header>
   <section class="entry-content">
-    <p class="entry-eyebrow"><i aria-hidden="true"></i> ЗИМНИЙ ВЫЕЗД <a class="entry-log" href="UPDATE-1.4.2.txt" target="_blank" rel="noopener" aria-label="Изменения 1.4.2, текстовый файл">/ 1.4.2</a></p>
+    <p class="entry-eyebrow"><i aria-hidden="true"></i> ЗИМНИЙ ВЫЕЗД <a class="entry-log" href="UPDATE-1.4.3.txt" target="_blank" rel="noopener" aria-label="Изменения 1.4.3, текстовый файл">/ 1.4.3</a></p>
     <h1 id="entry-title">Северное<br> депо</h1>
     <p class="entry-intro" id="entry-intro">Выберите способ входа в ангар.</p>
     <div class="entry-actions" role="group" aria-label="Вход в игру">
@@ -259,10 +259,6 @@
         <div class="gold-txt"><small>Золото</small><b><span id="gold-val">0</span> G</b></div>
         <div><small>Серебро</small><b><span id="silver-val">0</span> ₽</b></div>
       </div>
-      <div id="exchange-panel">
-        <button class="btn btn-sm" onclick="exchangeXP()" title="Обменять 100 XP на 10 золота">ОБМЕН</button>
-        <span id="exchange-msg" role="status"></span>
-      </div>
       <button type="button" class="garage-settings" onclick="showSettings()" aria-label="Настройки" title="Настройки">⚙</button>
     </div>
     <nav class="top-btns" aria-label="Сервисы ангара">
@@ -363,7 +359,7 @@
               <div class="plan-key"><span>◇ Свои</span><span>◇ Противник</span></div>
               <p id="map-detail"></p>
               <ol id="map-sights" aria-label="Ориентиры на плане"></ol>
-              <p class="survey-key"><b>Составы команд</b> У ботов обеих команд — исследуемая, премиумная и коллекционная техника. Подбор случайный: ваш уровень или соседний. Боты-САУ остаются у своей базы.</p>
+              <p class="survey-key"><b>Составы команд</b> У ботов обеих команд — исследуемая, премиумная и коллекционная техника. 50% боёв — только ваш уровень, 25% — с уровнем ниже, 25% — с уровнем выше. На I и X недоступные 25% переходят в одноуровневые бои. Боты-САУ остаются у своей базы.</p>
               <p class="survey-key"><b>◎ Разведка</b> Кольцом отмечены свои разведчики. Посещённые клетки светлеют.</p>
             </details>
             <div class="btn-group">
@@ -428,7 +424,7 @@
   <div id="bottom-bar">
     <div id="field-actions">
       <button class="btn btn-sm" onclick="CombatMechanics.deploySmokeScreen(GameState.player)">Дым <kbd>7</kbd></button>
-      <button class="btn btn-sm" onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">Артподдержка <kbd>8</kbd></button>
+      <button id="strike-btn" type="button" class="btn btn-sm" hidden disabled onclick="CombatMechanics.callArtilleryStrike(GameState.aim.x, GameState.aim.y)">Артподдержка <kbd>8</kbd></button>
     </div>
     <div id="combat-callsign" hidden></div>
     <div class="armor-readout"><b id="combat-tank"></b><span id="hp-text"></span></div>

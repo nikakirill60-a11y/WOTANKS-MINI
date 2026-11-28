@@ -59,6 +59,33 @@ test('Turán I: the rotating skirt remains seated and concentric with the hull r
   }
 });
 
+// Test the actual triangle order: double-sided garage renders can hide an inside-out mesh.
+function outwardBroadside({verts,faces}) {
+  const [bottom,top]=range(verts.map(p=>p[1])), [back,front]=range(verts.map(p=>p[2]));
+  let rays=0, left=0, right=0;
+  for(let row=0;row<16;row++)for(let col=0;col<16;col++) {
+    const y=bottom+(row+.513)*(top-bottom)/16,z=back+(col+.517)*(front-back)/16;
+    let lo=Infinity,hi=-Infinity,lowFront=false,highFront=false;
+    for(const [ia,ib,ic] of faces) {
+      const a=verts[ia],b=verts[ib],c=verts[ic],by=b[1]-a[1],bz=b[2]-a[2],cy=c[1]-a[1],cz=c[2]-a[2];
+      const nx=by*cz-bz*cy;if(!nx)continue;
+      const u=((y-a[1])*cz-(z-a[2])*cy)/nx,v=(by*(z-a[2])-bz*(y-a[1]))/nx;
+      if(u<0 || v<0 || u+v>1)continue;
+      const x=a[0]+u*(b[0]-a[0])+v*(c[0]-a[0]);
+      if(x<lo){lo=x;lowFront=nx<0;}if(x>hi){hi=x;highFront=nx>0;}
+    }
+    if(lo!==Infinity){rays++;left+=lowFront;right+=highFront;}
+  }
+  return Math.min(left,right)/rays;
+}
+test('six German OBJ casemates: hull, gun and belts face out on both sides and match StuG G paint', () => {
+  const reference=read('stug-iii-g');
+  for(const [,,slug] of require('./fixtures/sturmtiger.cjs').slice(0,-1)) {
+    const d=read(slug);assert.deepEqual([d.color,d.tracks],[reference.color,reference.tracks]);
+    for(const part of ['body','gun','tracks'])assert.ok(outwardBroadside(mesh(d,part))>.7,slug+' '+part+' winding');
+  }
+});
+
 // Weld coincident cap/side vertices only for identifying each physical cylinder.
 function components({ verts, faces }) {
   const parent = verts.map((_, i) => i),

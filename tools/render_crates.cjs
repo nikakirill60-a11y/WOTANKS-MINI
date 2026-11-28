@@ -3,7 +3,7 @@ const {chromium}=require('../tests/node_modules/playwright-core');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{pathToFileURL}=require('node:url');
 const root=path.resolve(__dirname,'..'),folder=path.join(root,'assets/crates');
 (async()=>{
-  const all=['basic','premium','supply','collection','ornament'], ids=process.argv.length>2?process.argv.slice(2):all;
+  const all=['basic','premium','collection','ornament'], ids=process.argv.length>2?process.argv.slice(2):all;
   if(ids.some(id=>!all.includes(id)))throw Error('Unknown crate');
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ct-crate-studio-')),file=path.join(dir,'index.html');
   fs.writeFileSync(file,`<meta charset="utf-8"><base href="${pathToFileURL(root+'/')}"><script src="vendor/three-r180.min.js"></script><script src="js/crate-motion.js"></script><script src="js/ornament-models.js"></script><script src="js/crate-model.js"></script>`);

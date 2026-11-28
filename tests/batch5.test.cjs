@@ -65,7 +65,7 @@ test('all 32 batch5 exports deploy in offline WebGL: actual model geometry, sepa
   for (const [id,other] of pairs) {
     const [,name,,damage,clip,seconds] = byId.get(id), enemy=byId.get(other);
     await click('Выбрать для боя: '+name); await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-    assert.equal(await page.evaluate(()=>DepotView.stats().triangles),byId.get(id).at(-1));
+    assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),byId.get(id).at(-1));
     if (!await page.locator('#enemy-select').isVisible()) await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption(paths.find(p=>p.rows.includes(enemy)).nation);
     await page.locator('#enemy-select').selectOption(other); await click('НАЧАТЬ');
@@ -85,13 +85,13 @@ test('all 32 batch5 exports deploy in offline WebGL: actual model geometry, sepa
           firePlayer(); firePlayer(); // second click cannot bypass shot spacing / reload
           shots.push([g.bullets.length,g.bullets[0]?.dmg,p.curMag,p.isReloading,Math.round(p.nextShot-BattleClock.now())]);
           for (let step=0;step<50 && g.bullets.length;step++) updateBullets();
-          elapsed+=120;
+          elapsed+=p.shotDelay;
         }
         return {mounts,shots,units:BattleView.stats().units,hp:e.hp,dealt:g.battleDmg};
       } finally {BattleClock.now=now; backToGarage();}
     },clip);
     assert.deepEqual(battle,{mounts:[[id,byId.get(id).at(-1)],[other,enemy.at(-1)]],units:2,
-      shots:Array.from({length:clip},(_,i)=>[1,damage,clip-i-1,i===clip-1,i===clip-1?Math.round(seconds*1000):120]),
+      shots:Array.from({length:clip},(_,i)=>[1,damage,clip-i-1,i===clip-1,i===clip-1?Math.round(seconds*1000):2000]),
       hp:enemy[2]-clip*damage,dealt:clip*damage},id+' vs '+other);
   }
   await click('Выбрать для боя: Объект 268'); await click('7×7');

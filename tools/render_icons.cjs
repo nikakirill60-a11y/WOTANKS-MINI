@@ -12,7 +12,7 @@ const { chromium } = require('../tests/node_modules/playwright-core'),
   const file = path.join(tmp, 'index.html');
   fs.writeFileSync(
     file,
-    `<base href="${pathToFileURL(root + '/')}"><script src="models/catalog.js"></script><script src="vendor/three-r180.min.js"></script><script src="js/battle-models.js"></script>`
+    `<base href="${pathToFileURL(root + '/')}"><script src="models/catalog.js"></script><script src="vendor/three-r180.min.js"></script><script src="models/running-gear.js"></script><script src="js/road-wheels.js"></script><script src="js/battle-models.js"></script>`
   );
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH,
@@ -67,7 +67,8 @@ const { chromium } = require('../tests/node_modules/playwright-core'),
         t.position.fromArray(a.pivot);
         g.position.fromArray(a.gunPivot);
         t.add(g);
-        group.add(h, t);
+        const wheels=new RoadWheels(a,mat).mesh; wheels.castShadow=wheels.receiveShadow=true;
+        group.add(h, t, wheels);
         scene.add(group);
         group.updateMatrixWorld(true);
         const box = new T.Box3().setFromObject(group),
@@ -118,7 +119,7 @@ const { chromium } = require('../tests/node_modules/playwright-core'),
         const o = out.getContext('2d');
         o.imageSmoothingQuality = 'high';
         o.drawImage(c, l, top, w, ht, 8, 8, 624, out.height - 16);
-        scene.remove(group);
+        scene.remove(group); wheels.dispose();
         return out.toDataURL('image/webp', 0.92).split(',')[1];
       };
     });

@@ -68,7 +68,7 @@ class Tank {
     this.trackRepairAt = this.engineRestartAt = 0;
     this.visible = true;
     this.engineTick = 0;
-    this.shotDelay = this.usesMagazine ? 120 : 0; // arcade spacing inside a clip, never the full reload
+    this.shotDelay = d.clipMs || 0; // interval between successive rounds, not full reload or twin salvo
 
     this.aimPitch = 0;
     this.modelScale = BATTLE_UNITS_PER_METRE;
@@ -82,6 +82,8 @@ class Tank {
     const rate = ({lt:52, mt:42, ht:30, td:34, spg:34})[DB[this.id].cls] || 42;
     this.slewSight(rate * Math.PI / 180 * dt, 28 * Math.PI / 180 * dt);
   }
+
+  shellStep(round) { return 14 * CONFIG.SHELL_FLIGHT_RATE * round.sMul * this.shellSpeedMul; }
 
   roundFor(index) {
     if (this.calibration) return KPZ_CALIBRATION[this.calibration.active ? 'calibrated' : 'standard'][index];
@@ -123,7 +125,7 @@ class Tank {
     if (sight && (!this.isSPG || (this === GameState.player && GameState.holdTurret) || !sight.aligned(this))) return false;
     const sh = this.roundFor(shellType);
     if (!sh) return false;
-    const speed = 14 * sh.sMul * this.shellSpeedMul;
+    const speed = this.shellStep(sh);
     const base = sh.alpha === undefined ? this.dmg * sh.dMul : Math.floor(sh.alpha * this.calibration.damageScale);
     const damage = base * getCritMultiplier(this, 'dmg') *
       ((this.fieldKit?.paiokActive || (this === GameState.player && GameState.paiokActive)) ? 1.05 : 1);

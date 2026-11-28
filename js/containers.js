@@ -4,14 +4,12 @@ const CONTAINERS = {
   collection: { name: 'Новогодний ящик', icon: '❄', cost: {gold: 500}, color: '#91c7d4',
     // This box has its own published manifest; a promo collectible is not automatically a crate prize.
     vehicleChance: 0.02, slotChance: 0.05, vehicles: ['M4A3E2','T71DA','JPANTHERII','T62A','TL7'],
-    drops: [['silver', 100, 50000], ['gold', 1, 650]] },
+    drops: [['silver', 100, 50000, 70], ['gold', 1, 650, 30]] },
   basic: { name: 'Полевой ящик', icon: '📦', cost: {silver: 25000}, color: '#96a486',
-    drops: [['silver', 5000, 15000], ['xp', 2000, 8000], ['gold', 50, 200]] },
+    drops: [['silver', 5000, 15000, 60], ['xp', 2000, 8000, 30], ['gold', 50, 200, 10]] },
   premium: { name: 'Офицерский резерв', icon: '🎁', cost: {gold: 500}, color: '#d0a76b',
     vehicleChance: 0.02, vehicles: ['PZ-II-J','T67'],
-    drops: [['silver', 15000, 40000], ['xp', 5000, 20000], ['gold', 200, 600]] },
-  supply: { name: 'Склад снабжения', icon: '⚡', cost: {charges: 1}, color: '#76b8ba',
-    drops: [['silver', 30000, 80000], ['xp', 15000, 40000], ['gold', 200, 1000]] }
+    drops: [['silver', 15000, 40000, 60], ['xp', 5000, 20000, 25], ['gold', 200, 600, 15]] }
 };
 // A separate permanent berth roll; the primary reward table is unchanged.
 const slotChance = box => box.slotChance ?? 0.10;
@@ -23,7 +21,7 @@ const SUPPLIES = {
 
 function migrateSupplyBoxes(inventory) {
   // Keep the number of paid-for boxes, including stock from retired events.
-  const aliases = { event: 'basic', waffentrager: 'supply', legendary: 'premium', flamebox: 'premium', titanbox: 'premium', lowlevels: 'premium' };
+  const aliases = { event: 'basic', legendary: 'premium', flamebox: 'premium', titanbox: 'premium', lowlevels: 'premium' };
   const result = {};
   for (const [key, count] of Object.entries(inventory)) {
     const id = Object.hasOwn(CONTAINERS, key) ? key : aliases[key];
@@ -46,8 +44,9 @@ function rollPrimary(box, random) {
     }
     roll = (roll - chance) / (1 - chance);
   }
-  // The resource entries are equiprobable. A complete collection goes directly here.
-  const [type, min, max] = box.drops[Math.floor(roll * box.drops.length)];
+  // Weights sum to 100 inside the resource pool, after the independent tank decision.
+  let threshold=0;
+  const [type,min,max] = box.drops.find(([, , ,weight]) => roll < (threshold+=weight)/100) || box.drops.at(-1);
   const [field] = SUPPLIES[type];
   const amount = min + Math.floor(random() * (max - min + 1));
   GameState[field] += amount;
@@ -114,39 +113,12 @@ function updateInvCount() {
   }
 }
 
-function buyCharges(count) {
-  count = count || 1;
-  const cost = count * 100;
-  if (GameState.GOLD < cost) {
-    alert("❌ Недостаточно золота! 1 заряд = 100 G (нужно: " + cost + " G)");
-    return false;
-  }
-  GameState.GOLD -= cost;
-  GameState.charges = (GameState.charges || 0) + count;
-  updateResources();
-  if (typeof saveProgress === 'function') saveProgress();
-  showInvNotification(count + " ⚡ Зарядов", "⚡");
-  return true;
-}
-window.buyCharges = buyCharges;
-
 function buyContainer(cid) {
   if (CrateView.active) return;
   if (!Object.hasOwn(CONTAINERS,cid)) return;
   const c = CONTAINERS[cid];
   if (!c.cost) return; // earned-only containers
 
-  if (c.cost.charges) {
-    const curCharges = GameState.charges || 0;
-    if (curCharges < c.cost.charges) {
-      if (confirm("⚡ Недостаточно зарядов! Купить 1 заряд за 100 золота?")) {
-        if (!buyCharges(1)) return;
-      } else {
-        return;
-      }
-    }
-    GameState.charges -= c.cost.charges;
-  }
   if (c.cost.silver && GameState.SILVER < c.cost.silver) {
     alert("Недостаточно серебра!");
     return;
@@ -217,23 +189,17 @@ function showInvNotification(name, icon) {
   setTimeout(() => notif.remove(), 1500);
 }
 
-function vehicleOdds(box) {
-  const available = box.vehicles.some(missingPrize);
-  const chance = available ? box.vehicleChance * 100 : 0;
-  const each = ((100 - chance) / box.drops.length).toLocaleString('ru-RU', {maximumFractionDigits:2});
-  const resources = box.drops.map(([key], i) => `${i ? SUPPLIES[key][1].toLowerCase() : SUPPLIES[key][1]} — ${each}%`).join(', ');
-  const full = box === CONTAINERS.collection ? 'Все пять машин уже получены.' : 'Обе машины уже получены навсегда.';
-  return (available ? `${chance}% на танк — общий шанс для всех недостающих машин.` : full) + ` ${resources}.`;
-}
-
 function boxOdds(box) {
   if (box === CONTAINERS[TreeEvent.boxId]) return `Только одно украшение. ${TreeEvent.oddsText()}.`;
-  const primary = box.vehicles ? vehicleOdds(box) : 'Одна из трёх ресурсных наград с равным шансом.';
-  return `${primary} Дополнительный слот ангара — ${slotChance(box) * 100}%.`;
+  const available = box.vehicles?.some(missingPrize), chance = available ? box.vehicleChance : 0;
+  const vehicles = !box.vehicles ? '' : available ? `${chance * 100}% на танк — общий шанс для всех недостающих машин. ` :
+    box === CONTAINERS.collection ? 'Все пять машин уже получены. ' : 'Обе машины уже получены навсегда. ';
+  const resources = box.drops.map(([key,,,weight], i) => `${i ? SUPPLIES[key][1].toLowerCase() : SUPPLIES[key][1]} — ${((1-chance)*weight).toLocaleString('ru-RU',{maximumFractionDigits:2})}%`).join(', ');
+  return `${vehicles}${resources}. Дополнительный слот ангара — ${slotChance(box) * 100}%.`;
 }
 
 function renderSupplyStatus(){
-  document.getElementById('supply-balance').textContent=`Баланс: ${GameState.GOLD.toLocaleString('ru-RU')} G · ${GameState.SILVER.toLocaleString('ru-RU')} ₽ · ${GameState.charges} ⚡`;
+  document.getElementById('supply-balance').textContent=`Баланс: ${GameState.GOLD.toLocaleString('ru-RU')} G · ${GameState.SILVER.toLocaleString('ru-RU')} ₽`;
   document.getElementById('supply-capacity').textContent=`Слоты ангара: ${GameState.owned.length} / ${GameState.garageSlots}`;
   document.getElementById('supply-notice').textContent='Дополнительный слот ангара разыгрывается отдельно в каждом покупном ящике. Боевой ёлочный ларец даёт только украшение.';
 }
@@ -246,7 +212,7 @@ function renderContainerGrid() {
   const host=document.getElementById('container-grid');host.replaceChildren();
   for(const [id,box] of Object.entries(CONTAINERS)){
     if (!box.cost) continue;
-    const [currency,cost]=Object.entries(box.cost)[0],unit={silver:'₽',gold:'G',charges:'⚡'}[currency];
+    const [currency,cost]=Object.entries(box.cost)[0],unit={silver:'₽',gold:'G'}[currency];
     const card=document.createElement('article');card.className='c-card';card.style.setProperty('--stripe',box.color);
     const list=(box.vehicles||[]).map(id=>`<li>${missingPrize(id)?'':'✓ '}${DB[id].n}${box===CONTAINERS.premium?' · навсегда':''}</li>`);
     list.push(...box.drops.map(([t,a,b])=>`<li>${SUPPLIES[t][1]}: ${a.toLocaleString('ru-RU')}–${b.toLocaleString('ru-RU')}</li>`));

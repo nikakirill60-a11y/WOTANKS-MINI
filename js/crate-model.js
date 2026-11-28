@@ -3,7 +3,7 @@
 // No showcase page, second engine or network scripts are loaded by the game.
 const CrateModel = (() => {
   const T = THREE, W = 2.3, D = 1.42, top = 1.5, base = .14, deck = .07, lidH = .2;
-  const paints = {basic:'#46543c', premium:'#5d4a36', supply:'#3f4a52', collection:'#33502f'};
+  const paints = {basic:'#46543c', premium:'#5d4a36', collection:'#33502f'};
   const colours = ['#ff5a4e','#ffd35a','#5ad1ff','#7dff6e','#ff7de0','#c9a2ff'];
 
   function plaque(festive) {

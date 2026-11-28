@@ -60,12 +60,12 @@ test('Autoloaders: real independent projectiles, total base damage and full-clip
       g.bullets=[];const u=new Tank(id,0,0,team),t=new Tank('LTR',200,0,'enemy');
       u.modelAsset={groundY:0,pivot:[0,1,0],gunPivot:[0,.25,.7],muzzle:[0,0,2]};
       for(let i=0;i<n;i++){
-        at(1000+i*120);assert.ok(u.fire(1));assert.equal(u.curMag,n-i-1);assert.equal(u.isReloading,i===n-1);
-        at(1001+i*120);assert.equal(u.fire(0),false);
+        at(1000+i*u.shotDelay);assert.ok(u.fire(1));assert.equal(u.curMag,n-i-1);assert.equal(u.isReloading,i===n-1);
+        at(1000+(i+1)*u.shotDelay-1);assert.equal(u.fire(0),false);
       }
       assert.equal(g.bullets.length,n);assert.ok(g.bullets.every(b=>b.st===0 && b.dmg===alpha));
       assert.equal(g.bullets.reduce((s,b)=>s+resolveHit(b,t,'hull').dmg,0),alpha*n);
-      const ready=1000+(n-1)*120+reload;at(ready-1);assert.equal(u.fire(),false);at(ready);assert.ok(u.fire());assert.equal(u.curMag,n-1);
+      const ready=1000+(n-1)*u.shotDelay+reload;at(ready-1);assert.equal(u.fire(),false);at(ready);assert.ok(u.fire());assert.equal(u.curMag,n-1);
     }
   }
 });
@@ -79,15 +79,15 @@ test('T-46: six independent rounds share 60 base damage; the whole drum reloads 
     gun.modelAsset={groundY:0,pivot:[0,1,0],gunPivot:[0,.25,.7],muzzle:[0,0,2]};
     assert.equal(gun.hp,260);assert.equal(gun.dmg,10);assert.equal(gun.pen,65);
     for(let i=0;i<6;i++) {
-      at(500+i*120);assert.equal(gun.fire(1),true,'held fire, including an incompatible shell choice');
+      at(500+i*350);assert.equal(gun.fire(1),true,'held fire, including an incompatible shell choice');
       assert.equal(gun.curMag,5-i);assert.equal(gun.isReloading,i===5);
-      at(500+i*120+1);assert.equal(gun.fire(),false,'neither a second click nor another tick bypasses the cadence');
+      at(500+i*350+1);assert.equal(gun.fire(),false,'neither a second click nor another tick bypasses the cadence');
     }
     assert.equal(g.bullets.length,6);assert.ok(g.bullets.every(b=>b.dmg===10&&b.st===0));
     assert.equal(g.bullets.reduce((s,b)=>s+resolveHit(b,target,'hull').dmg,0),60);
-    assert.equal(gun.nextShot,1100+2800);
-    at(3899);gun.updateReload(3899);assert.equal(gun.curMag,0);assert.equal(gun.fire(),false);
-    at(3900);gun.updateReload(3900);assert.equal(gun.curMag,6);assert.equal(gun.isReloading,false);
+    assert.equal(gun.nextShot,500+5*350+2800);
+    at(5049);gun.updateReload(5049);assert.equal(gun.curMag,0);assert.equal(gun.fire(),false);
+    at(5050);gun.updateReload(5050);assert.equal(gun.curMag,6);assert.equal(gun.isReloading,false);
     assert.equal(gun.fire(),true);assert.equal(gun.curMag,5);
   }
 });
@@ -488,4 +488,24 @@ test('France: the four routes share their actual prerequisite records; both side
     }
   }
   assert.equal(sources.size,31);
+});
+
+test('all 33 clip variants: independent per-round clock, full reload after last round, and faster arcade flight',()=>{
+  const {DB,Tank,GameState:g,at}=game();const intervals={
+    130:['PZII','PZ-II-J'],140:['LEOPARD'],170:['PZIC','LUCHS'],300:['ARES-75','ARES-85','ARES-90'],
+    350:['T46'],500:['TOLDI1'],2000:['T69','T54E1','T57HEAVY','T71DA','WTE100','AMX-13-75','B-C-12-T'],
+    2300:['TL7','TL7OLEN'],2500:['AMX-12-T','AMX-50-100','AMX-50-120','AMX-50-B'],2730:['B-C-25-T-AP','B-C-25-T'],
+    2750:['KRANVAGN'],3000:['EMIL1','EMIL2'],4000:['KV-4F','KV-4M','KV-90','TET-100'],5000:['FOCH-155']};
+  assert.deepEqual(new Set(Object.values(DB).filter(t=>t.mag>1).map(t=>t.id)),new Set(Object.values(intervals).flat()));
+  for(const [ms,ids] of Object.entries(intervals))for(const id of ids){
+    const p=new Tank(id,0,0,'player');p.modelAsset={groundY:0,pivot:[0,1,0],gunPivot:[0,.25,.7],muzzle:[0,0,2]};
+    g.bullets=[];let time=500;
+    for(let i=1;i<=p.magSize;i++){
+      at(time);assert.equal(p.fire(),true,id);assert.equal(p.isReloading,i===p.magSize);
+      assert.equal(g.bullets.at(-1).speed,21*p.roundFor(0).sMul*p.shellSpeedMul);
+      const delay=i===p.magSize?DB[id].reload:Number(ms);assert.equal(p.nextShot-time,delay,id);
+      time+=delay;at(time-1);assert.equal(p.fire(),false,id);
+    }
+    at(time);assert.equal(p.fire(),true,id);
+  }
 });

@@ -57,12 +57,9 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   const register=async(p,name)=>{ await p.locator('#entry-register').click(); await p.locator('#profile-handle').fill(name);
     await p.locator('#profile-pass').fill('local fixture password');await p.locator('#account-submit').click();await p.waitForFunction(()=>Accounts.active && !Accounts.switching);};
   await Promise.all([register(a,'commander'),register(b,'friend_2')]);
-  // A researched French tank (including its hyphenated save ID) can take the
-  // commander's seat just like the original starter in the fallback run.
-  if (!fallback) {
-    for (const name of ['Дерево развития','ФРАНЦИЯ','Исследовать: Renault FT','Исследовать: Renault FT AC','Мой танк'])
-      await a.getByRole('button',{name,exact:true}).click();
-  }
+  // Compatible IV/V or V/V human seats. T67 is still the invited player's rental.
+  const commandTank=fallback?'KV1':'SAU-40';
+  await a.evaluate(id=>{GameState.owned.push(id);GameState.selected=id;renderCarousel();saveProgress();},commandTank);
   const sector=fallback?'field':'burgstadt';
   await a.locator('#map-select').selectOption(sector);
   // Preexisting garage with a fitted rental; check that only a real launch uses it.
@@ -76,6 +73,14 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   },i)));
   await a.locator('#platoon-open').click();await a.locator('#platoon-create').click(); await a.locator('#platoon-code').waitFor();
   assert.ok(await a.locator('#platoon-deploy').isDisabled());
+  if (!fallback) {
+    await b.getByRole('button',{name:'Выбрать для боя: МС-1',exact:true}).click();
+    await b.locator('#platoon-open').click();await b.locator('#platoon-key').fill(await a.locator('#platoon-code').inputValue());await b.locator('#platoon-join button').click();
+    await b.waitForFunction(()=>document.querySelector('#platoon-status').textContent.includes('Разница больше одного уровня'));
+    assert.ok(await b.locator('#platoon-deploy').isDisabled());await b.locator('#platoon-back').click();
+    await a.waitForFunction(()=>document.querySelectorAll('#platoon-members li').length===1);
+    await b.getByRole('button',{name:'Выбрать для боя: T67',exact:true}).click();
+  }
   await b.locator('#platoon-open').click();await b.locator('#platoon-key').fill(await a.locator('#platoon-code').inputValue());await b.locator('#platoon-join button').click();await b.locator('#platoon-deploy').waitFor();
   assert.equal(await b.evaluate(()=>GameState.rentalBattles.T67),2);await a.locator('#platoon-device').selectOption('mobile');await b.locator('#platoon-device').selectOption('mobile');
   await b.locator('#platoon-deploy').click();await a.waitForFunction(()=>!document.querySelector('#platoon-deploy').disabled);assert.match(await a.locator('#platoon-members').innerText(),/friend_2/);
@@ -89,8 +94,8 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
   assert.equal(await b.evaluate(()=>!!GameState.platoon.http),fallback);
   const manifest=p=>p.evaluate(()=>({ids:GameState.units.map(u=>u.id),drivers:GameState.units.filter(u=>u.callsign).map(u=>[u.driverSeat,u.callsign,!!u.bot]),
     weather:WeatherEngine.currentWeather,sector:GameState.arena.id,bots:GameState.units.filter(u=>u.bot).length}));
-  const m=await manifest(a);assert.deepEqual(await manifest(b),m);assert.equal(m.ids.length,14);assert.equal(m.sector,sector);assert.equal(m.bots,12);assert.deepEqual(m.drivers,[[0,'commander',false],[1,'friend_2',false]]);
-  assert.deepEqual(await a.evaluate(()=>[GameState.player.id,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),[fallback?'MS1':'FT-AC',['friend_2'],'commander']);
+  const m=await manifest(a);assert.ok(await b.evaluate(()=>GameState.units.every(u=>GameState.units.filter(h=>h.callsign).every(h=>Math.abs(DB[u.id].tier-DB[h.id].tier)<=1))));assert.deepEqual(await manifest(b),m);assert.equal(m.ids.length,14);assert.equal(m.sector,sector);assert.equal(m.bots,12);assert.deepEqual(m.drivers,[[0,'commander',false],[1,'friend_2',false]]);
+  assert.deepEqual(await a.evaluate(()=>[GameState.player.id,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),[commandTank,['friend_2'],'commander']);
   assert.deepEqual(await b.evaluate(()=>[GameState.player.id,GameState.player.maxHp,GameState.rentalBattles.T67,BattleView.stats().nameplates,document.querySelector('#combat-callsign').textContent]),['T67',475,1,['commander'],'friend_2']);
   // Hide the host's local input menu over the running world; the ally still drives.
   await a.evaluate(()=>BattleInput.pause());assert.match(await a.locator('#input-title').innerText(),/бой взвода продолжается/);
@@ -108,7 +113,7 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
     };
     window.releaseWorld=()=>{ hold=false; if (queued) receive(queued); };
   }));
-  await b.keyboard.down('KeyW');
+  await b.keyboard.down('KeyW');await b.keyboard.down('KeyD');
   await b.waitForFunction(()=>{
     const p=GameState.player,q=window.driveProbe;
     return GameState.platoon.lastWorld===q.world && Math.hypot(p.x-q.x,p.y-q.y)>.03 && p.hp===q.hp;
@@ -121,7 +126,10 @@ for (const fallback of [false,true]) test('two registered browsers share a sorti
       cmd:GameState.platoon?.inputs.get(1), world:GameState.platoon?.lastWorld, position:GameState.units[1] && [GameState.units[1].x,GameState.units[1].y]}))));
     throw Error('Drive intent did not move both views: '+JSON.stringify({state,from:pos[1],counts:[...relay.counts],errors:relay.errors}));
   }
-  await b.keyboard.up('KeyW');
+  const turned=before=>Math.abs(wrapAngle(GameState.units[1].angle-before))>.12;
+  const before=await b.evaluate(()=>GameState.player.angle);
+  await Promise.all([a.waitForFunction(turned,before),b.waitForFunction(turned,before)]);
+  await b.keyboard.up('KeyW');await b.keyboard.up('KeyD');
   assert.ok(await a.evaluate(p=>GameState.units.some((u,i)=>u.bot && Math.hypot(u.x-p[i][0],u.y-p[i][1])>1),pos));
   // Real fire edge from the remote player's touch button goes through host Tank.fire().
   await b.locator('#fire-btn').click();

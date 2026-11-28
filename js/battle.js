@@ -50,11 +50,18 @@ function startTraining() {
 }
 // Deal each side its own shuffled nation decks. The player's garage (including
 // rentals) is not the bot pool; fielding a bot never grants or spends a vehicle.
-function makeRosters(playerId, size, random = Math.random) {
-  const tier = DB[playerId].tier;
+const MATCH_TOP_TIER = Math.max(...Object.values(DB).map(t=>t.tier));
+function matchBand(ids) {
+  const tiers=ids.map(id=>DB[id]?.tier);
+  const low=Math.min(...tiers), high=Math.max(...tiers);
+  return tiers.length && high-low<=1 ? [Math.max(1,high-1),Math.min(MATCH_TOP_TIER,low+1)] : null;
+}
+function makeRosters(playerId, size, random = Math.random, seats = [playerId]) {
+  const band=matchBand(seats);
+  if (!band) throw Error('Во взводе нужны машины одного или соседних уровней.');
   const byNation = new Map();
   for (const tank of Object.values(DB)) {
-    if (Math.abs(tank.tier - tier) > 1) continue;
+    if (tank.tier < band[0] || tank.tier > band[1]) continue;
     if (tank.source && tank.source !== 'premium' && tank.source !== 'collection') continue;
     if (!byNation.has(tank.nat)) byNation.set(tank.nat, []);
     byNation.get(tank.nat).push(tank.id);

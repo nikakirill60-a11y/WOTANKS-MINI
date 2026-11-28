@@ -44,7 +44,10 @@ const Accounts = (() => {
     if (!Array.isArray(rows) || rows.length > 1) throw Error('save format');
     if (!rows.length) return {rev:0, data:initialProgress()};
     if (!Number.isSafeInteger(rows[0].revision) || rows[0].revision < 1) throw Error('save format');
-    return {rev:rows[0].revision, data:decodeProgress(rows[0].progress)};
+    const raw=rows[0].progress;
+    const migrate=!Array.isArray(raw.researched) || Object.hasOwn(raw,'charges') ||
+      raw.inventory?.supply !== undefined || raw.inventory?.waffentrager !== undefined;
+    return {rev:rows[0].revision, data:decodeProgress(raw), migrate};
   }
   async function readClock(p) {
     const ms = Date.parse(await rest(p,'rpc/city_tanks_clock_v1','POST',{}));
@@ -119,7 +122,7 @@ const Accounts = (() => {
         if (rows?.[0]?.revision !== revision) {
           // A lost response may already have committed. Never blindly upsert over a newer revision.
           const remote = await readRemote(p);
-          if (JSON.stringify(remote.data) !== snapshot) { p.conflict = true; break; }
+          if (remote.migrate || JSON.stringify(remote.data) !== snapshot) { p.conflict = true; break; }
           p.rev = remote.rev;
         } else p.rev = revision;
         p.ack = snapshot; p.error = false;
@@ -166,7 +169,8 @@ const Accounts = (() => {
         if (r.stale) {
           // Another device (or an earlier call whose reply was lost) advanced this clean save.
           const row = await readRemote(p); Object.assign(GameState,row.data);
-          p.rev=row.rev; p.ack=p.snapshot=progressSnapshot(); changedProfile();
+          p.rev=row.rev; p.ack=row.migrate ? null : progressSnapshot(); capture(); await flush(p); changedProfile();
+          if (p.conflict || p.ack!==p.snapshot) throw Error('migration not saved');
           r = await collect(p,p.rev); if (r.stale) throw Error('changed again');
         }
         if (!Number.isSafeInteger(r.invited) || !Number.isSafeInteger(r.gold) || !Number.isSafeInteger(r.xp) ||
@@ -192,7 +196,7 @@ const Accounts = (() => {
     // On first entry the guest never started playing: don't migrate/write that slot behind the menu.
     const fromEntry = atEntry();
     if (!fromEntry) saveProgress();
-    p.rev = row.rev; p.ack = row.rev ? remote : null; let data = row.data;
+    p.rev = row.rev; p.ack = row.rev && !row.migrate ? remote : null; let data = row.data;
     if (draft) {
       const recovered = decodeProgress(draft.data);
       if (JSON.stringify(recovered) !== remote) {
@@ -297,7 +301,7 @@ const Accounts = (() => {
     if (!player?.conflict || !confirm('Скачать копию текущего ангара и продолжить с облачной версией?')) return;
     run(async () => {
       const p = player, row = await readRemote(p); downloadDraft(); clearDraft(p);
-      p.rev=row.rev; p.ack=row.rev ? JSON.stringify(row.data) : null; p.conflict=p.error=false;
+      p.rev=row.rev; p.ack=row.rev && !row.migrate ? JSON.stringify(row.data) : null; p.conflict=p.error=false;
       Object.assign(GameState,row.data); p.snapshot = null; capture(); changedProfile(); message('Загружена облачная версия.');
     });
   }

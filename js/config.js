@@ -3,6 +3,7 @@
 
 const CONFIG = {
   TIER_ROMAN: ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"],
+  SHELL_FLIGHT_RATE: 1.5, // arcade travel only, not damage, range or reload
   SHELLS: [
     { name: 'ББ', sMul: 1, dMul: 1, penMul: 1, color: '#f1c40f', rico: true },
     { name: 'ОФ', sMul: 0.6, dMul: 1.5, penMul: 0.55, color: '#e74c3c', rico: false },
@@ -122,8 +123,8 @@ const KPZ_CALIBRATION = (() => {
 const BASE_GARAGE_SLOTS = 10;
 function initialProgress() {
   return {
-    XP: 500, GOLD: 0, SILVER: 5000, charges: 0,
-    owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
+    XP: 500, GOLD: 0, SILVER: 5000,
+    researched: [STARTER_TANK], owned: [STARTER_TANK], selected: STARTER_TANK, curNat: DB[STARTER_TANK].nat,
     garageSlots: BASE_GARAGE_SLOTS, pendingVehicles: [], usedPromos: [], rentalBattles: {},
     inventory: {}, boosters: { xp: 0, gold: 0, silver: 0 }, boosterStock: { xp: 0, gold: 0, silver: 0 },
     tree2026: TreeEvent.counts(), treeSlots2026: TreeEvent.emptySlots(),

@@ -15,7 +15,7 @@ function machine(seat) {
   for (const f of ['models/catalog','js/tree-event','js/config','js/battle-space','js/armor-system','js/tank','js/terrain','js/track-contact','js/track-drive','js/platoon-motion','js/platoon-match'])
     vm.runInContext(fs.readFileSync(path.join(root,f+'.js'),'utf8'),ctx,{filename:f});
   const {g,Tank,Match,Playback,bodyTick}=vm.runInContext('const TICK=1000/60; let ticks=0; ({g:GameState,Tank,Match:PlatoonMatch,Playback:PlatoonPlayback,bodyTick:()=>++ticks})',ctx);
-  const members=[{seat:0,tank:'MS1'},{seat:1,tank:'T67'}];
+  const members=[{seat:0,tank:'KV1'},{seat:1,tank:'T67'}];
   g.units=members.map(({seat,tank})=>Object.assign(new Tank(tank,0,0,'player'),{driverSeat:seat,fieldKit:{}}));
   g.player=g.units[seat];g.arena={bounds:{x:5000,y:5000},trees:[]};g.walls=[];
   g.navigation={recon:{teams:[{visited:[-1]}]}};g.gameActive=true;
@@ -80,3 +80,34 @@ test('remote movement uses host ticks across the angle seam; late packets cannot
   v.draw([u],null,3000,100,false);assert.equal(u.x,x);assert.ok(x<=3.6+5*.6+.001);
   v.push(frame(280,50,0),5000,false);v.draw([u],null,5000,step,false);assert.equal(u.x,50);
 });
+
+for (const http of [false,true]) for (const hz of [60,120])
+  test(`sustained throttle + steering at ${hz} Hz (${http?'HTTP':'Broadcast'} jitter) never freezes the wingman's heading or reverses forward travel`,()=>{
+    const h=machine(0),w=machine(1),queue=[],p=w.g.player;
+    h.n.http=w.n.http=http;
+    let seed=7,nextHttp=0,lastTick=0,checked=0;
+    const random=()=>((seed=Math.imul(48271,seed)>>>0)%1000)/1000;
+    for (let frame=1;frame<=hz*20;frame++) {
+      const t=frame/hz,tick=Math.floor(t*60+1e-6),old={x:p.x,y:p.y,a:p.angle};
+      h.env.ms=t*1000;w.env.ms=4000+t*1000;
+      for (let i=0;i<queue.length;) {
+        const item=queue[i]; if (item.at>t) {i++;continue;}
+        queue.splice(i,1);if(item.world)w.n.receiveWorld(item.world);else h.n.receiveInput(1,item.cmd);
+      }
+      if(tick>lastTick) {
+        lastTick=tick;h.bodyTick();h.n.stepDriver(h.g.units[1]);
+        if(tick%(http?18:6)===0)queue.push({at:t+.04+random()*(http?.28:.16),world:h.n.snapshot()});
+      }
+      w.env.cmd={forward:t<17?1:0,turn:t>1 && t<17?.9:0,brake:t>=17};
+      if(http && t>=nextHttp){nextHttp=t+.30;w.n.sendInput();}
+      w.n.stepView(1000/hz);
+      for (const cmd of w.env.out.splice(0))queue.push({at:t+.05+random()*(http?.28:.16),cmd});
+      if(t>5 && t<16) {
+        const yaw=Math.atan2(Math.sin(p.angle-old.a),Math.cos(p.angle-old.a))*hz;
+        const forward=((p.x-old.x)*Math.cos(p.angle)+(p.y-old.y)*Math.sin(p.angle))*hz/9;
+        assert.ok(yaw>.12 && yaw<.9 && forward>2 && forward<12,`frame ${frame}: ${yaw} rad/s, ${forward} m/s`);checked++;
+      }
+    }
+    assert.equal(checked,hz*11-1);assert.ok(Math.hypot(p.x-h.g.units[1].x,p.y-h.g.units[1].y)<.1);
+    h.n.stop();w.n.stop();
+  });

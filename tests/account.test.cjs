@@ -72,15 +72,15 @@ test('failed initial cloud read never initializes a fresh save; offline outbox s
   api.rows.set(who,{revision:7,progress:{owned:['MS1','TL7'],selected:'TL7',GOLD:710,XP:600}});api.time='2026-11-22T10:00:00Z';api.failRead=true;
   const {page,saved}=await openGame(t,{route:api.route,seed:{GOLD:13}});const guest=await saved();
   await form(page,'returning','test phrase','Войти');await page.waitForFunction(()=>!Accounts.switching);assert.equal(api.writes,0);assert.deepEqual(await saved(),guest);
-  api.failRead=false;await form(page,'returning','test phrase','Войти');await active(page);assert.equal(await page.locator('#dispatch-name').innerText(),'TL-7');
+  api.failRead=false;await form(page,'returning','test phrase','Войти');await active(page);await synced(page);assert.equal(await page.locator('#dispatch-name').innerText(),'TL-7');
   api.offline=true;await page.evaluate(()=>exchangeXP());await page.waitForFunction(()=>document.getElementById('save-status').textContent.includes('Нет связи'));
   await logout(page);assert.deepEqual(await saved(),guest);assert.equal(api.rows.get(who).progress.GOLD,710);
-  api.offline=false;await form(page,'returning','test phrase','Войти');await active(page);await synced(page);assert.equal(api.rows.get(who).revision,8);assert.equal(api.rows.get(who).progress.GOLD,720);
+  api.offline=false;await form(page,'returning','test phrase','Войти');await active(page);await synced(page);assert.equal(api.rows.get(who).revision,9);assert.equal(api.rows.get(who).progress.GOLD,720);
   // A second device has advanced the same row since sign-in. PATCH of the old revision affects zero rows.
-  const updated={...api.rows.get(who).progress,GOLD:3200};api.rows.set(who,{revision:9,progress:updated});await page.evaluate(()=>exchangeXP());
+  const updated={...api.rows.get(who).progress,GOLD:3200};api.rows.set(who,{revision:10,progress:updated});await page.evaluate(()=>exchangeXP());
   await page.locator('#cloud-recover').waitFor();assert.equal(api.rows.get(who).progress.GOLD,3200);assert.equal(await page.locator('#gold-val').innerText(),'730');
   page.once('dialog',d=>d.accept());const download=page.waitForEvent('download');await page.locator('#cloud-recover').click();assert.equal((await download).suggestedFilename(),'city-tanks-progress.json');
-  await synced(page);assert.equal(await page.locator('#gold-val').innerText(),'3200');assert.equal(api.rows.get(who).revision,9);
+  await synced(page);assert.equal(await page.locator('#gold-val').innerText(),'3200');assert.equal(api.rows.get(who).revision,10);
   await logout(page);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
 });
 
@@ -207,4 +207,24 @@ test('the earned case and its decorations sync to their owner, not the guest; pa
   assert.equal(await page.getByLabel('Слот 2',{exact:true}).inputValue(),'gingerbread');assert.equal(await page.getByLabel('Слот 4',{exact:true}).inputValue(),'');
   assert.equal(await page.locator('#tree-chance').innerText(),'20%');await click('В ангар');await inventory.click();
   assert.deepEqual(await page.locator('#inventory-toys h4').allInnerTexts(),['Пряник × 3']);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
+});
+
+test('1.4.2 gold refund: isolated guest, old cloud row and old outbox merge only once; conflicts do not add two balances',async t=>{
+  const api=service(),uid=randomUUID(),email='legacy_142@players.citytanks.invalid';api.time='2026-11-22T10:00:00Z';
+  api.users.set(email,{id:uid,email,password:'fixture phrase'});
+  const legacy={owned:['T46'],selected:'T46',GOLD:17,charges:3,inventory:{supply:4,waffentrager:2,basic:1}};
+  api.rows.set(uid,{revision:4,progress:legacy});
+  const {page,saved}=await openGame(t,{route:api.route,seed:{GOLD:1,charges:1,inventory:{supply:2,waffentrager:1}}});
+  const guest=await saved();assert.deepEqual([guest.GOLD,guest.charges,guest.inventory],[401,undefined,{}]);
+  await page.reload();assert.deepEqual(await saved(),guest);
+  const login=async()=>{await form(page,'legacy_142','fixture phrase','Войти');await active(page);};
+  await login();await synced(page);const migrated=api.rows.get(uid);
+  assert.deepEqual([migrated.revision,migrated.progress.GOLD,migrated.progress.charges,migrated.progress.inventory],[5,917,undefined,{basic:1}]);
+  assert.ok(migrated.progress.researched.includes('T26'));await page.reload();await active(page);await synced(page);assert.equal(api.rows.get(uid).revision,5);
+  await logout(page);assert.deepEqual(await saved(),guest);
+  const draft=(rev,gold)=>page.evaluate(({uid,rev,legacy,gold})=>localStorage.setItem('ct_cloud_draft_v1:'+uid+':previous',JSON.stringify({rev,at:1,data:{...legacy,GOLD:gold}})),{uid,rev,legacy,gold});
+  await draft(5,21);await login();await synced(page);assert.equal(api.rows.get(uid).progress.GOLD,921);
+  await logout(page);await draft(2,999);await login();await page.locator('#cloud-recover').waitFor();assert.equal(api.rows.get(uid).progress.GOLD,921);
+  page.once('dialog',d=>d.accept());await page.locator('#cloud-recover').click();await synced(page);assert.equal(await page.locator('#gold-val').innerText(),'921');
+  await page.reload();await active(page);await synced(page);assert.equal(api.rows.get(uid).revision,6);assert.deepEqual(await saved(),guest);
 });

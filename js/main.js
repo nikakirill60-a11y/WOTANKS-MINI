@@ -112,7 +112,7 @@ function ramContact(a, b, lossA, lossB) {
 function updateBullets() {
   for (let i = GameState.bullets.length - 1; i >= 0; i--) {
     const b = GameState.bullets[i];
-    const length = b.arc ? artilleryStep(b) : b.speed;
+    const length = b.arc ? artilleryStep(b) : Math.min(b.speed, BATTLE_RANGE-b.traveled);
     const step = traceBattleRay(b.x, b.y, b.h, b.dx, b.dy, b.dh, length, b.shooter, false, false, false, b.round?.ricochetDeg !== undefined);
     b.x = step.x;
     b.y = step.y;
@@ -221,6 +221,7 @@ function updateHUD() {
     '  /  ' +
     (p.isReloading
       ? `ПЕРЕЗАРЯДКА  ${Math.max(0, (p.nextShot - gunTime) / 1000).toFixed(1)} с`
+      : p.usesMagazine && gunTime < p.nextShot ? `ДО ВЫСТРЕЛА  ${((p.nextShot-gunTime)/1000).toFixed(1)} с`
       : p.calibration?.until != null ? 'ПЕРЕКЛЮЧЕНИЕ' : 'ГОТОВ');
   const water = document.getElementById('water-warning');
   water.hidden = p.drownTimer == null || p.dead;

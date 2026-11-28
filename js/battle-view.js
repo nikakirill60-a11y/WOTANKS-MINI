@@ -94,6 +94,7 @@ const BattleView = (() => {
         treads = new T.Mesh(asset.treads, mat);
         root.add(treads, cradle);
       } else root.add(hull, turret);
+      const wheels=new RoadWheels(asset,mat); root.add(wheels.mesh);
       turret.add(gun);
       scene.add(root);
       const shade = new T.Mesh(quad, world.shadowMat);
@@ -136,7 +137,7 @@ const BattleView = (() => {
         }};
       } else marker.add(flag);
       scene.add(marker);
-      avatars.set(u, { root, hull, cradle, treads, turret, gun, shade, marker, plate, hp, wreck });
+      avatars.set(u, { root, wheels, hull, cradle, treads, turret, gun, shade, marker, plate, hp, wreck });
     }
     bodyMat.dispose();
     const cube = new T.BoxGeometry(),
@@ -355,7 +356,7 @@ const BattleView = (() => {
     if (g.holdTurret) return;
     if (autoTarget) {
       const u = autoTarget,
-        flight = Math.hypot(u.x - p.x, u.y - p.y) / (14 * p.roundFor(g.curShell).sMul * p.shellSpeedMul);
+        flight = Math.hypot(u.x - p.x, u.y - p.y) / p.shellStep(p.roundFor(g.curShell));
       p.lookAtPoint(u.x + u.vx * flight, u.y + u.vy * flight, u.aimHeight);
     } else p.lookAtPoint(q.x, q.y, q.h);
     if (!aimOnly) p.slewDriver(dt);
@@ -430,6 +431,7 @@ const BattleView = (() => {
       const lod = distant ? u.modelAsset.far : u.modelAsset;
       v.root.visible = v.shade.visible = !(u === g.player && look.scoped) &&
         !(artillery && u.team === 'enemy' && !u.visible);
+      v.wheels.follow(u,u!==g.player && Math.hypot(u.x-g.player.x,u.y-g.player.y)>55*BATTLE_UNITS_PER_METRE*look.zoom);
       v.hull.geometry = lod.body || lod.hull;
       v.turret.geometry = lod.turret;
       v.gun.geometry = lod.gun;
@@ -448,7 +450,7 @@ const BattleView = (() => {
       v.shade.rotation.set(-u.groundPitch, v.root.rotation.y, u.groundRoll, 'YXZ');
       v.shade.rotateX(-Math.PI / 2);
       if (u.dead && v.hull.material !== v.wreck) {
-        v.hull.material = v.turret.material = v.gun.material = v.wreck;
+        v.wheels.mesh.material = v.hull.material = v.turret.material = v.gun.material = v.wreck;
         if (v.treads) v.treads.material = v.wreck;
       }
       v.marker.visible = !u.dead && u !== g.player && (u.team !== 'enemy' || u.visible);

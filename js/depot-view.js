@@ -53,7 +53,7 @@ const DepotView = (() => {
       p = new T.Vector3();
     model.updateMatrixWorld(true);
     model.traverse((part) => {
-      if (!part.isMesh) return;
+      if (!part.isMesh || part.isInstancedMesh) return; // original hull envelope already includes the wheels
       const positions = part.geometry.attributes.position;
       for (let i = 0; i < positions.count; i++) {
         p.fromBufferAttribute(positions, i).applyMatrix4(part.matrixWorld).sub(controls.target);
@@ -208,8 +208,9 @@ const DepotView = (() => {
     turret.position.fromArray(asset.pivot);
     gun.position.fromArray(asset.gunPivot);
     turret.add(gun);
-    model.add(hull, turret);
-    for (const part of [hull, turret, gun]) {
+    const wheels=new RoadWheels(asset,material).mesh;
+    model.add(hull, turret, wheels); model.userData.sourceTriangles=asset.sourceTriangles;
+    for (const part of [hull, turret, gun,wheels]) {
       part.castShadow = true;
       part.receiveShadow = true;
     }
@@ -270,12 +271,12 @@ const DepotView = (() => {
     if (!model) return null;
     let triangles = 0;
     model.traverse((o) => {
-      if (o.isMesh) triangles += o.geometry.attributes.position.count / 3;
+      if (o.isMesh) triangles += (o.geometry.index?.count ?? o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1);
     });
     return {
       id: modelId,
       room: room.name,
-      triangles,
+      triangles, sourceTriangles:model.userData.sourceTriangles,
       camera: camera.position.toArray(),
       calls: renderer.info.render.calls
     };

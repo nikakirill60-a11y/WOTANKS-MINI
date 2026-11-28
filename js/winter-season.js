@@ -15,7 +15,7 @@ const WinterSeason = (() => {
     return triples[2 * (((seed ^ (seed >>> 16)) >>> 0) % 5) + (day & 1)];
   }
   function reward(visit) {
-    const resources = visit % 7 === 0 ? { GOLD:500, SILVER:50000, charges:2 } : { GOLD:50, SILVER:10000, XP:1000 };
+    const resources = visit % 7 === 0 ? { GOLD:700, SILVER:50000 } : { GOLD:50, SILVER:10000, XP:1000 };
     return {resources, vehicle:visit === 15 ? 'BT42' : visit === 31 ? 'TL7OLEN' : null};
   }
   function visit(ms) {
@@ -59,7 +59,7 @@ const WinterSeason = (() => {
 })();
 
 function rewardText(reward) {
-  const units = {GOLD:'G',SILVER:'₽',XP:'XP',charges:'⚡'};
+  const units = {GOLD:'G',SILVER:'₽',XP:'XP'};
   return [reward.vehicle && (DB[reward.vehicle].n + (GameState.pendingVehicles.includes(reward.vehicle) ? ' (ожидает слота)' : '')), ...Object.entries(reward.resources).map(([k,v]) =>
     v.toLocaleString('ru-RU') + ' ' + units[k])].filter(Boolean).join(' · ');
 }

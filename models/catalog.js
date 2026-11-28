@@ -14,7 +14,7 @@ const USSR_BRANCH = defineLine('ussr', [
   // ID, name, class, model · HP, full alpha, reload ms, pen, hull, turret, km/h · arcade size, vision, camo
   ['MS1','МС-1','lt','ms-1',             120, 40, 2500, 40, 16, 16,22,  .65,270,.33],
   ['T26','Т-26','lt','t-26',             180, 50, 2600, 55, 15, 15,30,  .72,280,.32],
-  ['T46','Т-46','lt','t-46',             260, 60, 2800, 65, 15, 15,45,  .83,300,.30,{weapon:'machinegun',mag:6}],
+  ['T46','Т-46','lt','t-46',             260, 60, 2800, 65, 15, 15,45,  .83,300,.30,{weapon:'machinegun',mag:6,clipMs:350}],
   // T28 is an unrelated US vehicle in old saves.
   ['T28_USSR','Т-28','mt','t-28',       420,115, 4200, 95, 30, 30,37, 1.03,330,.24],
   ['KV1','КВ-1','ht','kv-1',            700,160, 5500,120, 75, 75,34,    1,310,.15],
@@ -35,11 +35,11 @@ const USSR_IS4_BRANCH = defineLine('ussr', [
 ], USSR_BRANCH.slice(0,5));
 const GERMAN_BRANCH = defineLine('germany', [
   ['LTR','Leichttraktor','lt','leichttraktor',      115, 35,2200, 38,14,12,30, .65,270,.33],
-  ['PZII','Pz.Kpfw. II','lt','pz-ii',               165, 75,4500, 48,30,15,40, .72,285,.32,{mag:5}],
-  ['PZIC','Pz.Kpfw. I Ausf. C','lt','pz-i-c',       230, 96,5000, 58,30,20,68, .70,305,.34,{mag:8}],
-  ['LUCHS','Pz. II «Luchs»','lt','luchs',           340,180,7500, 92,30,30,60, .76,320,.34,{mag:6}],
+  ['PZII','Pz.Kpfw. II','lt','pz-ii',               165, 75,4500, 48,30,15,40, .72,285,.32,{mag:5,clipMs:130}],
+  ['PZIC','Pz.Kpfw. I Ausf. C','lt','pz-i-c',       230, 96,5000, 58,30,20,68, .70,305,.34,{mag:8,clipMs:170}],
+  ['LUCHS','Pz. II «Luchs»','lt','luchs',           340,180,7500, 92,30,30,60, .76,320,.34,{mag:6,clipMs:170}],
   // Primary loadouts only: Leopard's clip (lower end of 105–115), VK 28.01's 115 single shot.
-  ['LEOPARD','VK 16.02 Leopard','lt','vk-16-02-leopard',500,240,9000,105,50,50,60,.84,340,.32,{mag:8}],
+  ['LEOPARD','VK 16.02 Leopard','lt','vk-16-02-leopard',500,240,9000,105,50,50,60,.84,340,.32,{mag:8,clipMs:140}],
   ['VK2801','VK 28.01','lt','vk-28-01',             680,115,3600,135,50,50,64, .93,350,.30],
   ['SPIC','Spähpanzer SP I.C.','lt','sp-i-c',       880,220,6800,175,15,15,58, .79,370,.36],
   ['HWK12','HWK 12','lt','hwk-12',                 1100,240,6800,190,15,15,65, .82,380,.34],
@@ -109,16 +109,16 @@ const US_E4_BRANCH = defineLine('usa', [
 // Ares shares I–VII with Patton. Each shell is fired separately from the clip;
 // the cooldown in the sheet starts after the last shell, not each trigger pull.
 const US_ARES_BRANCH = defineLine('usa', [
-  ['ARES-75','Ares 75','mt','ares-75', 1400,448,6000,195, 80,150,50,1.02,365,.22,{mag:8,weapon:'machinegun',minPitch:-7,maxPitch:45}],
-  ['ARES-85','Ares 85','mt','ares-85', 1700,600,7000,210, 95,178,50,1.05,380,.21,{mag:8,weapon:'machinegun',minPitch:-7,maxPitch:45}],
-  ['ARES-90','Ares 90','mt','ares-90', 1950,735,8000,225,100,248,50,1.07,390,.20,{mag:7,weapon:'machinegun',minPitch:-9,maxPitch:45}]
+  ['ARES-75','Ares 75','mt','ares-75', 1400,448,6000,195, 80,150,50,1.02,365,.22,{mag:8,clipMs:300,weapon:'machinegun',minPitch:-7,maxPitch:45}],
+  ['ARES-85','Ares 85','mt','ares-85', 1700,600,7000,210, 95,178,50,1.05,380,.21,{mag:8,clipMs:300,weapon:'machinegun',minPitch:-7,maxPitch:45}],
+  ['ARES-90','Ares 90','mt','ares-90', 1950,735,8000,225,100,248,50,1.07,390,.20,{mag:7,clipMs:300,weapon:'machinegun',minPitch:-9,maxPitch:45}]
 ], US_BRANCH.slice(0,7));
 // The T20 fork reuses I–VII of the Patton route. Store full-clip alpha,
 // not per-round damage: reload is the cooldown AFTER the fourth shot.
 const US_T57_BRANCH = defineLine('usa', [
-  ['T69','T69','mt','t69',                   1350, 960,22000,181,102,114,51,1.02,370,.21,{mag:4,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}],
-  ['T54E1','T54E1','ht','t54e1',            1800,1560,30000,210,110,127,43,1.11,380,.14,{mag:4,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}],
-  ['T57HEAVY','T57 Heavy','ht','t57-heavy', 2250,1600,23000,258,127,152,35,1.16,395,.10,{mag:4,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}]
+  ['T69','T69','mt','t69',                   1350, 960,22000,181,102,114,51,1.02,370,.21,{mag:4,clipMs:2000,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}],
+  ['T54E1','T54E1','ht','t54e1',            1800,1560,30000,210,110,127,43,1.11,380,.14,{mag:4,clipMs:2000,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}],
+  ['T57HEAVY','T57 Heavy','ht','t57-heavy', 2250,1600,23000,258,127,152,35,1.16,395,.10,{mag:4,clipMs:2000,weapon:'drum',oscillating:true,minPitch:-5,maxPitch:15}]
 ], US_BRANCH.slice(0,7));
 const US_T110E5_BRANCH = defineLine('usa', [
   ['T1HEAVY','T1 Heavy','ht','t1-heavy', 720,115,3600,128,102,102,35,1.05,320,.15,{minPitch:-5,maxPitch:15}],
@@ -202,7 +202,7 @@ const GERMAN_TD_BRANCH = defineLine('germany', [
   ['STEMIL','Sturer Emil','td','sturer-emil',     900,460,11200,231,50,null,25,1.05,350,.20,{yawLimits:[-5,7],minPitch:-15,maxPitch:10}],
   ['RHMBWT','Rhm.-Borsig Waffenträger','td','rhm-borsig-waffentrager',1150,490,10500,246,20,20,35,1.0,360,.30,{minPitch:-5,maxPitch:15}],
   ['WTPZ4','Waffenträger auf Pz. IV','td','waffentrager-pz-iv',1550,520,10200,276,80,20,38,1.05,380,.15,{minPitch:-5,maxPitch:45}],
-  ['WTE100','Waffenträger auf E 100','td','waffentrager-e100',2000,2080,40000,276,200,20,40,1.10,395,.11,{mag:4,weapon:'drum',minPitch:-8,maxPitch:14}]
+  ['WTE100','Waffenträger auf E 100','td','waffentrager-e100',2000,2080,40000,276,200,20,40,1.10,395,.11,{mag:4,clipMs:2000,weapon:'drum',minPitch:-8,maxPitch:14}]
 ], GERMAN_BRANCH.slice(0,1));
 // Waffenträger auf Pz. IV offers two independent tier Xs: the old drum or a single-shot Grille.
 const GERMAN_GRILLE_BRANCH = defineLine('germany', [
@@ -238,9 +238,9 @@ const SWEDISH_BRANCH=defineLine('sweden',[
   ['STRVM42','Strv m/42','mt','strv-m42',570,120,3700,115,55,55,45,.91,335,.26,{minPitch:-15,maxPitch:25}],
   ['STRV74','Strv 74','mt','strv-74',790,150,4000,148,55,55,45,.96,345,.25,{minPitch:-10,maxPitch:20}],
   ['LEO','Leo','mt','leo',1080,280,8000,168,70,70,55,1,360,.23,{minPitch:-10,maxPitch:15}],
-  ['EMIL1','Emil I','ht','emil-i',1500,960,22000,215,100,180,48,1.02,355,.14,{mag:3,oscillating:true,weapon:'drum',minPitch:-10,maxPitch:15}],
-  ['EMIL2','Emil II','ht','emil-ii',1850,1200,25000,242,120,230,50,1.06,375,.12,{mag:3,oscillating:true,weapon:'drum',minPitch:-9,maxPitch:10}],
-  ['KRANVAGN','Kranvagn','ht','kranvagn',2200,1200,22000,252,90,280,55,1.09,395,.11,{mag:3,oscillating:true,weapon:'drum',minPitch:-9,maxPitch:10}]
+  ['EMIL1','Emil I','ht','emil-i',1500,960,22000,215,100,180,48,1.02,355,.14,{mag:3,clipMs:3000,oscillating:true,weapon:'drum',minPitch:-10,maxPitch:15}],
+  ['EMIL2','Emil II','ht','emil-ii',1850,1200,25000,242,120,230,50,1.06,375,.12,{mag:3,clipMs:3000,oscillating:true,weapon:'drum',minPitch:-9,maxPitch:10}],
+  ['KRANVAGN','Kranvagn','ht','kranvagn',2200,1200,22000,252,90,280,55,1.09,395,.11,{mag:3,clipMs:2750,oscillating:true,weapon:'drum',minPitch:-9,maxPitch:10}]
 ]);
 const SWEDISH_TD_BRANCH=defineLine('sweden',[
   ['PVLVV42','Pvlvv fm/42','td','pvlvv-fm42',145,45,2100,62,15,15,45,.69,280,.34,{yawLimits:[-30,30],minPitch:-7,maxPitch:30}],
@@ -257,7 +257,7 @@ const SWEDISH_TD_BRANCH=defineLine('sweden',[
 // the 44M Tas export has a fixed superstructure and a limited gun, not a moving turret.
 const HUNGARIAN_BRANCH = defineLine('hungary', [
   ['V440','Straussler V-4','lt','straussler-v4-40',115, 35,2200, 38, 13, 13,35, .66,270,.33,{minPitch:-8,maxPitch:15}],
-  ['TOLDI1','38M Toldi I','lt','toldi-i',          165, 80,4000, 45, 13, 13,50, .72,285,.33,{mag:4,weapon:'drum',minPitch:-9,maxPitch:20}],
+  ['TOLDI1','38M Toldi I','lt','toldi-i',          165, 80,4000, 45, 13, 13,50, .72,285,.33,{mag:4,clipMs:500,weapon:'drum',minPitch:-9,maxPitch:20}],
   ['TOLDI3','43M Toldi III','lt','toldi-iii',      250, 50,2400, 64, 35, 35,50, .76,305,.31,{minPitch:-9,maxPitch:13}],
   ['TURAN1','40M Turán I','mt','turan-i',          390, 60,2500, 85, 50, 50,47, .86,320,.27,{minPitch:-8,maxPitch:15}],
   ['TURAN2','41M Turán II','mt','turan-ii',        580,140,4400,105, 60, 60,43, .90,335,.24,{minPitch:-8,maxPitch:15}],
@@ -304,7 +304,7 @@ const FRENCH_TD_BRANCH = defineLine('france', [
   ['AMX-AC-46','AMX AC mle. 46','td','amx-ac-46',950,300,7200,212,120,null,50,1.05,340,.30,{yawLimits:[-10,10],minPitch:-10,maxPitch:15}],
   ['AMX-AC-48','AMX AC mle. 48','td','amx-ac-48',1200,400,9200,248,150,null,50,1.10,350,.28,{yawLimits:[-10,10],minPitch:-6,maxPitch:18}],
   ['FOCH','AMX 50 Foch','td','foch',          1650,400,7800,257,180,null,50,1.12,370,.25,{yawLimits:[-10,10],minPitch:-6,maxPitch:18}],
-  ['FOCH-155','AMX 50 Foch (155)','td','foch-155',1900,750*3,40000,293,180,null,50,1.12,380,.22,{weapon:'drum',mag:3,yawLimits:[-10,10],minPitch:-6,maxPitch:18}]
+  ['FOCH-155','AMX 50 Foch (155)','td','foch-155',1900,750*3,40000,293,180,null,50,1.12,380,.22,{weapon:'drum',mag:3,clipMs:5000,yawLimits:[-10,10],minPitch:-6,maxPitch:18}]
 ]);
 const FRENCH_50B_BRANCH = defineLine('france', [
   ['D1','D1','lt','d1',                             195,45,2400,46,35,35,20, .73,285,.31,{minPitch:-18,maxPitch:20}],
@@ -313,9 +313,9 @@ const FRENCH_50B_BRANCH = defineLine('france', [
   ['BDR-G1-B','BDR G1 B','ht','bdr-g1-b',          710,240,7800,135,60,70,30,1.00,320,.15,{minPitch:-8,maxPitch:17}],
   ['ARL-44','ARL 44','ht','arl-44',                960,240,6800,212,120,110,37,1.04,330,.12,{minPitch:-10,maxPitch:15}],
   ['AMX-M4-45','AMX M4 mle. 45','ht','amx-m4-45',1320,240,6200,212,90,100,40,1.08,350,.10,{minPitch:-10,maxPitch:12}],
-  ['AMX-50-100','AMX 50 100','ht','amx-50-100',1450,300*6,38000,232,90,90,51,1.10,370,.10,{weapon:'drum',mag:6,oscillating:true,minPitch:-9,maxPitch:13}],
-  ['AMX-50-120','AMX 50 120','ht','amx-50-120',1850,400*4,30000,257,100,100,65,1.13,380,.08,{weapon:'drum',mag:4,oscillating:true,minPitch:-9,maxPitch:11}],
-  ['AMX-50-B','AMX 50 B','ht','amx-50-b',      2200,400*4,26000,257,170,100,65,1.15,400,.07,{weapon:'drum',mag:4,oscillating:true,minPitch:-10,maxPitch:12}]
+  ['AMX-50-100','AMX 50 100','ht','amx-50-100',1450,300*6,38000,232,90,90,51,1.10,370,.10,{weapon:'drum',mag:6,clipMs:2500,oscillating:true,minPitch:-9,maxPitch:13}],
+  ['AMX-50-120','AMX 50 120','ht','amx-50-120',1850,400*4,30000,257,100,100,65,1.13,380,.08,{weapon:'drum',mag:4,clipMs:2500,oscillating:true,minPitch:-9,maxPitch:11}],
+  ['AMX-50-B','AMX 50 B','ht','amx-50-b',      2200,400*4,26000,257,170,100,65,1.15,400,.07,{weapon:'drum',mag:4,clipMs:2500,oscillating:true,minPitch:-10,maxPitch:12}]
 ], FRENCH_TD_BRANCH.slice(0,1));
 const FRENCH_M454_BRANCH = defineLine('france', [
   ['AMX-65-T','AMX 65 t','ht','amx-65-t',          1550,300,7600,232,100,250,38,1.12,360,.09,{minPitch:-8,maxPitch:13}],
@@ -327,11 +327,11 @@ const FRENCH_BATCHAT_BRANCH = defineLine('france', [
   ['AMX-38','AMX 38','lt','amx-38',                 270,50,2400,58,60,40,25, .75,300,.31,{minPitch:-14,maxPitch:18}],
   ['AMX-40','AMX 40','lt','amx-40',                 390,75,3000,74,70,70,35, .82,315,.30,{minPitch:-7,maxPitch:17}],
   ['AMX-ELC-BIS','AMX ELC bis','lt','amx-elc-bis', 460,220,7500,140,14,14,65, .75,360,.45,{yawLimits:[-15,15],minPitch:-5,maxPitch:13}],
-  ['AMX-12-T','AMX 12 t','lt','amx-12-t',        650,135*4,14000,144,30,40,60, .80,370,.40,{weapon:'drum',mag:4,oscillating:true,minPitch:-6,maxPitch:12}],
-  ['AMX-13-75','AMX 13 75','lt','amx-13-75',     870,135*4,12000,155,40,40,61, .85,380,.38,{weapon:'drum',mag:4,oscillating:true,minPitch:-6,maxPitch:9}],
-  ['B-C-12-T','Bat.-Châtillon 12 t','lt','b-c-12-t',1100,170*4,15000,175,40,25,68,.90,390,.36,{weapon:'drum',mag:4,oscillating:true,minPitch:-6,maxPitch:13}],
-  ['B-C-25-T-AP','Bat.-Châtillon 25 t AP','mt','b-c-25-t-ap',1600,300*6,34000,232,50,30,65,1.00,400,.28,{weapon:'drum',mag:6,oscillating:true,minPitch:-6,maxPitch:13}],
-  ['B-C-25-T','Bat.-Châtillon 25 t','mt','b-c-25-t',1850,390*5,34000,259,60,50,65,1.05,410,.28,{weapon:'drum',mag:5,oscillating:true,minPitch:-6,maxPitch:11}]
+  ['AMX-12-T','AMX 12 t','lt','amx-12-t',        650,135*4,14000,144,30,40,60, .80,370,.40,{weapon:'drum',mag:4,clipMs:2500,oscillating:true,minPitch:-6,maxPitch:12}],
+  ['AMX-13-75','AMX 13 75','lt','amx-13-75',     870,135*4,12000,155,40,40,61, .85,380,.38,{weapon:'drum',mag:4,clipMs:2000,oscillating:true,minPitch:-6,maxPitch:9}],
+  ['B-C-12-T','Bat.-Châtillon 12 t','lt','b-c-12-t',1100,170*4,15000,175,40,25,68,.90,390,.36,{weapon:'drum',mag:4,clipMs:2000,oscillating:true,minPitch:-6,maxPitch:13}],
+  ['B-C-25-T-AP','Bat.-Châtillon 25 t AP','mt','b-c-25-t-ap',1600,300*6,34000,232,50,30,65,1.00,400,.28,{weapon:'drum',mag:6,clipMs:2730,oscillating:true,minPitch:-6,maxPitch:13}],
+  ['B-C-25-T','Bat.-Châtillon 25 t','mt','b-c-25-t',1850,390*5,34000,259,60,50,65,1.05,410,.28,{weapon:'drum',mag:5,clipMs:2730,oscillating:true,minPitch:-6,maxPitch:11}]
 ], FRENCH_TD_BRANCH.slice(0,1));
 // These forks reuse the existing parent records. The sheets give damage per
 // projectile: a salvo fires both barrels now; a drum fires on successive inputs.
@@ -362,10 +362,10 @@ const USSR_263X_BRANCH = defineLine('ussr', [
   ['OBJ-263-X','Объект 263 (10 ур.)','td','obj-263',1850,460,7800,290,250,null,55,1.14,390,.21,{modelId:'OBJ-263',yawLimits:[-10,10],minPitch:-4,maxPitch:18}]
 ], USSR_268V4_BRANCH.slice(0,8));
 const USSR_TET_BRANCH = defineLine('ussr', [
-  ['KV-4F','КВ-4 Федоренко','ht','kv-4f',     1450, 750,22000,185,140,180,30,1.12,340,.08,{mag:3,weapon:'drum',minPitch:-9,maxPitch:20}],
-  ['KV-4M','КВ-4 Михайлова','ht','kv-4m',     1800, 960,24000,220,220,240,25,1.18,350,.07,{mag:3,weapon:'drum',minPitch:-8,maxPitch:20}],
-  ['KV-90','КВ-90','ht','kv-90',              2200,1470,33000,243,250,280,25,1.24,370,.06,{mag:3,weapon:'drum',minPitch:-8,maxPitch:20}],
-  ['TET-100','ТЭТ-100','ht','tet-100',        2900,1470,31000,258,250,280,25,1.30,385,.05,{mag:3,weapon:'drum',minPitch:-8,maxPitch:30}]
+  ['KV-4F','КВ-4 Федоренко','ht','kv-4f',     1450, 750,22000,185,140,180,30,1.12,340,.08,{mag:3,clipMs:4000,weapon:'drum',minPitch:-9,maxPitch:20}],
+  ['KV-4M','КВ-4 Михайлова','ht','kv-4m',     1800, 960,24000,220,220,240,25,1.18,350,.07,{mag:3,clipMs:4000,weapon:'drum',minPitch:-8,maxPitch:20}],
+  ['KV-90','КВ-90','ht','kv-90',              2200,1470,33000,243,250,280,25,1.24,370,.06,{mag:3,clipMs:4000,weapon:'drum',minPitch:-8,maxPitch:20}],
+  ['TET-100','ТЭТ-100','ht','tet-100',        2900,1470,31000,258,250,280,25,1.30,385,.05,{mag:3,clipMs:4000,weapon:'drum',minPitch:-8,maxPitch:30}]
 ], USSR_IS4_BRANCH.slice(0,6));
 const GERMAN_LEOPARD1_BRANCH = defineLine('germany', [
   ['VK-3001-D','VK 30.01 (D)','mt','vk-3001-d', 790,135,3600,150,60, 80,56, .97,345,.23,{minPitch:-8,maxPitch:20}],
@@ -411,21 +411,21 @@ const PLAYABLE_NATIONS = Object.freeze(Object.keys(BRANCHES));
 // The category determines the garage label and resale currency, not the contents of a seasonal box.
 const SPECIAL_TANKS = Object.freeze([
   // source, ID, name, nation, tier, class, slug, HP, full load, reload ms, pen, hull, turret, km/h, model limits
-  ['collection','PZ-II-J','Pz.Kpfw. II Ausf. J','germany',3,'lt','pz-ii-j',290,75,4200,46,80,80,31,{mag:5,minPitch:-20,maxPitch:10}],
+  ['collection','PZ-II-J','Pz.Kpfw. II Ausf. J','germany',3,'lt','pz-ii-j',290,75,4200,46,80,80,31,{mag:5,clipMs:130,minPitch:-20,maxPitch:10}],
   ['collection','T67','T67','usa',5,'td','t67',440,115,2800,128,13,25,67,{minPitch:-20,maxPitch:10}],
   ['collection','GPZ','G.Pz. Mk. VI (e)','germany',2,'spg','gpz-mk-vi-e',125,220,14500,35,22,null,50,{s:.70,vr:270,camo:.29,yawLimits:[-5,5],minPitch:-3,maxPitch:42}],
   ['collection','M4A3E2','M4A3E2 Sherman Jumbo','usa',6,'mt','m4a3e2-sherman-jumbo',880,140,4000,138,102,152,35,{minPitch:-25,maxPitch:10}],
-  ['collection','T71DA','T71 DA','usa',7,'lt','t71-da',860,900,20000,175,25,25,64,{mag:6,weapon:'drum',oscillating:true,minPitch:-20,maxPitch:7}],
+  ['collection','T71DA','T71 DA','usa',7,'lt','t71-da',860,900,20000,175,25,25,64,{mag:6,clipMs:2000,weapon:'drum',oscillating:true,minPitch:-20,maxPitch:7}],
   ['collection','JPANTHERII','Jagdpanther II','germany',8,'td','jagdpanther-ii',1200,490,10800,246,100,null,55,{yawLimits:[-10,10],minPitch:-15,maxPitch:6.5}],
   ['collection','T62A','Т-62А','ussr',10,'mt','t-62a',1950,320,5600,255,102,240,50,{minPitch:-17,maxPitch:6}],
-  ['collection','TL7','TL-7','usa',9,'td','tl-7',1500,1440,32000,252,100,200,50,{mag:4,weapon:'drum',minPitch:-10,maxPitch:15}],
+  ['collection','TL7','TL-7','usa',9,'td','tl-7',1500,1440,32000,252,100,200,50,{mag:4,clipMs:2300,weapon:'drum',minPitch:-10,maxPitch:15}],
   ['premium','IS6','ИС-6','ussr',8,'ht','is-6',1550,390,10800,196,100,150,35,{price:7000,minPitch:-20,maxPitch:6}],
   ['premium','LOWE','Löwe','germany',8,'ht','lowe',1650,320,9200,234,150,120,35,{price:8000,minPitch:-17,maxPitch:8}],
   ['premium','T34HEAVY','T34','usa',8,'ht','t34-heavy',1550,400,12200,248,102,279,35,{price:7600,minPitch:-15,maxPitch:10}],
   ['premium','STA2','STA-2','japan',8,'mt','sta-2',1380,240,5700,212,45,70,55,{price:6100,minPitch:-10,maxPitch:13}],
   ['premium','STRVS1','Strv S1','sweden',8,'td','strv-s1',1100,390,8800,288,30,null,50,{price:6500,stance:'hull',yawLimits:[0,0],minPitch:-11,maxPitch:11}],
   ['advent','BT42','БТ-42','finland',4,'lt','bt-42',370,210,7500,75,22,15,54,{minPitch:-5,maxPitch:15}],
-  ['advent','TL7OLEN','TL-7 Олень','usa',9,'td','tl-7-olen',1500,1440,32000,252,100,200,50,{mag:4,weapon:'drum',minPitch:-10,maxPitch:15}]
+  ['advent','TL7OLEN','TL-7 Олень','usa',9,'td','tl-7-olen',1500,1440,32000,252,100,200,50,{mag:4,clipMs:2300,weapon:'drum',minPitch:-10,maxPitch:15}]
 ].map(([source,id,n,nat,tier,cls,slug,hp,alpha,reload,pen,armor,turretArmor,speed,extra]) => Object.freeze({
   source,id,n,nat,tier,cls,file:slug+'.mesh.js',thumbnail:slug+'.webp',hp,alpha,reload,pen,armor,turretArmor,speed,
   s:({lt:.86,mt:1,ht:1.12,td:1.04})[cls],vr:300+8*tier,camo:({lt:.32,mt:.22,ht:.09,td:.28})[cls],...extra
@@ -438,6 +438,7 @@ const shotDamage = t => t.alpha / (t.salvo || t.mag || 1);
 const magazineName = t => t.weapon === 'machinegun' || t.weapon === 'drum' ? 'Барабан' : 'Кассета';
 const damageLabel = t => t.salvo ? 'Урон залпа' : !t.mag ? 'Урон за выстрел' : magazineName(t) === 'Барабан' ? 'Урон барабана' : 'Урон кассеты';
 const damageSummary = t => (t.salvo || t.mag) ? `${t.alpha} (${t.salvo || t.mag} × ${shotDamage(t)})` : String(t.alpha);
+const clipLabel = t => (t.clipMs/1000).toLocaleString('ru-RU')+' с';
 const reloadLabel = t => t.salvo ? 'Перезарядка залпа' : t.mag ? 'Полная перезарядка' : 'Перезарядка';
 const armorLabel = t => `${t.armor}${t.markedHull ? '*' : ''} / ${t.turretArmor ?? '—'}${t.markedTurret ? '*' : ''}`;
 const speedLabel = t => t.roadSpeed ? `${t.speed}–${t.roadSpeed}` : String(t.speed);

@@ -36,10 +36,10 @@ test('legacy large fleet and earned capacity persist; restore sanitizes the deli
   });assert.deepEqual(restored,[['MS1','BT42','TL7'],[],14,10,10]);
 });
 
-test('independent bonus slot from all four boxes: 5% for the holiday box, 10% for the others; keeps the primary prize and can park a same-box vehicle',async t=>{
+test('independent bonus slot from all three paid boxes: 5% for the holiday box, 10% for the others; keeps the primary prize and can park a same-box vehicle',async t=>{
   const {page}=await openGame(t,{seed:{owned:full}});
   const out=await page.evaluate(()=>{
-    const opened=[];for(const id of ['basic','premium','supply','collection']){
+    const opened=[];for(const id of ['basic','premium','collection']){
       const threshold=id==='collection' ? .05 : .10;
       for(const bonus of [threshold,threshold-.000001]){
         const seq=[.06,0,bonus],g=GameState.garageSlots,r=openContainerDirect(id,()=>seq.shift());
@@ -49,7 +49,7 @@ test('independent bonus slot from all four boxes: 5% for the holiday box, 10% fo
     GameState.garageSlots=GameState.owned.length;const seq=[.019999,.999999,.049999],r=openContainerDirect('collection',()=>seq.shift());
     return {opened,r,count:GameState.owned.length,cap:GameState.garageSlots,waiting:GameState.pendingVehicles};
   });
-  assert.deepEqual(out.opened,[['basic',5000],['premium',15000],['supply',30000],['collection',100]].flatMap(([id,n])=>[[id,'silver',n,false,0],[id,'silver',n,true,1]]));
+  assert.deepEqual(out.opened,[['basic',5000],['premium',15000],['collection',100]].flatMap(([id,n])=>[[id,'silver',n,false,0],[id,'silver',n,true,1]]));
   assert.equal(out.r.id,'TL7');assert.equal(out.r.slot,true);assert.equal(out.count,11);assert.equal(out.cap,11);assert.deepEqual(out.waiting,[]);
 });
 
@@ -60,7 +60,7 @@ test('full garage: Advent and two distinct box wins queue FIFO. Bulk slot, sale 
   await click('Адвент');assert.match(await page.locator('#milestone-15').innerText(),/ожидает слота/);await click('В ангар');await click('Ожидают слота: 1');
   const inventory=id=>page.locator('.inv-card').filter({hasText:id});
   assert.match(await page.locator('#vehicle-deliveries').innerText(),/БТ-42/);
-  await pressWithRolls(inventory('Новогодний ящик').getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[0,.9999,.05, 0,.9999,.05, .51,0,.04999]);
+  await pressWithRolls(inventory('Новогодний ящик').getByRole('button',{name:'ОТКРЫТЬ ВСЕ'}),[0,.9999,.05, 0,.9999,.05, .8,0,.04999]);
   const state=await saved();assert.deepEqual(state.inventory,{basic:1});assert.deepEqual(state.pendingVehicles,['TL7','T62A']);
   assert.deepEqual(state.owned,full.concat('BT42'));assert.equal(state.garageSlots,11);assert.equal(state.GOLD,51); // daily 50 + primary 1
   const text=await page.locator('#reward-lines').innerText();for(const term of [/Слоты ангара: \+1/,/TL-7/,/Т-62А/,/Ожидает слота/,/Доставлено из очереди/])assert.match(text,term);
@@ -77,7 +77,7 @@ test('full garage: Advent and two distinct box wins queue FIFO. Bulk slot, sale 
 test('supplied crate rigs render offline, open on their original hinge, skip/context loss do not double spend, depot resumes',async t=>{
   const {page,click,saved}=await openGame(t,{webgl:true,mobile:true,seed:{inventory:{collection:2,basic:2}}});
   await page.waitForFunction(()=>DepotView.stats()?.id==='MS1');await click('Контейнеры');assert.equal(await page.locator('#depot-canvas').count(),0);
-  assert.equal(await page.locator('.c-card img').evaluateAll(async ns=>{await Promise.all(ns.map(n=>n.decode()));return ns.filter(n=>n.naturalWidth===512).length;}),4);
+  assert.equal(await page.locator('.c-card img').evaluateAll(async ns=>{await Promise.all(ns.map(n=>n.decode()));return ns.filter(n=>n.naturalWidth===512).length;}),3);
   await page.evaluate(()=>{
     const after=THREE.Scene.prototype.onAfterRender;window.framesSeen=[];
     THREE.Scene.prototype.onAfterRender=function(renderer,scene,cam){

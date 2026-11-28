@@ -20,6 +20,7 @@ const TankSales = (() => {
     el('sale-currency').textContent = price.field === 'GOLD' ? 'К получению · золото' : 'К получению · серебро';
     el('sale-price').textContent = price.label;
     const notes = ['Установленные модули и улучшения будут сняты без компенсации.'];
+    if (!t.source && t.xp) notes.push('Исследование ветки сохранится. Выкуп: '+silverLabel(buybackCost(t))+', без опыта.');
     if (t.xp === 0) notes.push('Стартовую машину можно снова получить бесплатно, поэтому цена продажи — 0 ₽.');
     if (t.source === 'advent') notes.push('Этот подарок Адвента повторно не выдаётся.');
     if (GameState.usedPromos.some(code => CONFIG.PROMOCODES[code]?.vehicle === id))
@@ -37,6 +38,7 @@ const TankSales = (() => {
     if (!canSell(id)) return;
     const g = GameState, price = quote(DB[id]);
     g[price.field] += price.amount;
+    if (!DB[id].source && !g.researched.includes(id)) g.researched.push(id);
     const arrivals = HangarSlots.release(id);
     saveProgress(); updateResources(); renderCarousel(); renderTree();
     const status = el('sale-status'); status.hidden = false;

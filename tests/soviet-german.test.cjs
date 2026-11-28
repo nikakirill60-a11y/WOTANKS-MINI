@@ -71,7 +71,7 @@ test('historical tier-X OB263 and Leopard 1 saves keep the right tier, equipment
 
 async function practice(page,click,id,enemy){
   await click('Выбрать для боя: '+rows.get(id)[1]);await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-  assert.equal(await page.evaluate(()=>DepotView.stats().triangles),rows.get(id).at(-1));
+  assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),rows.get(id).at(-1));
   if(!await page.locator('#enemy-select').isVisible())await click('ТРЕНИРОВКА');
   await page.locator('#train-nat-select').selectOption(paths.find(p=>p.rows.includes(rows.get(enemy))).nation);
   await page.locator('#enemy-select').selectOption(enemy);await click('НАЧАТЬ');
@@ -104,7 +104,7 @@ test('all thirty records deploy offline: actual meshes, hits, separate 263 varia
       } finally {BattleClock.now=now;backToGarage();}
     },mag);
     assert.deepEqual(result,{models:[[id,rows.get(id).at(-1)],[other,rows.get(other).at(-1)]],shared:id==='OBJ-263-X',
-      shots:Array.from({length:mag},(_,i)=>[Array(salvo).fill(dmg),mag-i-1,i===mag-1,i===mag-1?Math.round(seconds*1000):120]),
+      shots:Array.from({length:mag},(_,i)=>[Array(salvo).fill(dmg),mag-i-1,i===mag-1,i===mag-1?Math.round(seconds*1000):4000]),
       cycle:salvo,loss:dmg*mag*salvo,counted:dmg*mag*salvo},id+' vs '+other);
   }
 });

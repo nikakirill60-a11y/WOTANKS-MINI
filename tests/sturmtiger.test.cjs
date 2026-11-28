@@ -35,7 +35,7 @@ test('all seven fitted meshes deploy and fire offline: fixed casemate, visible m
   await page.context().setOffline(true);
   for(const [id,name,,hp,dmg,ms,pen,armor,speed,,tris] of rows){
     await click('Выбрать для боя: '+name);await page.waitForFunction(id=>DepotView.stats()?.id===id,id);
-    assert.equal(await page.evaluate(()=>DepotView.stats().triangles),tris);
+    assert.equal(await page.evaluate(()=>DepotView.stats().sourceTriangles),tris);
     if (!await page.locator('#enemy-select').isVisible()) await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption('germany');
     await page.locator('#enemy-select').selectOption(id==='BAER'?'STURMTIGER':'BAER');await click('НАЧАТЬ');

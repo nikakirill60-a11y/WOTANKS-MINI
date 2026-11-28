@@ -5,12 +5,21 @@ let treeCardId = null,
 const treeEl = (id) => document.getElementById(id);
 const xpLabel = (n) => n.toLocaleString('ru-RU') + ' XP';
 
+// A buyback is twice the normal research vehicle's resale price; free roots stay free.
+const buybackCost = t => t.xp ? t.tier * 10000 : 0;
+const silverLabel = n => n.toLocaleString('ru-RU')+' ₽';
 function researchState(id) {
   const t = DB[id],
     parent = researchParent(id);
   if (GameState.owned.includes(id))
     return { kind: 'owned', text: id === GameState.selected ? 'Выбран для боя' : 'В ангаре' };
-  if (parent && !GameState.owned.includes(parent))
+  if (GameState.researched.includes(id)) {
+    const cost=buybackCost(t), price=cost ? silverLabel(cost) : 'бесплатно';
+    const full=HangarSlots.free()<=0, short=GameState.SILVER<cost;
+    return {kind:full || short ? 'locked' : 'available',buyback:true,full,price,
+      text:'Исследован · выкуп: '+price+(full ? '. '+HangarSlots.fullMessage() : short ? '. Не хватает '+silverLabel(cost-GameState.SILVER) : '')};
+  }
+  if (parent && !GameState.researched.includes(parent) && !GameState.owned.includes(parent))
     return { kind: 'locked', text: 'Сначала исследуйте ' + DB[parent].n };
   if (HangarSlots.free() <= 0) return { kind: 'locked', full: true, text: HangarSlots.fullMessage() };
   if (t.xp === 0)
@@ -34,6 +43,7 @@ function showTreeCard(id) {
     ['Лоб корпуса / башни', armorLabel(t) + ' мм'],
     ['Скорость', speedLabel(t) + ' км/ч']
   ];
+  if (t.mag) stats.push(['Между выстрелами', clipLabel(t)]);
   if (t.weapon === 'calibration') stats.push(['Особенность', KPZ_CALIBRATION.name]);
   if (t.cls === 'spg') stats.push(['Особенность', 'Арт-прицел · вид сверху']);
   if (t.yawLimits) {
@@ -67,7 +77,8 @@ function researchTank(id) {
   if (state.kind === 'locked') return;
   if (state.kind === 'available') {
     if (!HangarSlots.park(id)) return;
-    GameState.XP -= DB[id].xp;
+    if (state.buyback) GameState.SILVER -= buybackCost(DB[id]);
+    else { GameState.XP -= DB[id].xp; GameState.researched.push(id); }
   }
   GameState.selected = id;
   saveProgress();
@@ -195,7 +206,7 @@ function renderTree() {
       height: height + 'px'
     });
     const action =
-      state.kind === 'owned' ? 'Выбрать' : state.kind === 'available' ? 'Исследовать' : 'Характеристики';
+      state.kind === 'owned' ? 'Выбрать' : state.kind === 'available' ? (state.buyback ? 'Выкупить' : 'Исследовать') : 'Характеристики';
     button.setAttribute('aria-label', action + ': ' + t.n);
     button.setAttribute('aria-pressed', String(selected));
     button.title = t.n + ' · ' + state.text;
@@ -209,7 +220,7 @@ function renderTree() {
       ? '✓ Для боя'
       : state.kind === 'owned'
         ? 'В ангаре'
-        : state.full ? 'Нет места' : t.xp
+        : state.buyback ? 'Исследован · '+state.price : state.full ? 'Нет места' : t.xp
           ? xpLabel(t.xp)
           : 'Бесплатно';
     const img = document.createElement('img');

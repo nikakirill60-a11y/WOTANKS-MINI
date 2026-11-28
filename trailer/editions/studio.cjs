@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'../..'),[work,...ids]=process.argv.slice(2);
 if(!work)throw Error('Pass a temporary work directory');
 const cast=['GPZ','STB-1','TYPE-5-H','OBJ-705A','ST-II','OBJ-2684','OBJ-263-X','TET-100','LEOPARD-1','PZKPFW-VII','VK-7201-K','PZ-55','VPZ-57','KPZ-67','MS1','IS3','MAUSCHEN','MAUS','IS7'];
 (async()=>{const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'ct-soundstage-'));let b;
-try{const file=path.join(tmp,'index.html');fs.writeFileSync(file,`<meta charset="utf-8"><base href="${pathToFileURL(root+'/')}"><script src="models/catalog.js"></script><script src="vendor/three-r180.min.js"></script><script src="js/battle-models.js"></script>`);
+try{const file=path.join(tmp,'index.html');fs.writeFileSync(file,`<meta charset="utf-8"><base href="${pathToFileURL(root+'/')}"><script src="models/catalog.js"></script><script src="vendor/three-r180.min.js"></script><script src="models/running-gear.js"></script><script src="js/road-wheels.js"></script><script src="js/battle-models.js"></script>`);
  b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const p=await b.newPage({offline:true});await p.goto(pathToFileURL(file).href);
  await p.evaluate(()=>{const T=THREE,W=820,H=424,renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setClearColor(0,0);renderer.setSize(W,H,false);
@@ -14,8 +14,8 @@ try{const file=path.join(tmp,'index.html');fs.writeFileSync(file,`<meta charset=
    scene.add(new T.HemisphereLight(0xeaf1fa,0x8d877b,1.65));const light=(c,p,i)=>{const l=new T.DirectionalLight(c,i);l.position.set(...p);scene.add(l);return l;};
    const sun=light(0xffdd9b,[5,7,4],3.6);light(0x94d6ff,[-4,3,-3],3.0);light(0xfcdfb5,[3,3,-5],1.3);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-8,right:8,top:8,bottom:-8,near:.1,far:26});sun.shadow.bias=-.0005;
    let model,center,distance,high,wide;
-   window.loadPlate=async id=>{if(model)scene.remove(model);const a=await BattleModels.load(modelKey(id),new AbortController().signal);model=new T.Group();
-     const h=new T.Mesh(a.hull,mat),t=new T.Mesh(a.turret,mat),g=new T.Mesh(a.gun,mat);t.position.fromArray(a.pivot);g.position.fromArray(a.gunPivot);t.add(g);model.add(h,t);scene.add(model);model.updateMatrixWorld(true);
+   window.loadPlate=async id=>{if(model){scene.remove(model);model.getObjectByName('Опорные катки').dispose();}const a=await BattleModels.load(modelKey(id),new AbortController().signal);model=new T.Group();
+     const h=new T.Mesh(a.hull,mat),t=new T.Mesh(a.turret,mat),g=new T.Mesh(a.gun,mat);t.position.fromArray(a.pivot);g.position.fromArray(a.gunPivot);t.add(g);const wheels=new RoadWheels(a,mat).mesh;wheels.castShadow=wheels.receiveShadow=true;model.add(h,t,wheels);scene.add(model);model.updateMatrixWorld(true);
      const box=new T.Box3().setFromObject(model);center=box.getCenter(new T.Vector3());high=box.max.y-box.min.y;wide=id==='ST-II'?.66:1.12;distance=0;
      const slope=Math.tan(cam.fov*Math.PI/360),vec=new T.Vector3();for(const angle of [wide-.46,wide-.23,wide,wide+.19]){
        const dir=new T.Vector3(Math.sin(angle),.32,Math.cos(angle)).normalize(),right=new T.Vector3().crossVectors(cam.up,dir).normalize(),up=new T.Vector3().crossVectors(dir,right);

@@ -629,3 +629,14 @@ test('Burgstadt: north and south castle approaches carry a player and a bot into
     assert.ok(tick<18000 && bot.rideHeight>elevation-3*m,'bot reached court from side '+side);
   }
 });
+
+test('every adjacent-tier platoon gets only opponents and allies within one tier of EACH seat; wide parties cannot deploy',()=>{
+  const {DB,makeRosters}=game(), ids=[];
+  for(const t of Object.values(DB))ids[t.tier]??=t.id;
+  for(const a of ids.filter(Boolean)) for(const b of ids.filter(Boolean)) {
+    const party=[a,b,a];
+    if(Math.abs(DB[a].tier-DB[b].tier)>1){assert.throws(()=>makeRosters(a,7,()=>.4,party),/соседних уровней/);continue;}
+    const teams=makeRosters(a,7,()=>.42,party);
+    for(const id of teams.flat())assert.ok(party.every(h=>Math.abs(DB[h].tier-DB[id].tier)<=1),[a,b,id]);
+  }
+});

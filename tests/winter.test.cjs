@@ -39,7 +39,7 @@ test('all 31 actual December visits award the two distinct milestone vehicles ex
     if(day===14||day===30)assert.equal((await saved()).owned.includes(day===14?'BT42':'TL7OLEN'),false);
   }
   const s=await saved();assert.equal(s.advent2026.dates.length,31);assert.deepEqual(s.owned,['MS1','BT42','TL7OLEN']);
-  assert.equal(s.GOLD,27*50+4*500);await page.reload();assert.deepEqual(await saved(),s);
+  assert.equal(s.GOLD,27*50+4*700);await page.reload();assert.deepEqual(await saved(),s);
 });
 
 test('collection: a single 2% roll for the whole pool, equal missing vehicles, two currency bands and no duplicates',async t=>{
@@ -62,13 +62,13 @@ test('collection: a single 2% roll for the whole pool, equal missing vehicles, t
       return hits;
     }
     return {pool,full:histogram([]),oneLeft:histogram(pool.slice(0,-1)),edges:[
-      draw([],0,0),draw([],.01999999,.999999),draw([],.02,0),draw([],.5099999,.999999),
-      draw([],.51,0),draw([],.999999,.999999),draw(pool,0,0),draw(pool,.49999,.999999),draw(pool,.5,.999999)
+      draw([],0,0),draw([],.01999999,.999999),draw([],.02,0),draw([],.7059999,.999999),
+      draw([],.706001,0),draw([],.999999,.999999),draw(pool,0,0),draw(pool,.699999,.999999),draw(pool,.7,.999999)
     ]};
   });
   assert.deepEqual(pool,['M4A3E2','T71DA','JPANTHERII','T62A','TL7']);
-  assert.deepEqual(full,{M4A3E2:8,T71DA:8,JPANTHERII:8,T62A:8,TL7:8,silver:980,gold:980});
-  assert.deepEqual(oneLeft,{TL7:40,silver:980,gold:980});
+  assert.deepEqual(full,{M4A3E2:8,T71DA:8,JPANTHERII:8,T62A:8,TL7:8,silver:1372,gold:588});
+  assert.deepEqual(oneLeft,{TL7:40,silver:1372,gold:588});
   assert.deepEqual(edges,['M4A3E2','TL7',['silver',100],['silver',50000],['gold',1],['gold',650],['silver',100],['silver',50000],['gold',650]]);
 });
 
@@ -78,7 +78,7 @@ test('500 gold each; insufficient funds leave old boxes alone; single and mixed 
   await click('Контейнеры');
   const box=page.locator('.c-card').filter({hasText:'Новогодний ящик'}),buy=box.getByRole('button',{name:'КУПИТЬ · 500 G'});
   const odds=await box.locator('.c-desc').innerText();
-  assert.match(odds,/^2% на танк.*Серебро — 49%, золото — 49%.*Дополнительный слот ангара — 5%/);
+  assert.match(odds,/^2% на танк.*Серебро — 68,6%, золото — 29,4%.*Дополнительный слот ангара — 5%/);
   const manifest=await box.locator('.crate-manifest li').allTextContents();
   assert.deepEqual(manifest.slice(-2).map(s=>s.replace(/\s/g,' ')),['Серебро: 100–50 000','Золото: 1–650']);
   assert.equal(await box.locator('.c-name').innerText(),'Новогодний ящик');
@@ -101,12 +101,12 @@ test('500 gold each; insufficient funds leave old boxes alone; single and mixed 
   }
   assert.match(await open('ОТКРЫТЬ 1',[.02,0,.5]),/100 ₽/);await click('ЗАБРАТЬ');
   assert.deepEqual((await saved()).owned,['MS1','T62A']);
-  const rewards=await open('ОТКРЫТЬ ВСЕ',[.99,.999999,.5, .019999,.999999,.5, .509999,.999999,.5, .51,0,.5]);
+  const rewards=await open('ОТКРЫТЬ ВСЕ',[.99,.999999,.5, .019999,.999999,.5, .509999,.999999,.5, .706001,0,.5]);
   assert.match(rewards,/TL-7/);assert.match(rewards,/651 G/);assert.match(rewards,/50000 ₽/);
   assert.deepEqual(await page.locator('#reward-lines [data-card-nation]').evaluateAll(frames => frames.map(f => [f.dataset.cardNation,f.querySelector('img').getAttribute('src')])),[['usa','models/tl-7.webp']]);
   await click('ЗАБРАТЬ');
   const s=await saved();assert.deepEqual(s.inventory,{basic:2});assert.deepEqual(s.owned,['MS1','T62A','TL7']);
-  assert.equal(s.SILVER,125100);assert.equal(s.GOLD,1150);assert.equal(s.XP,paid.XP);assert.equal(s.charges,paid.charges);
+  assert.equal(s.SILVER,125100);assert.equal(s.GOLD,1150);assert.equal(s.XP,paid.XP);assert.equal(s.charges,undefined);
   await click('В ангар');await click('Выбрать для боя: TL-7');await page.reload();assert.equal((await saved()).selected,'TL7');assert.equal(await page.locator('#dispatch-dmg').innerText(),'1440 (4 × 360)');
   await page.evaluate(()=>{researchTank('TL7OLEN');researchTank('LOWE');sellTank('TL7');buyPremium('LOWE','2000-01-01');});
   assert.ok(await page.locator('#sale-modal').isVisible());await click('Отмена');
@@ -116,7 +116,7 @@ test('500 gold each; insufficient funds leave old boxes alone; single and mixed 
 test('completed collection shows resource-only odds before purchase; no silver is needed to buy the last affordable box',async t=>{
   const {page,click,saved}=await openGame(t,{seed:{GOLD:500,SILVER:0,owned:['MS1','M4A3E2','T71DA','JPANTHERII','T62A','TL7']}});
   await click('Контейнеры');const box=page.locator('.c-card').filter({hasText:'Новогодний ящик'});
-  assert.match(await box.locator('.c-desc').innerText(),/Все пять.*Серебро — 50%, золото — 50%/);
+  assert.match(await box.locator('.c-desc').innerText(),/Все пять.*Серебро — 70%, золото — 30%/);
   await box.getByRole('button',{name:'КУПИТЬ · 500 G'}).click();assert.equal((await saved()).GOLD,0);assert.equal((await saved()).inventory.collection,1);
   await click('Инвентарь');await click('ОТКРЫТЬ 1');await click('ЗАБРАТЬ');const s=await saved();
   assert.equal(s.owned.length,6);assert.deepEqual(s.inventory,{});assert.ok((s.SILVER>=100 && s.SILVER<=50000 && s.GOLD===0) || (s.GOLD>=1 && s.GOLD<=650 && s.SILVER===0));

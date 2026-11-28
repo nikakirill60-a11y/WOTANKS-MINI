@@ -10,8 +10,7 @@ class PlatoonMatch {
     // The immutable room ID picks ONE deal and weather, independent of page RNG.
     let seed = parseInt(room.id.slice(0,8),16);
     this.random = () => ((seed = (Math.imul(seed,1664525) + 1013904223) >>> 0) / 4294967296);
-    const top = room.members.reduce((a,b) => DB[a.tank].tier >= DB[b.tank].tier ? a : b);
-    this.teams = makeRosters(top.tank,7,this.random);
+    this.teams = makeRosters(this.drivers.get(0).tank,7,this.random,room.members.map(m=>m.tank));
     for (const m of room.members) this.teams[0][m.seat] = m.tank;
     this.channels = new Map(); this.inputs = new Map(); this.seen = new Map(); this.sequence = 0; this.lastWorld = -1;
     this.scores = Array.from({length:3},()=>[0,0,0]); this.service = service; this.edges=[]; this.pendingKits=new Set(); this.radioLog=[]; this.lastRadio=0;
@@ -255,7 +254,7 @@ class PlatoonMatch {
     this.legacy=!(Array.isArray(m) && m.length===7 && m.every(Number.isFinite));
     if (!this.legacy) {
       if (m[0]!==this.ack) { this.ack=m[0]; this.ackAt=now; }
-      this.prediction.reconcile(w.units[this.me],m,gap>(this.http?1700:900));
+      this.prediction.reconcile(w.units[this.me],m,gap>(this.http?1700:900),w.tick);
     }
   }
   stepView(dt) {

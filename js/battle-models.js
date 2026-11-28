@@ -66,30 +66,54 @@ const BattleModels = (() => {
     }
     g.computeBoundingSphere();
     g.computeBoundingBox();
+    // Wheel replacement changes only the draw index. Original model bounds
+    // (including the tracks) still drive hits, ride height, drowning and camera.
+    if (parts.some(p=>p.omit)) {
+      const ix=[]; let base=0;
+      for (const p of parts) {
+        const count=p.position.length/3;
+        if (p.omit!==true) {
+          const runs=p.omit || []; let at=0;
+          for (let i=0;i<count;i+=3) {
+            if (at<runs.length && i===3*runs[at]) { i+=3*runs[at+1]-3; at+=2; }
+            else ix.push(base+i,base+i+1,base+i+2);
+          }
+        }
+        base+=count;
+      }
+      g.setIndex(ix);
+    }
     return g;
   }
+  function decodePart(data,kind,positions,indices,override) {
+    const pos = Float32Array.from(unpack(positions, Int16Array), (v) => v / 1000),
+      ix = unpack(indices, Uint16Array),
+      wheels = kind === 'wheels' || kind === 'tracks',
+      geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(new THREE.BufferAttribute(ix, 1));
+    if (wheels) geo.computeVertexNormals();
+    const flat = geo.toNonIndexed(),
+      position = flat.attributes.position.array,
+      normal = wheels ? flat.attributes.normal.array : crease(position);
+    const paint = new THREE.Color(override || (kind === 'tracks' ? data.tracks : data.color));
+    if (kind === 'wheels') paint.multiplyScalar(0.65);
+    const color = new Float32Array(position.length);
+    for (let i = 0; i < color.length; i += 3) paint.toArray(color, i);
+    geo.dispose(); flat.dispose();
+    return {position,normal,color,decorative:!!override};
+  }
+  const wheelPaint=new Map();
   function build(data) {
+    const [fit,omit]=WHEEL_FITS[data.id];
     const groups = {body:[], tracks:[], wheels:[], turret:[], gun:[]};
-    for (const [kind, positions, indices, override] of data.meshes) {
-      const pos = Float32Array.from(unpack(positions, Int16Array), (v) => v / 1000),
-        ix = unpack(indices, Uint16Array),
-        wheels = kind === 'wheels' || kind === 'tracks',
-        geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      geo.setIndex(new THREE.BufferAttribute(ix, 1));
-      if (wheels) geo.computeVertexNormals();
-      const flat = geo.toNonIndexed(),
-        position = flat.attributes.position.array,
-        normal = wheels ? flat.attributes.normal.array : crease(position);
-      const paint = new THREE.Color(override || (kind === 'tracks' ? data.tracks : data.color));
-      if (kind === 'wheels') paint.multiplyScalar(0.65);
-      const color = new Float32Array(position.length);
-      for (let i = 0; i < color.length; i += 3) paint.toArray(color, i);
-      groups[kind].push({ position, normal, color, decorative: !!override });
-      geo.dispose();
-      flat.dispose();
-    }
+    data.meshes.forEach(([kind,positions,indices,override],i)=>{
+      const p=decodePart(data,kind,positions,indices,override); p.omit=omit[i]; groups[kind].push(p);
+    });
+    if (!wheelPaint.has(data.color)) wheelPaint.set(data.color,join(STURM_WHEEL.map(
+      ([pos,ix,paint])=>decodePart(data,'wheels',pos,ix,paint))));
     const a = {
+      axles: fit.map(row=>row.map(v=>v/1000)), wheel:wheelPaint.get(data.color), sourceTriangles:data.triangles,
       hull: join([...groups.body, ...groups.tracks, ...groups.wheels]),
       turret: join(groups.turret),
       gun: join(groups.gun),

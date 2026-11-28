@@ -110,7 +110,7 @@ test('all 19 US exports deploy offline: distinct Hellcats, live TD hits and ever
       target = byId.get(other);
     await click('Выбрать для боя: ' + name);
     await page.waitForFunction((id) => DepotView.stats()?.id === id, id);
-    assert.equal(await page.evaluate(() => DepotView.stats().triangles), byId.get(id).at(-1));
+    assert.equal(await page.evaluate(() => DepotView.stats().sourceTriangles), byId.get(id).at(-1));
     if (!(await page.locator('#enemy-select').isVisible())) await click('ТРЕНИРОВКА');
     await page.locator('#train-nat-select').selectOption('usa');
     await page.locator('#enemy-select').selectOption(other);
@@ -188,7 +188,7 @@ test('all 19 US exports deploy offline: distinct Hellcats, live TD hits and ever
           dmg,
           mag - i - 1,
           target[2] - dmg * (i + 1),
-          i === mag - 1 ? Math.round(sec * 1000) : 120
+          i === mag - 1 ? Math.round(sec * 1000) : 300
         ]),
         earlyBlocked: true,
         refill: true

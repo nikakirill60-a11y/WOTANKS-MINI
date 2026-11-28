@@ -16,7 +16,7 @@ test('Hungary on a phone: a Soviet T-54 grants no Hungarian tiers; inspect, clai
   for(const [i,[id,name,hp,dmg,mag,reload,pen,hull,turret,speed]] of rows.entries()){
     await click('Исследовать: '+name);owned.push(id);xp-=costs[i];const s=await saved();
     assert.deepEqual([s.owned,s.XP,s.selected,s.curNat],[owned,xp,id,'hungary']);
-    assert.deepEqual(await page.locator('#tree-stats dd').allTextContents(),[hp+' HP',mag===1?String(dmg):'80 (4 × 20)',(reload/1000).toLocaleString('ru-RU')+' с',pen+' мм',`${hull} / ${turret} мм`,speed+' км/ч',...(id==='TAS'?['±10° от корпуса']:[])]);
+    assert.deepEqual(await page.locator('#tree-stats dd').allTextContents(),[hp+' HP',mag===1?String(dmg):'80 (4 × 20)',(reload/1000).toLocaleString('ru-RU')+' с',pen+' мм',`${hull} / ${turret} мм`,speed+' км/ч',...(id==='TOLDI1'?['0,5 с']:[]),...(id==='TAS'?['±10° от корпуса']:[])]);
   }
   await page.reload();const s=await saved();assert.deepEqual([s.owned,s.selected,s.XP,s.curNat],[owned,'T55AM1',0,'hungary']);
   assert.equal(await page.locator('#bay-name').innerText(),'T-55AM');assert.match(await page.locator('#bay-meta').innerText(),/Венгрия/);

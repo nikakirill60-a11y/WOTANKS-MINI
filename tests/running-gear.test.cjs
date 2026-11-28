@@ -38,7 +38,8 @@ test('WebGL: actual instanced matrices roll with signed travel and opposite trac
     const advance=m=>{p.x+=m*p.modelScale*Math.cos(p.angle);p.y+=m*p.modelScale*Math.sin(p.angle);BattleView.draw();};
     const delta=(a,b)=>a.map((v,i)=>wrapAngle(b[i]-v));const zero=angles();advance(.12);const ahead=angles();advance(-.12);const back=angles();
     p.angle+=.04;BattleView.draw();const yaw=angles(),ver=wheel.instanceMatrix.version;
-    p.suspensionPitch=.08;BattleView.draw();const stable=wheel.instanceMatrix.version===ver && Math.abs(cradle.rotation.x+.08)<1e-6;
+    p.setLook(p.angle,.08);p.slewSight(Math.PI,Math.PI);BattleView.draw();
+    const stable=wheel.instanceMatrix.version===ver && Math.abs(cradle.rotation.x+.08)<1e-6;
     // Check a shell's last sweep as well: a thin obstruction just BEYOND range must survive.
     const g=GameState, wall={x:13,y:-2,w:2,h:4,baseHeight:0,height:100,type:'fixture'};
     const b={x:0,y:0,h:80,dx:1,dy:0,dh:0,traveled:BATTLE_RANGE-12,speed:21,shooter:p};

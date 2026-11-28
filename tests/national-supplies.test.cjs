@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {openGame}=require('./winter-harness.cjs'),{ids,active}=require('./fixtures/national.cjs');
 const counts={ussr:14,germany:15,usa:15,sweden:14,japan:13,france:15};
 
-test('victory and opening are separate rolls: boundaries, full manifests, fallback weights and unknown countries',async t=>{
+test('20% for a victory box and 10% for a tank on opening are separate rolls: boundaries, full manifests, fallback weights and unknown countries',async t=>{
   const {page}=await openGame(t);
   const results=await page.evaluate(()=>{
     const unsupported=['BT42','V440','NAT015','does-not-exist'];
@@ -17,11 +17,11 @@ test('victory and opening are separate rolls: boundaries, full manifests, fallba
       if(g.inventory[id]!==2 || g.inventory.basic!==2)throw Error('wrong inventory');
       const check=(rolls)=>{const r=openContainerDirect(id,()=>{if(!rolls.length)throw Error('unexpected RNG '+id);return rolls.shift();});if(rolls.length || r.slot)throw Error(id);return r;};
       const draws=b.vehicles.map((_,i)=>{
-        GameState.owned=[];GameState.pendingVehicles=[];GameState.rentalBattles={};const r=check([.019999,(i+.5)/b.vehicles.length]);
+        GameState.owned=[];GameState.pendingVehicles=[];GameState.rentalBattles={};const r=check([.099999,(i+.5)/b.vehicles.length]);
         if(r.type!=='vehicle' || !GameState.owned.includes(r.id))throw Error(id+' failed to award');return r.id;
       });
       GameState.owned=[];
-      for(const [value,expected,amt] of [[.02,'silver',5000],[.60799999,'silver',5000],[.60800001,'xp',2000],[.90199999,'xp',2000],[.90200001,'gold',50]]){
+      for(const [value,expected,amt] of [[.10,'silver',5000],[.63999999,'silver',5000],[.64000001,'xp',2000],[.90999999,'xp',2000],[.91000001,'gold',50]]){
         const r=check([value,0]);if(r.type!==expected || r.amount!==amt)throw Error(id+': '+JSON.stringify(r));
       }
       GameState.owned=b.vehicles.slice(0,3);GameState.pendingVehicles=b.vehicles.slice(3); // nothing left, even those in the queue count
@@ -43,10 +43,11 @@ test('earned inventory: open a national batch once; show resources and queued M7
   const stock=(await saved()).inventory;assert.equal(Object.keys(stock).length,7);assert.equal(stock['national-finland'],undefined);
   await page.getByRole('navigation').getByRole('button',{name:/^Инвентарь/}).click();
   const card=page.locator('.inv-card').filter({hasText:'Ящик США × 4'});
+  assert.match(await card.locator('.c-desc').innerText(),/^10% на танк.*Серебро — 54%, опыт — 27%, золото — 9%/);
   await card.getByRole('button',{name:'Осмотреть модель: Ящик США'}).click();await click('Открыть крышку');await click('Назад');
   assert.deepEqual((await saved()).inventory,stock);
   await card.locator('.inv-open-all').evaluate(b=>{
-    const old=Math.random,values=[0,3.5/15,.02,0,.80,0,.99,0]; // corrected fourth US row is M7; then three resources
+    const old=Math.random,values=[.099999,3.5/15,.10,0,.80,0,.99,0]; // corrected fourth US row is M7; then three resources
     try{Math.random=()=>{return values.length ? values.shift() : old();};b.click();}finally{Math.random=old;}
   });
   await page.locator('#reward-display:not([hidden])').waitFor();

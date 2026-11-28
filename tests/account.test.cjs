@@ -91,6 +91,80 @@ test('failed initial cloud read never initializes a fresh save; offline outbox s
   await logout(page);assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
 });
 
+// Reopen an actual tab-scoped outbox, as on a phone after refreshing the game.
+async function phoneConflict(t) {
+  const api=service(),uid=randomUUID(),nick='phone_pilot',email=nick+'@players.citytanks.invalid',password='fixture phone pass';
+  api.time='2026-11-22T10:00:00Z';api.users.set(email,{id:uid,email,password});
+  const cloud={revision:8,progress:{owned:['TL7'],selected:'TL7',GOLD:840,inventory:{'national-usa':2}}};api.rows.set(uid,cloud);
+  const {page,click,saved}=await openGame(t,{route:api.route,mobile:true,seed:{owned:['T55A'],selected:'T55A',GOLD:37}});
+  const guest=await saved(),key='ct_cloud_draft_v1:'+uid+':phone-fixture';
+  await page.evaluate(k=>{
+    sessionStorage.setItem('ct_account_tab_v1','phone-fixture');
+    localStorage.setItem(k,JSON.stringify({rev:4,at:1,data:{owned:['MS1','IS4'],selected:'IS4',GOLD:190,XP:5400,
+      inventory:{'national-germany':2},usedPromos:['START2025'],tree2026:{bauble:1},treeSlots2026:['bauble',null,null,null]}}));
+  },key);
+  await form(page,nick,password,'Войти');await active(page);await page.locator('#cloud-keep').waitFor();
+  const local=await page.evaluate(()=>JSON.parse(progressSnapshot()));
+  const outbox=()=>page.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
+  const compare=async()=>{await click('Сохранить этот ангар в облаке');await page.locator('#cloud-confirm').waitFor();};
+  const ready=()=>page.evaluate(()=>Accounts.platoonConnection().sync().then(()=>true,()=>false));
+  return {api,uid,cloud,page,click,saved,guest,local,key,outbox,compare,ready};
+}
+
+test('mobile save conflict: review and cancel are read-only; explicit local-wins preserves the phone fleet, guest and other drafts, and unlocks platoon sync',async t=>{
+  const {api,uid,cloud,page,click,saved,guest,local,key,outbox,compare,ready}=await phoneConflict(t);
+  await page.setViewportSize({width:320,height:568});assert.equal(await ready(),false);
+  await compare();assert.match(await page.locator('#review-local').innerText(),/Машин: 2.*ИС-4/s);assert.match(await page.locator('#review-cloud').innerText(),/Машин: 1.*TL-7/s);
+  assert.ok(await page.locator('#account-modal').evaluate(d=>d.scrollWidth<=d.clientWidth && d.getBoundingClientRect().right<=innerWidth));
+  const pending=page.waitForEvent('download');await click('Скачать облачную копию');const file=await pending;
+  assert.equal(file.suggestedFilename(),'city-tanks-cloud-r8.json');assert.deepEqual(JSON.parse(await require('node:fs/promises').readFile(await file.path(),'utf8')),cloud.progress);
+  await click('Отмена');assert.ok(await page.locator('#cloud-confirm').isHidden());assert.equal(api.writes,0);
+  await page.reload();await active(page);assert.deepEqual((await outbox()).data,local);assert.equal(await ready(),false);
+  await compare(); // A different tab saves a distinct outbox; confirming this tab must never delete it.
+  const other=await page.evaluate(k=>{const raw=JSON.stringify({rev:4,at:2,data:{owned:['T46'],selected:'T46',GOLD:11}});localStorage.setItem(k+':other',raw);return raw;},key);
+  await page.locator('#cloud-confirm').evaluate(b=>{b.click();b.click();});await synced(page);
+  assert.equal(api.writes,1);assert.deepEqual(api.rows.get(uid),{revision:9,progress:local});
+  assert.equal(await outbox(),null);assert.equal(await page.evaluate(k=>localStorage.getItem(k+':other'),key),other);
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(progressSnapshot())),local);assert.equal(await ready(),true);
+  assert.ok(await page.locator('#cloud-keep').isHidden());assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
+});
+
+test('a failed read, offline confirm or revision race cannot clear the conflict or overwrite either garage; only a fresh review can commit',async t=>{
+  const {api,uid,cloud,page,click,saved,guest,local,outbox,compare,ready}=await phoneConflict(t);
+  const notice=regex=>page.locator('#account-message').filter({hasText:regex}).waitFor();
+  const untouched=async row=>{
+    assert.deepEqual(api.rows.get(uid),row);assert.equal(api.writes,0);assert.deepEqual((await outbox()).data,local);
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(progressSnapshot())),local);assert.ok(await page.locator('#cloud-confirm').isHidden());assert.equal(await ready(),false);
+  };
+  api.failRead=true;await click('Сохранить этот ангар в облаке');await notice(/Не удалось прочитать/);await untouched(cloud);api.failRead=false;
+  await compare();api.offline=true;await click('Подтвердить замену');await notice(/Нет подтверждения/);await untouched(cloud);api.offline=false;
+  await compare();const newer={revision:9,progress:{...cloud.progress,GOLD:972}};api.rows.set(uid,newer);
+  await click('Подтвердить замену');await notice(/Облако изменилось/);await untouched(newer);
+  await compare();assert.match(await page.locator('#review-cloud').innerText(),/972/);
+  await page.evaluate(()=>{GameState.XP++;saveProgress();});await click('Подтвердить замену');await notice(/устройстве изменился/);
+  assert.deepEqual(api.rows.get(uid),newer);assert.equal(api.writes,0);assert.equal(await ready(),false);
+  await compare();await click('Подтвердить замену');await synced(page);assert.equal(api.writes,1);
+  assert.deepEqual(api.rows.get(uid),{revision:10,progress:{...local,XP:local.XP+1}});assert.equal(await ready(),true);
+  await page.reload();await active(page);await synced(page);assert.deepEqual(await page.evaluate(()=>JSON.parse(progressSnapshot())),api.rows.get(uid).progress);
+  assert.deepEqual(await saved(),guest);assert.deepEqual(api.forbidden,[]);
+});
+
+test('a missing cloud row is insert-only, and edits during the confirmed write stay queued against its acknowledgement',async t=>{
+  const {api,uid,cloud,page,click,local,outbox,compare,ready}=await phoneConflict(t);
+  api.rows.delete(uid);await compare();assert.ok(await page.locator('#cloud-backup').isHidden());
+  api.rows.set(uid,cloud);await click('Подтвердить замену');await page.locator('#account-message').filter({hasText:'Облако изменилось'}).waitFor();
+  assert.equal(api.writes,0);assert.deepEqual(api.rows.get(uid),cloud);assert.equal(await ready(),false);
+  api.rows.delete(uid);await compare();
+  let release;const gate=new Promise(resolve=>release=resolve),isInsert=q=>q.method()==='POST' && q.url().includes('/city_tanks_saves_v1?');
+  await page.route('**/city_tanks_saves_v1?*',async r=>{if(isInsert(r.request()))await gate;await r.fallback();});
+  try{
+    await Promise.all([page.waitForRequest(isInsert),click('Подтвердить замену')]);
+    await page.evaluate(()=>{GameState.SILVER+=25;saveProgress();});assert.equal((await outbox()).data.SILVER,local.SILVER+25);
+  }finally{release();}
+  await synced(page);assert.equal(api.writes,2);assert.deepEqual(api.rows.get(uid),{revision:2,progress:{...local,SILVER:local.SILVER+25}});
+  assert.equal(await outbox(),null);assert.equal(await ready(),true);assert.deepEqual(api.forbidden,[]);
+});
+
 test('berths, pending Advent tank and box receipt belong only to the signed-in profile',async t=>{
   const api=service(),uid=randomUUID(),email='supply_pilot@players.citytanks.invalid';api.time='2026-11-22T10:00:00Z';api.users.set(email,{id:uid,email,password:'test crate pass'});
   const fleet=['MS1','T26','T46','T28_USSR','KV1','KV1S','IS','IS3','OBJ257','IS7'];

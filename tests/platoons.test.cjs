@@ -50,6 +50,24 @@ test('offline guest sees sign-in, cannot create/join or open a socket, and still
   assert.equal(await page.evaluate(async()=>{if(!await launchBattle(1))return false;stopBattleLoop();const ok=GameState.training&&!GameState.platoon&&document.querySelector('#combat-callsign').hidden;backToGarage();return ok;}),true); assert.equal(sockets,0);
 });
 
+test('two devices, one fixture account: the phone resolves its conflict and creates a platoon with the tank absent from the old cloud fleet',async t=>{
+  const {route}=await bridge(t,{platoons:true}),opts={route,enterGuest:false};
+  const {page:phone}=await openGame(t,{...opts,mobile:true}),{page:other}=await openGame(t,opts);
+  for(const [p,entry] of [[phone,'register'],[other,'login']]){
+    await p.locator('#entry-'+entry).click();await p.locator('#profile-handle').fill('phone_driver');await p.locator('#profile-pass').fill('local fixture phrase');
+    await p.locator('#account-submit').click();await p.waitForFunction(()=>Accounts.active && !Accounts.switching);await p.evaluate(()=>Accounts.platoonConnection().sync());
+  }
+  const choose=id=>{GameState.owned.push(id);GameState.selected=id;renderCarousel();saveProgress();};
+  await other.evaluate(choose,'T26');await other.evaluate(()=>Accounts.platoonConnection().sync());await phone.evaluate(choose,'IS4');
+  const create=async()=>{await phone.locator('#platoon-open').click();await phone.locator('#platoon-create').click();};
+  await create();await phone.locator('#platoon-status').filter({hasText:'Сначала синхронизируйте ангар'}).waitFor();await phone.locator('#platoon-back').click();
+  await phone.getByRole('button',{name:'Профиль игрока'}).click();await phone.locator('#cloud-keep').click();await phone.locator('#cloud-confirm').click();
+  await phone.locator('#profile-sync').filter({hasText:'Прогресс сохранён в облаке'}).waitFor();await phone.locator('#account-back').click();await create();
+  await phone.locator('#platoon-code').waitFor();assert.match(await phone.locator('#platoon-code').inputValue(),/^[0-9A-F]{8}$/);
+  assert.match(await phone.locator('#platoon-members').innerText(),/ИС-4/);
+  await Promise.all([phone.waitForResponse(r=>r.url().endsWith('/rpc/city_tanks_platoon_v1') && r.request().postDataJSON()?.op==='leave'),phone.locator('#platoon-back').click()]);
+});
+
 for (const fallback of [false,true]) test('two registered browsers share a sortie via '+(fallback?'authenticated HTTP fallback':'private Broadcast')+': drive, fire, human plates, hits, surviving wingman, shared result',async t=>{
   const {route,pg,identityFor}=await bridge(t,{platoons:true}),relay=require('./fixtures/platoon-relay.cjs')(pg,identityFor);
   const opts={route,enterGuest:false,webgl:true,socketSetup:relay.attach}; const [{page:a},{page:b}]=await Promise.all([openGame(t,opts),openGame(t,fallback?{...opts,socketSetup:p=>p.routeWebSocket('**/*',ws=>ws.close({code:4001,reason:'fixture relay offline'}))}:opts)]);

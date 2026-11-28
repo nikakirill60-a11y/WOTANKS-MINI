@@ -29,7 +29,7 @@ const SUPPLIES = {
 // the hangar; use the actual player's tank, never the selected tank, tree or opponent.
 function nationalVictoryBox(g, won, random=Math.random) {
   const id='national-'+DB[g.player?.id]?.nat;
-  if (!won || !CONTAINERS[id]?.national || random() >= NATIONAL_BOX_CHANCE) return null;
+  if (g.training || !won || !CONTAINERS[id]?.national || random() >= NATIONAL_BOX_CHANCE) return null;
   g.inventory[id]=(g.inventory[id] || 0)+1;
   return id;
 }

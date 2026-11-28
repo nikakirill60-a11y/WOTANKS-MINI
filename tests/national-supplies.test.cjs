@@ -64,7 +64,7 @@ test('earned inventory: open a national batch once; show resources and queued M7
 test('a last rental wins its own country once; loss, aborted and duplicate results do not add national stock',async t=>{
   const {page,saved}=await openGame(t,{webgl:true,seed:{owned:['MS1','GPZ'],selected:'GPZ',curNat:'france',rentalBattles:{GPZ:1},usedPromos:['ARTA']}});
   const settle=async(won)=>page.evaluate(async won=>{
-    GameState.controlMode='mobile';if(!await launchBattle(1))throw Error('Launch failed');stopBattleLoop();
+    GameState.controlMode='mobile';if(!await startBattle(7))throw Error('Team launch failed');stopBattleLoop();
     const sortie=[GameState.player.id,GameState.selected,!!GameState.player.rented],old=Math.random;
     try{Math.random=()=>.19;if(won!==null){endBattle(won);endBattle(true);}else{backToGarage();endBattle(true);}}finally{Math.random=old;}
     if(won!==null)backToGarage();return sortie;
@@ -109,4 +109,32 @@ for(const mobile of [false,true])test(`French all-branches graph: distinct click
     });return [nodes.length,overlap,noEdge];
   });assert.deepEqual(report,[51,[],[]]);
   for(const [id,name] of [['AMX-12-T','AMX 12 t'],['AMD178B','Panhard AMD 178B']]){await page.locator(`.node[data-tank-id="${id}"]`).click();assert.equal(await page.locator('#tree-name').innerText(),name);}
+});
+
+test('training and tutorial never roll either container; practice currency bonuses remain and the next team match is eligible again',async t=>{
+  const inventory={basic:1,ornament:2,'national-ussr':3};
+  const {page,saved}=await openGame(t,{mobile:true,webgl:true,seed:{inventory,tree2026:{bauble:1},treeSlots2026:['bauble',null,null,null]}});
+  let before=await saved();
+  for(const [mode,won] of [['training',true],['training',false],['tutorial',true],['tutorial',false],[10,true],[15,false]]){
+    const practice=typeof mode==='string';
+    const result=await page.evaluate(async({mode,won})=>{
+      GameState.controlMode='mobile';
+      if(mode==='training')await startTraining();else if(mode==='tutorial')await startTutorial();else await startBattle(mode);
+      if(!GameState.gameActive)throw Error('Launch failed: '+mode);stopBattleLoop();
+      const training=GameState.training,tutorial=document.body.classList.contains('in-tutorial');
+      const tree=TreeEvent.settle,national=nationalVictoryBox,draws=[0,0];
+      // A zero roll always wins when eligible. Count draws only at the two reward hooks.
+      TreeEvent.settle=(g,base)=>tree(g,base,()=>{draws[0]++;return 0;});
+      nationalVictoryBox=(g,won)=>national(g,won,()=>{draws[1]++;return 0;});
+      try{creditDamage(GameState.player,200);endBattle(won);endBattle(won);}
+      finally{TreeEvent.settle=tree;nationalVictoryBox=national;}
+      const text=document.getElementById('result-tree').textContent;backToGarage();return {training,tutorial,draws,text};
+    },{mode,won});
+    assert.equal(result.training,practice);assert.equal(result.tutorial,mode==='tutorial');assert.deepEqual(result.draws,practice?[0,0]:[1,+won]);
+    const after=await saved();assert.deepEqual([after.SILVER-before.SILVER,after.XP-before.XP,after.GOLD-before.GOLD],[110,won?330:110,won?55:11]);
+    if(practice){assert.match(result.text,/контейнеры не выдаются/);assert.doesNotMatch(result.text,/получен|не выпал/i);}
+    else{inventory.ornament++;if(won)inventory['national-ussr']++;assert.match(result.text,/Получен ёлочный ларец/);}
+    assert.deepEqual(after.inventory,inventory);before=after;
+  }
+  await page.reload();assert.deepEqual((await saved()).inventory,inventory);
 });

@@ -2,7 +2,7 @@
 const NATIONAL_BOX_CHANCE = .20;
 const CONTAINERS = {
   ...Object.fromEntries(Object.entries(NationalCrates.catalog).map(([id,model]) => [id,{
-    name:model.name, icon:'📦', color:model.accent, national:true, slotChance:0, vehicleChance:.02,
+    name:model.name, icon:'📦', color:model.accent, national:true, slotChance:0, vehicleChance:.10,
     vehicles:NATIONAL_TANKS.filter(t=>t.supplyBox===id).map(t=>t.id),
     drops:[['silver',5000,15000,60],['xp',2000,8000,30],['gold',50,200,10]]
   }])),

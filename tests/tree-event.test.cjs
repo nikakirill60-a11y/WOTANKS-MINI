@@ -45,7 +45,8 @@ test('mobile tree: open, manually hang, replace and take down; single/bulk never
   const start=await saved();assert.deepEqual(start.tree2026,{...empty,gingerbread:2});assert.deepEqual(start.treeSlots2026,bare);
   const decoded=await page.evaluate(()=>decodeProgress({tree2026:{gingerbread:1,bauble:1},treeSlots2026:['bauble',{},'gingerbread','gingerbread','bauble']}).treeSlots2026);
   assert.deepEqual(decoded,['bauble',null,'gingerbread',null]);
-  await click('Контейнеры'); assert.equal(await page.locator('#container-grid .c-card').count(),4);
+  await click('Контейнеры');
+  assert.deepEqual(new Set(await page.locator('#container-grid .c-name').allTextContents()),new Set(['Полевой ящик','Офицерский резерв','Новогодний ящик']));
   assert.equal(await page.locator('#container-grid').getByText('Ёлочный ларец',{exact:true}).count(),0);
   await page.evaluate(()=>buyContainer('ornament'));assert.deepEqual(await saved(),start);await click('В ангар');
   await click('Ёлка');assert.equal(await page.locator('#tree-stock').innerText(),'6');

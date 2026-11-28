@@ -940,7 +940,7 @@ test('supplied Swedish rigs in combat: Kranvagn fires 3 × 400; hydraulic mounts
 
 test('IS-4 research on a phone: one KV-1 feeds both heavy routes without cross-unlocks or duplicate charges',async t=>{
   const prior=sovietIds.slice(0,5).concat('IS7','OBJ140','KRANVAGN');let xp=408000;
-  // Reserve one more berth: the last assertion isolates the XP gate on the other branch.
+  // IS-7 proves the missing KV-1S path in a pre-ledger save. Keep a free berth to isolate the buyback price.
   const {page,click}=await offlineGame(t,{mobile:true,seed:{[saveKey]:JSON.stringify({owned:prior,selected:'KV1',XP:xp,garageSlots:prior.length+is4Ids.length+1})}});
   await click('Дерево развития');assert.match(await page.locator('#branch-title').innerText(),/ИС-4/);
   const layout=await page.evaluate(()=>{
@@ -953,7 +953,7 @@ test('IS-4 research on a phone: one KV-1 feeds both heavy routes without cross-u
   await click('Характеристики: КВ-3');assert.match(await page.locator('#tree-status').innerText(),/Т-150/);
   await click('Характеристики: ИС-4');assert.match(await page.locator('#tree-status').innerText(),/СТ-I/);
   assert.deepEqual((await saved(page)).owned,prior);assert.equal((await saved(page)).selected,'KV1');
-  assert.equal(await page.getByRole('button',{name:'Исследовать: КВ-1С',exact:true}).count(),1);
+  await click('Характеристики: КВ-1С');assert.match(await page.locator('#tree-status').innerText(),/Исследован · выкуп: 60\s000 ₽/);
   for(const [i,[name,cost]] of [['Т-150',8000],['КВ-3',25000],['КВ-4',60000],['СТ-I',120000],['ИС-4',195000]].entries()){
     await click('Исследовать: '+name);xp-=cost;const s=await saved(page);
     assert.equal(s.selected,is4Ids[i]);assert.equal(s.XP,xp);assert.deepEqual(s.owned,prior.concat(is4Ids.slice(0,i+1)));

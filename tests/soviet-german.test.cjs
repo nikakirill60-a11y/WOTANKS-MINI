@@ -27,9 +27,8 @@ test('New Year checkpoint: the local Object 261 artillery artwork, entry control
     assert.equal(await link.getAttribute('target'),'_blank');assert.match(await link.getAttribute('rel'),/noopener/);
   }
   assert.match(await page.locator('.entry-film').innerText(),/2:29/);
-  const archive=page.getByRole('link',{name:'Скачать игру (ZIP)',exact:true});
-  assert.equal(await archive.getAttribute('href'),'https://wotanks-mini.vercel.app/CITY-TANKS.zip');
-  assert.equal(await archive.getAttribute('download'),'CITY-TANKS.zip');
+  assert.equal(await page.locator('a[href*="CITY-TANKS.zip" i]').count(),0,'no game archive link in the entry screen or hangar');
+  assert.equal(await page.getByText(/Скачать игру/i).count(),0);
   assert.equal(await page.locator('.entry-model strong').innerText(),'САУ «Объект 261»');
   assert.equal(await saved(),null);await click('ГОСТЬ');assert.ok(await page.locator('#ui').isVisible());
 });

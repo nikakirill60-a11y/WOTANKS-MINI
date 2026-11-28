@@ -7,6 +7,7 @@ const Accounts = (() => {
   const atEntry = () => !el('entry-screen').hidden;
   let client, tab, player = null, busy = false, syncTimer, enterHangar;
   let serverTime = 0, timeAt = 0;
+  let keepReview = null; // one explicit comparison, bound to this account, snapshot and remote revision
   const now = () => serverTime + performance.now() - timeAt;
   function message(text) {
     el(atEntry() && !el('account-modal').open ? 'entry-status' : 'account-message').textContent = text;
@@ -47,7 +48,7 @@ const Accounts = (() => {
     const raw=rows[0].progress;
     const migrate=!Array.isArray(raw.researched) || Object.hasOwn(raw,'charges') ||
       raw.inventory?.supply !== undefined || raw.inventory?.waffentrager !== undefined;
-    return {rev:rows[0].revision, data:decodeProgress(raw), migrate};
+    return {rev:rows[0].revision, data:decodeProgress(raw), raw, migrate};
   }
   async function readClock(p) {
     const ms = Date.parse(await rest(p,'rpc/city_tanks_clock_v1','POST',{}));
@@ -85,7 +86,7 @@ const Accounts = (() => {
     } catch { p.cached = false; }
   }
   function stateLabel(p) {
-    if (p.conflict) return 'Другая версия в облаке · откройте профиль';
+    if (p.conflict) return p.cached ? 'Другая версия в облаке · откройте профиль' : 'Конфликт · скачайте копию, не закрывайте вкладку';
     if (p.snapshot !== p.ack && !p.cached) return 'Копия не записана · не закрывайте вкладку';
     if (p.error) return 'Нет связи · изменения на устройстве';
     return p.snapshot === p.ack ? 'Прогресс сохранён в облаке' : 'Сохранение в облако…';
@@ -93,33 +94,41 @@ const Accounts = (() => {
   function status(p) {
     if (p !== player) return;
     setSaveStatus(stateLabel(p),!!(p.error || p.conflict || (!p.cached && p.ack !== p.snapshot)));
-    el('profile-sync').textContent = stateLabel(p); el('cloud-recover').hidden = !p.conflict;
+    el('profile-sync').textContent = stateLabel(p);
+    el('cloud-conflict').hidden = !p.conflict;
+    el('cloud-options').hidden = !!keepReview;
+    el('cloud-keep').hidden = !p.registered;
   }
   function capture() {
     const p = player; if (!p) return;
     const snapshot = progressSnapshot();
     if (snapshot !== p.snapshot) {
       p.snapshot = snapshot;
-      if (snapshot !== p.ack || p.writing) cache(p); else clearDraft(p);
+      if (snapshot !== p.ack || p.writing || p.conflict) cache(p); else clearDraft(p);
     }
+    if ((p.conflict || p.snapshot !== p.ack) && !p.cached) cache(p);
     if (p.snapshot !== p.ack && !p.conflict) {
-      if (!p.cached) cache(p);
       if (!syncTimer && !p.writing) syncTimer = setTimeout(() => { syncTimer=0; flush(p); },300);
     }
     status(p);
+  }
+  // Both autosave and a player-confirmed replacement require the expected revision.
+  // A missing row may only be inserted, never upserted over a concurrent save.
+  async function writeNext(p, expected, snapshot) {
+    const revision = expected + 1, progress = JSON.parse(snapshot);
+    try {
+      const rows = expected === 0 ? await rest(p,table+'?select=revision','POST',{player_id:p.id,revision,progress}) :
+        await rest(p,`${table}?player_id=eq.${p.id}&revision=eq.${expected}&select=revision`,'PATCH',{revision,progress});
+      return Array.isArray(rows) && rows.length === 1 && rows[0].revision === revision;
+    } catch (e) { if (e.status === 409) return false; throw e; }
   }
   function flush(p) {
     if (p.writing) return p.writing;
     if (p !== player || p.conflict || p.ack === p.snapshot) return Promise.resolve();
     p.writing = (async () => {
       while (p === player && p.ack !== p.snapshot) {
-        const snapshot = p.snapshot, revision = p.rev+1, progress = JSON.parse(snapshot);
-        let rows;
-        try {
-          rows = p.rev === 0 ? await rest(p,table+'?select=revision','POST',{player_id:p.id,revision,progress}) :
-            await rest(p,`${table}?player_id=eq.${p.id}&revision=eq.${p.rev}&select=revision`,'PATCH',{revision,progress});
-        } catch (e) { if (e.status !== 409) throw e; }
-        if (rows?.[0]?.revision !== revision) {
+        const snapshot = p.snapshot, revision = p.rev+1;
+        if (!await writeNext(p,p.rev,snapshot)) {
           // A lost response may already have committed. Never blindly upsert over a newer revision.
           const remote = await readRemote(p);
           if (remote.migrate || JSON.stringify(remote.data) !== snapshot) { p.conflict = true; break; }
@@ -132,6 +141,7 @@ const Accounts = (() => {
     return p.writing;
   }
   function ui() {
+    if (keepReview && (keepReview.owner !== player || !player.conflict)) discardReview();
     el('account-form').hidden = !!player; el('cloud-profile').hidden = !player;
     el('account-mode').textContent = player ? 'Аккаунт' : 'Гость';
     el('profile-email').textContent = player?.email || '';
@@ -283,7 +293,7 @@ const Accounts = (() => {
   function logout() {
     run(async () => {
       const p = player; capture(); await flush(p);
-      if (p.snapshot !== p.ack && !p.cached) { message('Не удалось сохранить изменения. Скачайте копию или дождитесь связи.'); return; }
+      if ((p.conflict || p.snapshot !== p.ack) && !p.cached) { message('Не удалось сохранить изменения. Скачайте копию или дождитесь связи.'); return; }
       clearTimeout(syncTimer); syncTimer = 0;
       // Local scope only: logging out here must not revoke the player's other devices.
       try { await sdk().signOut({scope:'local'}); } catch { /* still close the local session offline */ }
@@ -293,10 +303,62 @@ const Accounts = (() => {
       message(p.snapshot === p.ack ? 'Вы вернулись в локальный гостевой ангар.' : 'Черновик аккаунта остался на устройстве до следующего входа. Вы играете как гость.');
     });
   }
+  function downloadSave(json, name) {
+    const a = document.createElement('a'), file = URL.createObjectURL(new Blob([json],{type:'application/json'}));
+    a.href = file; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(file),1000);
+  }
   function downloadDraft() {
-    if (!player) return;
-    const a = document.createElement('a'), file = URL.createObjectURL(new Blob([progressSnapshot()],{type:'application/json'}));
-    a.href = file; a.download = 'city-tanks-progress.json'; a.click(); setTimeout(() => URL.revokeObjectURL(file),1000);
+    if (player) downloadSave(progressSnapshot(),'city-tanks-progress.json');
+  }
+  function discardReview() {
+    keepReview = null;
+    el('cloud-review').hidden = true; el('cloud-options').hidden = false;
+    el('review-local').textContent = el('review-cloud').textContent = '';
+  }
+  function describeGarage(g) {
+    const fmt = n => n.toLocaleString('ru-RU');
+    return `Машин: ${g.owned.length} · в очереди: ${g.pendingVehicles.length}. Выбрана: ${DB[g.selected]?.n || '—'}.\n` +
+      `Золото: ${fmt(g.GOLD)} · серебро: ${fmt(g.SILVER)} · опыт: ${fmt(g.XP)}.`;
+  }
+  function reviewDevice() {
+    const p = player;
+    if (!p?.registered || !p.conflict || !el('account-modal').open || GameState.gameActive) return;
+    run(async () => {
+      discardReview();
+      let row;
+      try { row = await readRemote(p); }
+      catch { message('Не удалось прочитать облачную версию. Проверьте интернет. Ангар на устройстве не изменён.'); return; }
+      if (p !== player || !p.conflict || !el('account-modal').open) return;
+      capture();
+      keepReview = {owner:p, rev:row.rev, raw:row.raw, snapshot:p.snapshot};
+      el('review-local').textContent = describeGarage(JSON.parse(p.snapshot));
+      el('review-cloud').textContent = row.rev ? describeGarage(row.data) : 'Облачного сохранения пока нет.';
+      el('cloud-backup').hidden = !row.rev;
+      el('cloud-review').hidden = false; el('cloud-options').hidden = true;
+      message(''); el('review-title').focus();
+    });
+  }
+  function keepDevice() {
+    const r = keepReview, p = player;
+    if (busy || !p?.registered || !p.conflict || r?.owner !== p || !el('account-modal').open || GameState.gameActive) return;
+    run(async () => {
+      discardReview(); capture();
+      if (p.snapshot !== r.snapshot) { message('Ангар на устройстве изменился. Сравните версии ещё раз.'); return; }
+      try {
+        if (!await writeNext(p,r.rev,r.snapshot)) {
+          message('Облако изменилось после сравнения. Замена не выполнена. Сравните версии ещё раз.'); return;
+        }
+      } catch {
+        // The reply may have been lost after a successful write. Never guess a
+        // new revision or retry an overwrite; the next comparison reads the server.
+        message('Нет подтверждения сохранения. Ангар на устройстве остался прежним. Проверьте связь и сравните версии ещё раз.'); return;
+      }
+      // Do not load either side into GameState. A newer local edit during the
+      // request stays live and is queued against the acknowledged revision.
+      p.rev = r.rev+1; p.ack = r.snapshot; p.conflict = p.error = false; p.snapshot = null;
+      capture(); message(p.snapshot === p.ack ? 'Ангар с этого устройства сохранён в облаке. Можно вернуться во взвод.' :
+        'Выбранный ангар сохранён в облаке. Отправляем более свежие изменения с этого устройства.');
+    });
   }
   function recover() {
     if (!player?.conflict || !confirm('Скачать копию текущего ангара и продолжить с облачной версией?')) return;
@@ -320,7 +382,13 @@ const Accounts = (() => {
     el('account-switch').addEventListener('click',() => open(el('account-form').dataset.mode === 'login' ? 'register' : 'login'));
     el('account-form').addEventListener('submit',submit);
     el('account-modal').addEventListener('cancel',e => { if (busy) e.preventDefault(); });
-    el('account-modal').addEventListener('close',() => { el('account-form').reset(); });
+    el('cloud-keep').addEventListener('click',reviewDevice);
+    el('cloud-confirm').addEventListener('click',keepDevice);
+    el('cloud-cancel').addEventListener('click',() => { discardReview(); message('Замена отменена. Оба ангара сохранены как были.'); el('cloud-keep').focus(); });
+    el('cloud-backup').addEventListener('click',() => {
+      if (keepReview?.owner === player && keepReview?.raw) downloadSave(JSON.stringify(keepReview.raw),`city-tanks-cloud-r${keepReview.rev}.json`);
+    });
+    el('account-modal').addEventListener('close',() => { discardReview(); el('account-form').reset(); });
     window.addEventListener('online',() => { if (player) { capture(); flush(player); } });
     window.addEventListener('focus',async () => {
       const p=player; if (!p || busy || performance.now()-timeAt < 60000) return;

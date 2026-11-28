@@ -118,7 +118,7 @@ test('actual 3D branches and completed sorties follow the chosen slots, not tota
   const pieces=await page.evaluate(()=>caseFrame.pieces);assert.deepEqual(pieces.map(p=>p[0]),['ornament-gingerbread','ornament-deer','ornament-fir','ornament-bauble']);assert.ok(pieces.every(p=>p[1]&&p[2]>75));
   await click('Открыть крышку');await page.waitForFunction(()=>caseFrame.angle < -1);await page.keyboard.press('Escape');await click('В ангар');
   await page.waitForFunction(()=>window.branches?.[2]==='ornament-bauble');assert.deepEqual(await page.evaluate(()=>branches),before.treeSlots2026.map(id=>'ornament-'+id));
-  const launch=()=>page.evaluate(async()=>{if(!await launchBattle(1))throw Error('training launch');stopBattleLoop();});
+  const launch=()=>page.evaluate(async()=>{if(!await startBattle(7))throw Error('team launch');stopBattleLoop();});
   await launch();await page.evaluate(()=>{creditKill(GameState.player,500);backToGarage();});assert.deepEqual(await saved(),before,'a quit has no tree draw or partial kill payout');
   await launch();await page.evaluate(()=>{
     creditDamage(GameState.player,200);creditKill(GameState.player,500);

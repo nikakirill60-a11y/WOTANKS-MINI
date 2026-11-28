@@ -36,7 +36,6 @@
 #entry-guest { display:flex; gap:8px; align-items:center; justify-content:center; width:100%; margin-top:16px; min-height:44px; background:#0a1824b8; border-color:#b3c5cf60; }
 #entry-guest svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.5; }
 .entry-actions small { display:block; text-align:center; font-size:10px; font-weight:400; letter-spacing:.02em; margin-top:7px; color:var(--mist); }
-.entry-actions .entry-download { display:inline-flex; align-items:center; min-height:24px; white-space:nowrap; color:var(--sand); }
 .entry-actions button:not(:disabled):hover { filter:brightness(1.16); border-color:var(--sand); }
 .entry-actions button:focus-visible { outline:2px solid #ffe6bb; outline-offset:3px; }
 .entry-actions button:disabled { opacity:.58; cursor:wait; }

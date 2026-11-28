@@ -312,6 +312,7 @@ function endBattle(won) {
   document.getElementById('result-tree').textContent = [
     (s || x || g) ? `В награду вошёл бонус ёлки: +${s} ₽, +${x} XP, +${g} G.` : '',
     nationalBox ? `За победу получен «${CONTAINERS[nationalBox].name}». Откройте его в инвентаре.` : '',
+    GameState.training ? 'В тренировке и обучении контейнеры не выдаются.' :
     tree.dropped ? 'Получен ёлочный ларец! Откройте его в ангаре → «Ёлка».' : `Ёлочный ларец не выпал (шанс ${tree.chance}%).`
   ].filter(Boolean).join(' ');
   updateInvCount(); updateBoosterUI();

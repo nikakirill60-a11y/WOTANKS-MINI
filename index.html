@@ -34,7 +34,7 @@
     <div class="entry-actions" role="group" aria-label="Вход в игру">
       <div class="entry-online"><button type="button" id="entry-login">ВХОД <span aria-hidden="true">→</span></button><button type="button" id="entry-register">РЕГИСТРАЦИЯ</button></div>
       <button type="button" id="entry-guest"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="6" r="3"/><path d="M3 17c0-6 14-6 14 0"/></svg>ГОСТЬ</button>
-      <small>Прогресс гостя в этом браузере · <a class="entry-log entry-download" href="https://wotanks-mini.vercel.app/CITY-TANKS.zip" download="CITY-TANKS.zip" target="_blank" rel="noopener noreferrer">Скачать игру (ZIP)</a></small>
+      <small>Прогресс гостя сохраняется в этом браузере</small>
     </div>
     <p id="entry-status" role="status"></p>
   </section>
@@ -100,7 +100,7 @@
     </div><div id="container-grid"></div>
     <section id="national-showcase" aria-labelledby="national-crates-title">
       <header class="supply-subhead national-heading"><div><p class="season-kicker">БОЕВОЕ СНАБЖЕНИЕ &nbsp;/&nbsp; СЕРИЯ 01–06</p><h3 id="national-crates-title" tabindex="-1">Национальные ящики</h3>
-        <p>За победу на машине одной из этих шести наций — 20% на её ящик. При открытии — 10% на одну недостающую коллекционную машину этой нации, иначе ресурсы. Нажмите «3D · Осмотреть», чтобы бесплатно повернуть ящик и открыть крышку.</p></div></header>
+        <p>За победу в командном бою на машине одной из этих шести наций — 20% на её ящик. В тренировке и обучении контейнеры не выпадают. При открытии — 10% на одну недостающую коллекционную машину этой нации, иначе ресурсы. Нажмите «3D · Осмотреть», чтобы бесплатно повернуть ящик и открыть крышку.</p></div></header>
       <div id="national-grid"></div>
     </section></div>
   </section>
@@ -172,7 +172,7 @@
   <h3 class="tree-subhead">Ваши бонусы за бой</h3>
   <dl class="tree-bonuses"><div><dt>Серебро</dt><dd id="tree-silver"></dd></div><div><dt>Опыт</dt><dd id="tree-xp"></dd></div><div><dt>Золото</dt><dd id="tree-gold"></dd></div><div><dt>Шанс ларца</dt><dd id="tree-chance"></dd></div></dl>
   <div class="tree-subhead"><h3>Коллекция игрушек</h3><span>Шанс при открытии ларца</span></div><div id="tree-manifest" class="ornament-list"></div>
-  <p class="tree-foot">Из боевого ларца выпадает одна игрушка. Каждая повешенная копия даёт бонус. С шаром на ёлке шанс ларца — 30%, без него — 20%. Победа и поражение дают одинаковый шанс; досрочный выход не считается.</p>
+  <p class="tree-foot">Из боевого ларца выпадает одна игрушка. Каждая повешенная копия даёт бонус. С шаром на ёлке шанс ларца — 30%, без него — 20%. В командном бою победа и поражение дают одинаковый шанс. В тренировке, обучении и при досрочном выходе ларец не выпадает.</p>
 </dialog>
 
 <dialog id="leaderboard-modal" class="winter-dialog" aria-labelledby="leaderboard-title">
@@ -233,6 +233,17 @@
     <div class="profile-actions"><button class="winter-action" id="account-submit" type="submit">Войти</button><button class="winter-back" id="account-switch" type="button">Создать аккаунт</button></div>
   </form>
   <section id="cloud-profile" hidden><p class="winter-intro">Аккаунт Wot-mini</p><strong id="profile-email"></strong><p id="profile-sync"></p>
+    <section id="cloud-conflict" aria-label="Конфликт сохранений" hidden>
+      <div id="cloud-options"><p>Ангар этого устройства и облачный ангар различаются. Какую версию оставить?</p>
+        <div class="profile-actions"><button id="cloud-keep" type="button" class="winter-action">Сохранить этот ангар в облаке</button>
+          <button id="cloud-recover" type="button" class="winter-back" onclick="Accounts.recover()">Загрузить облачную версию</button></div></div>
+      <div id="cloud-review" hidden><h3 id="review-title" tabindex="-1">Заменить облачный ангар?</h3>
+        <dl><dt>Останется: ангар этого устройства</dt><dd id="review-local"></dd><dt>Будет заменён: ангар в облаке</dt><dd id="review-cloud"></dd></dl>
+        <p>В облако будет записан весь прогресс с этого устройства. Танки и ресурсы из двух версий не складываются.</p>
+        <button id="cloud-backup" type="button" class="winter-back">Скачать облачную копию</button>
+        <div class="profile-actions"><button id="cloud-cancel" type="button" class="winter-back">Отмена</button>
+          <button id="cloud-confirm" type="button" class="winter-action">Подтвердить замену</button></div></div>
+    </section>
     <details id="referral-desk"><summary>Пригласить друзей</summary>
       <p class="season-kicker">БЮРО НАБОРА / ПРИГЛАШЕНИЕ</p>
       <p>Вы выбираете обе награды. Отправьте ссылку друзьям: за каждый новый аккаунт по ней вам придёт награда, а новичку — ваш подарок.</p>
@@ -253,8 +264,7 @@
       <p class="winter-message" id="invite-status" role="status"></p>
     </details>
     <div class="profile-actions"><button type="button" class="winter-action" onclick="Accounts.logout()">Выйти в гостевой ангар</button>
-    <button type="button" class="winter-back" onclick="Accounts.downloadDraft()">Скачать копию</button>
-    <button id="cloud-recover" type="button" class="winter-back" onclick="Accounts.recover()" hidden>Загрузить облачную версию</button></div>
+    <button type="button" class="winter-back" onclick="Accounts.downloadDraft()">Скачать копию</button></div>
   </section><p id="account-message" class="winter-message" role="status"></p>
 </dialog>
 

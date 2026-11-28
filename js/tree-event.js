@@ -39,7 +39,9 @@ const TreeEvent = (() => {
   function settle(g, base, random = Math.random) {
     const percent = bonuses(g.treeSlots2026), extra = {};
     for (const k of Object.keys(percent)) extra[k] = Math.floor(base[k] * percent[k] / 100);
-    const chance = dropChance(g.treeSlots2026), dropped = random() < chance / 100;
+    // The tutorial launches the same training sortie. Keep currency bonuses,
+    // but do not even roll RNG for a case in either practice mode.
+    const chance = g.training ? 0 : dropChance(g.treeSlots2026), dropped = chance > 0 && random() < chance / 100;
     if (dropped) g.inventory[boxId] = (g.inventory[boxId] || 0) + 1;
     return { extra, chance, dropped };
   }

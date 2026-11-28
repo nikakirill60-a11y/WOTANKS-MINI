@@ -2,63 +2,56 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {openGame}=require('./winter-harness.cjs'),{ids,active}=require('./fixtures/national.cjs');
 const counts={ussr:14,germany:15,usa:15,sweden:14,japan:13,france:15};
 
-test('20% victory roll is separate: tier-weighted tank odds, every same-tier collector, resource boundaries and unsupported nations',async t=>{
+// The expected per-model intervals come from the agreed percentages and the source
+// manifest, not the runtime bands. 120 bp = 1.2% on each individual tier-V tank.
+const perTankBP=[0,0,300,240,170,120,80,50,25,10,5];
+const levelRow=(card,tier)=>card.getByRole('row').filter({has:card.page().getByRole('rowheader',{name:tier,exact:true})}).getByRole('cell').allTextContents();
+
+test('20% victory roll is separate from opening a national box; no roll on loss or for unsupported nations',async t=>{
   const {page}=await openGame(t);
-  const results=await page.evaluate(()=>{
-    const unsupported=['BT42','V440','NAT015','does-not-exist'];
-    for(const id of unsupported){const g={player:{id},inventory:{}};if(nationalVictoryBox(g,true,()=>{throw Error(id+' rolled');}) || Object.keys(g.inventory).length)throw Error(id);}
-    const out={};
+  const nations=await page.evaluate(()=>{
+    const never=()=>{throw Error('unexpected roll');};
+    for(const id of ['BT42','V440','NAT015','does-not-exist']){
+      const g={player:{id},inventory:{}};if(nationalVictoryBox(g,true,never) || Object.keys(g.inventory).length)throw Error(id);
+    }
+    const result=[];
     for(const [id,b] of Object.entries(CONTAINERS).filter(([,b])=>b.national)){
       if(b.cost || b.slotChance!==0)throw Error(id+' for sale or bonus');
       const nat=id.slice(9),player=Object.values(DB).find(t=>t.nat===nat && !t.source),g={player,selected:'IS7',curNat:'france',inventory:{basic:2}};
-      if(nationalVictoryBox(g,false,()=>{throw Error('roll on loss');})!==null)throw Error('loss');
+      if(nationalVictoryBox(g,false,never)!==null)throw Error('loss');
       for(const r of [.20,.9999])if(nationalVictoryBox(g,true,()=>r)!==null)throw Error('win boundary: '+id);
       for(const r of [0,.199999])if(nationalVictoryBox(g,true,()=>r)!==id)throw Error('missed win: '+id);
-      if(g.inventory[id]!==2 || g.inventory.basic!==2)throw Error('wrong inventory');
-      const check=(rolls)=>{const r=openContainerDirect(id,()=>{if(!rolls.length)throw Error('unexpected RNG '+id);return rolls.shift();});if(rolls.length || r.slot)throw Error(id);return r;};
-      function fresh(roll,detail){
-        GameState.owned=[];GameState.pendingVehicles=[];GameState.rentalBattles={};
-        const r=check([roll,detail]);if(r.type!=='vehicle' || !GameState.owned.includes(r.id))throw Error(id+' failed to award');return r.id;
-      }
-      // Stratify the first 1,000 basis points of a fresh profile, without Monte Carlo noise.
-      const hits=Array(11).fill(0),probe=[],draws=[];
-      for(let i=0;i<1000;i++){
-        const roll=(i+.5)/10000,tier=DB[fresh(roll,0)].tier;hits[tier]++;probe[tier]=roll;
-      }
-      for(let tier=2;tier<=10;tier++){
-        const pool=b.vehicles.filter(k=>DB[k].tier===tier);
-        pool.forEach((k,i)=>{
-          if(fresh(probe[tier],(i+.5)/pool.length)!==k)throw Error('nonuniform selection: '+k);
-          draws.push(k);
-        });
-      }
-      if(nat==='ussr'){
-        const edges=[.03,.054,.071,.083,.091,.096,.0985,.0995]; // II→III through IX→X
-        edges.forEach((r,i)=>{if(DB[fresh(r-1e-10,0)].tier!==i+2 || DB[fresh(r,0)].tier!==i+3)throw Error('tier boundary '+r);});
-        if(fresh(.0995,.49999999)!=='NAT013' || fresh(.0995,.5)!=='NAT014')throw Error('the two tens share ONE 0.05% band');
-      }
-      GameState.owned=[];
-      for(const [value,expected,amt] of [[.10,'silver',5000],[.63999999,'silver',5000],[.64000001,'xp',2000],[.90999999,'xp',2000],[.91000001,'gold',50]]){
-        const r=check([value,0]);if(r.type!==expected || r.amount!==amt)throw Error(id+': '+JSON.stringify(r));
-      }
-      GameState.owned=b.vehicles.slice(0,3);GameState.pendingVehicles=b.vehicles.slice(3); // nothing left, even those in the queue count
-      for(const [roll,k,max] of [[0,'silver',15000],[.60,'xp',8000],[.90,'gold',200]]){
-        const r=check([roll,.999999]);if(r.type!==k || r.amount!==max)throw Error('complete collection: '+id);
-      }
-      out[nat]={draws,hits};
+      if(g.inventory[id]!==2 || g.inventory.basic!==2)throw Error('wrong inventory');result.push(nat);
     }
-    return out;
+    return result;
   });
-  assert.deepEqual(Object.keys(results).sort(),Object.keys(counts).sort());
-  const base=[0,0,300,240,170,120,80,50,25,10,5];
+  assert.deepEqual(nations.sort(),Object.keys(counts).sort());
+});
+
+test('every eligible collector keeps its own absolute chance in all six national boxes; only the resource pool grows as tanks are collected',async t=>{
+  const {page}=await openGame(t);
   for(const [nat,n] of Object.entries(counts)){
-    const {draws,hits}=results[nat];assert.equal(draws.length,n);assert.deepEqual(draws.sort(),ids(nat,'collection').sort());
-    const present=new Set(active.filter(t=>t.nat===nat && t.source==='collection').map(t=>t.tier));
-    const lower=[...present].filter(t=>t<10),sum=lower.reduce((n,t)=>n+base[t],0),top=present.has(10)?5:0;
-    assert.equal(hits[10],top);assert.equal(hits.reduce((a,b)=>a+b),1000);
-    for(let tier=1;tier<10;tier++){
-      const expected=present.has(tier)?(1000-top)*base[tier]/sum:0;
-      assert.ok(Math.abs(hits[tier]-expected)<1,`${nat} / ${tier}: ${hits[tier]} vs ${expected} bp`);
+    const fleet=active.filter(t=>t.nat===nat && t.source==='collection');assert.equal(fleet.length,n);
+    const stock=ids(nat,'collection');
+    for(const [owned,pending] of [[[],[]],[stock.filter((_,i)=>i%3===0),stock.filter((_,i)=>i%3===1)],[stock.slice(0,3),stock.slice(3)]]){
+      const probes=[];let sumBP=0;
+      for(let tier=2;tier<=10;tier++){
+        const pool=fleet.filter(t=>t.tier===tier && !owned.includes(t.id) && !pending.includes(t.id));
+        const start=sumBP/10000;sumBP+=perTankBP[tier]*pool.length;
+        // Both edges of the tier's interval, and both edges of each member's 1/N share.
+        pool.forEach(({id},i)=>probes.push([start,i/pool.length,id],[sumBP/10000-1e-10,(i+1)/pool.length-1e-10,id]));
+      }
+      assert.ok(sumBP<10000,'the manifest must leave room for resources');
+      const end=sumBP/10000,s=end+(1-end)*.6,x=end+(1-end)*.9;
+      probes.push([end,0,'silver:5000'],[s-1e-10,.999999,'silver:15000'],[s+1e-10,0,'xp:2000'],
+        [x-1e-10,.999999,'xp:8000'],[x+1e-10,0,'gold:50'],[.999999,.999999,'gold:200']);
+      const got=await page.evaluate(({box,owned,pending,rolls})=>rolls.map(pair=>{
+        GameState.owned=[...owned];GameState.pendingVehicles=[...pending];GameState.rentalBattles={};
+        const r=openContainerDirect(box,()=>{if(!pair.length)throw Error('extra RNG draw');return pair.shift();});
+        if(pair.length || r.slot || (r.id && !HangarSlots.received(r.id)))throw Error('bad award '+box);
+        return r.id || `${r.type}:${r.amount}`;
+      }),{box:'national-'+nat,owned,pending,rolls:probes.map(([a,b])=>[a,b])});
+      assert.deepEqual(got,probes.map(p=>p[2]),`${nat}, ${owned.length} owned, ${pending.length} queued`);
     }
   }
 });
@@ -68,16 +61,18 @@ test('earned inventory: open a national batch once; show resources and queued M7
   const {page,click,saved}=await openGame(t,{mobile:true,seed:{owned,selected:'V440',garageSlots:10,GOLD:0,SILVER:0,XP:0,
     inventory:{...Object.fromEntries(Object.keys(counts).map(n=>['national-'+n,1])),'national-usa':4,basic:1,'national-finland':3}}});
   const stock=(await saved()).inventory;assert.equal(Object.keys(stock).length,7);assert.equal(stock['national-finland'],undefined);
-  await click('Контейнеры');const exhibit=page.locator('.national-card').filter({has:page.getByRole('button',{name:'Осмотреть модель: Ящик СССР',exact:true})});
-  await exhibit.locator('summary').click();assert.deepEqual(await exhibit.locator('.crate-tier-odds dd').allTextContents(),
-    ['0%','3%','2,4%','1,7%','1,2%','0,8%','0,5%','0,25%','0,1%','0,05%']);
+  await click('Контейнеры');const exhibit=page.locator('.national-card').filter({has:page.getByRole('button',{name:'Осмотреть модель: Ящик США',exact:true})});
+  await exhibit.locator('summary').click();assert.deepEqual(await levelRow(exhibit,'I'),['0','—','0%']);
+  assert.deepEqual(await levelRow(exhibit,'V'),['3','1,2%','3,6%']);assert.deepEqual(await levelRow(exhibit,'VI'),['2','0,8%','1,6%']);
+  assert.deepEqual(await exhibit.locator('li').filter({hasText:/^V · /}).allTextContents(),['V · T14 — 1,2%','V · M7 — 1,2%','V · M4A2E4 Sherman — 1,2%']);
   await click('Инвентарь');
   const card=page.locator('.inv-card').filter({hasText:'Ящик США × 4'});
-  assert.match(await card.locator('.c-desc').innerText(),/^10% на танк.*Серебро — 54%, опыт — 27%, золото — 9%/);
+  assert.match(await card.locator('.c-desc').innerText(),/^11,85% на танк.*Серебро — 52,89%, опыт — 26,445%, золото — 8,815%/);
+  await card.locator('summary').click();assert.deepEqual(await levelRow(card,'V'),['3','1,2%','3,6%']);
   await card.getByRole('button',{name:'Осмотреть модель: Ящик США'}).click();await click('Открыть крышку');await click('Назад');
   assert.deepEqual((await saved()).inventory,stock);
   await card.locator('.inv-open-all').evaluate(b=>{
-    const old=Math.random,values=[.05,.5,.10,0,.80,0,.99,0]; // US tier V, second of its three collectors is M7; then resources
+    const old=Math.random,values=[.05,.5,.1065,0,.80,0,.99,0]; // US tier V, second of its three collectors is M7; then resources
     try{Math.random=()=>{return values.length ? values.shift() : old();};b.click();}finally{Math.random=old;}
   });
   await page.locator('#reward-display:not([hidden])').waitFor();
@@ -86,34 +81,36 @@ test('earned inventory: open a national batch once; show resources and queued M7
   assert.deepEqual([before.inventory,before.pendingVehicles,before.owned,before.SILVER,before.XP,before.GOLD,before.garageSlots],
     [rest,['NAT114'],owned,5000,2000,50,10]);
   await page.locator('#unpack-replay').click();await page.locator('#unpack-skip').click();await page.locator('#unpack-collect').click();
+  await click('Магазин');await exhibit.locator('summary').click();assert.deepEqual(await levelRow(exhibit,'V'),['2','1,2%','2,4%']);
+  assert.deepEqual(await levelRow(exhibit,'VI'),['2','0,8%','1,6%']);assert.match(await exhibit.innerText(),/10,65% на танк/);
+  assert.deepEqual(await exhibit.locator('li').filter({hasText:/^V · /}).allTextContents(),['V · T14 — 1,2%','V · M7 — ✓ получена','V · M4A2E4 Sherman — 1,2%']);
   await page.reload();assert.deepEqual(await saved(),before);await click('Продать: Straussler V-4');
   await click('Подтвердить продажу');const delivered=await saved();assert.ok(delivered.owned.includes('NAT114'));assert.deepEqual(delivered.pendingVehicles,[]);
   await click('Выбрать для боя: M7');await page.reload();assert.equal(await page.locator('#dispatch-name').innerText(),'M7');assert.equal((await saved()).researched.includes('NAT114'),false);
 });
 
-test('single/bulk: level odds match the current hangar and queue, X stays at 0.05% even as the last prize',async t=>{
+test('single/bulk: each tier X stays at 0.05%, two tens give 0.1% and collected or queued tanks only increase resource odds',async t=>{
   const fleet=active.filter(t=>t.nat==='ussr' && t.source==='collection' && t.tier<9).map(t=>t.id);
-  const {page,click,saved}=await openGame(t,{mobile:true,seed:{owned:fleet,selected:fleet[0],garageSlots:fleet.length,inventory:{'national-ussr':5}}});
-  const start=await saved(),levels=c=>c.locator('.crate-tier-odds dd').allTextContents();
-  const atStart=[...Array(8).fill('0%'),'9,95%','0,05%'];
+  const {page,click,saved}=await openGame(t,{mobile:true,seed:{owned:fleet,selected:fleet[0],garageSlots:fleet.length,inventory:{'national-ussr':6}}});
+  const start=await saved();
   await click('Контейнеры');const exhibit=page.locator('.national-card').filter({has:page.getByRole('button',{name:'Осмотреть модель: Ящик СССР',exact:true})});
-  await exhibit.locator('summary').click();assert.deepEqual(await levels(exhibit),atStart);
+  await exhibit.locator('summary').click();assert.deepEqual(await levelRow(exhibit,'IX'),['1','0,1%','0,1%']);assert.deepEqual(await levelRow(exhibit,'X'),['2','0,05%','0,1%']);
   await click('Инвентарь');const card=page.locator('.inv-card').filter({hasText:'Ящик СССР'});
-  await card.locator('summary').click();assert.deepEqual(await levels(card),atStart);assert.ok(await card.evaluate(c=>c.scrollWidth<=c.clientWidth));
+  await card.locator('summary').click();assert.deepEqual(await levelRow(card,'X'),['2','0,05%','0,1%']);assert.ok(await card.evaluate(c=>c.scrollWidth<=c.clientWidth));
   const open=async(button,rolls)=>{
     const left=await card.locator(button).evaluate((b,seq)=>{
       const old=Math.random;try{Math.random=()=>seq.length?seq.shift():old();b.click();return seq.length;}finally{Math.random=old;}
     },rolls);assert.equal(left,0);await click('ЗАБРАТЬ');
   };
-  await open('.inv-open',[.09949999,0]);assert.deepEqual((await saved()).pendingVehicles,['NAT012']);
-  await card.locator('summary').click();assert.deepEqual(await levels(card),[...Array(9).fill('0%'),'0,05%']);
-  assert.match(await card.locator('.c-desc').innerText(),/^0,05% на танк.*Серебро — 59,97%, опыт — 29,985%, золото — 9,995%/);
-  // Exact upper bound is silver. The next two win DIFFERENT queued Xs, then a zero roll is silver too.
-  await open('.inv-open-all',[.0005,0,.000499999,.9999,.000499999,.9999,0,0]);
+  await open('.inv-open',[.000999999,0]);assert.deepEqual((await saved()).pendingVehicles,['NAT012']);
+  await card.locator('summary').click();assert.deepEqual(await levelRow(card,'IX'),['0','0,1%','0%']);assert.deepEqual(await levelRow(card,'X'),['2','0,05%','0,1%']);
+  assert.match(await card.locator('.c-desc').innerText(),/^0,1% на танк.*Серебро — 59,94%, опыт — 29,97%, золото — 9,99%/);
+  // Two Xs → 0.001 is silver. After the first X, 0.0005 is silver. After the last, even zero is silver.
+  await open('.inv-open-all',[.001,0,.000999999,.9999,.0005,.999999,.000499999,0,0,0]);
   const done=await saved();assert.deepEqual(done.pendingVehicles,['NAT012','NAT014','NAT013']);assert.deepEqual(done.owned,fleet);
-  assert.deepEqual(done.inventory,{});assert.deepEqual([done.SILVER,done.GOLD,done.XP,done.garageSlots],[start.SILVER+10000,start.GOLD,start.XP,fleet.length]);
+  assert.deepEqual(done.inventory,{});assert.deepEqual([done.SILVER,done.GOLD,done.XP,done.garageSlots],[start.SILVER+25000,start.GOLD,start.XP,fleet.length]);
   await page.reload();assert.deepEqual(await saved(),done);await click('Контейнеры');await exhibit.locator('summary').click();
-  assert.deepEqual(await levels(exhibit),Array(10).fill('0%'));assert.match(await exhibit.innerText(),/Все машины этого ящика получены/);
+  assert.deepEqual(await exhibit.locator('.crate-tier-odds tbody td:last-child').allTextContents(),Array(10).fill('0%'));assert.match(await exhibit.innerText(),/Все машины этого ящика получены/);
 });
 
 test('a last rental wins its own country once; loss, aborted and duplicate results do not add national stock',async t=>{
